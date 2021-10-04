@@ -82,6 +82,10 @@ const config: HardhatUserConfig = {
   },
   namedAccounts: {
     deployer: 0,
+    staker1: 1,
+    staker2: 2,
+    staker3: 3,
+    hacker: 4
   },
   mocha: {
     timeout: 60000,
