@@ -4,11 +4,14 @@ pragma solidity 0.8.7;
 import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
+import '@openzeppelin/contracts/utils/math/SafeCast.sol';
 
 import './TreasuryStake.sol';
 
 contract TreasuryMine is Ownable {
     using SafeERC20 for ERC20;
+    using SafeCast for uint256;
+    using SafeCast for int256;
 
     enum Lock { twoWeeks, oneMonth, threeMonths }
 
@@ -39,15 +42,15 @@ contract TreasuryMine is Ownable {
         uint256 depositAmount;
         uint256 lpAmount;
         uint256 lockedUntil;
-        uint256 rewardDebt;
+        int256 rewardDebt;
     }
 
     /// @notice user => depositId => UserInfo
     mapping (address => mapping (uint256 => UserInfo)) public userInfo;
     /// @notice user => depositId[]
     mapping (address => uint256[]) public allUserDepositIds;
-    // depositId => index in allUserIndex
-    mapping (uint256 => uint256) public depositIdIndex;
+    /// @notice user => depositId => index in allUserDepositIds
+    mapping (address => mapping(uint256 => uint256)) public depositIdIndex;
     /// @notice user => deposit index array
     mapping (address => uint256) public currentId;
 
@@ -56,8 +59,6 @@ contract TreasuryMine is Ownable {
     event EmergencyWithdraw(address indexed to, uint256 amount);
     event Harvest(address indexed user, uint256 indexed index, uint256 amount);
     event LogUpdateRewards(uint256 indexed lastRewardTimestamp, uint256 lpSupply, uint256 accMagicPerShare);
-
-
 
     modifier refreshMagicRate() {
         _;
@@ -83,7 +84,7 @@ contract TreasuryMine is Ownable {
     }
 
     modifier updateRewards() {
-        if (block.timestamp > lastRewardTimestamp && lastRewardTimestamp < endTimestamp) {
+        if (block.timestamp > lastRewardTimestamp && lastRewardTimestamp < endTimestamp && endTimestamp != 0) {
             uint256 lpSupply = totalLpToken;
             if (lpSupply > 0) {
                 uint256 timeDelta;
@@ -113,12 +114,17 @@ contract TreasuryMine is Ownable {
         transferOwnership(_owner);
     }
 
-    function init() external onlyOwner refreshMagicRate updateRewards {
+    function init() external onlyOwner refreshMagicRate {
         require(endTimestamp == 0, "Cannot init again");
 
         uint256 rewardsAmount = magic.balanceOf(address(this)) - magicTotalDeposits;
         maxMagicPerSecond = rewardsAmount / LIFECYCLE;
         endTimestamp = block.timestamp + LIFECYCLE;
+        lastRewardTimestamp = block.timestamp;
+    }
+
+    function getAllUserDepositIds(address _user) public view returns (uint256[] memory) {
+        return allUserDepositIds[_user];
     }
 
     function getBoost(Lock _lock) public pure returns (uint256 boost, uint256 timelock) {
@@ -138,15 +144,24 @@ contract TreasuryMine is Ownable {
 
     function pendingRewardsPosition(address _user, uint256 _depositId) public view returns (uint256 pending) {
         UserInfo storage user = userInfo[_user][_depositId];
-
         uint256 _accMagicPerShare = accMagicPerShare;
         uint256 lpSupply = totalLpToken;
         if (block.timestamp > lastRewardTimestamp && magicPerSecond != 0) {
-            uint256 timeDelta = block.timestamp - lastRewardTimestamp;
+            uint256 timeDelta;
+            if (block.timestamp > endTimestamp) {
+                timeDelta = endTimestamp - lastRewardTimestamp;
+            } else {
+                timeDelta = block.timestamp - lastRewardTimestamp;
+            }
+
             uint256 magicReward = timeDelta * magicPerSecond;
+            // send 10% to treasury
+            uint256 treasuryReward = magicReward / 10;
+            magicReward -= treasuryReward;
             _accMagicPerShare += magicReward * ONE / lpSupply;
         }
-        pending = user.lpAmount * _accMagicPerShare / ONE - user.rewardDebt;
+
+        pending = ((user.lpAmount * _accMagicPerShare / ONE).toInt256() - user.rewardDebt).toUint256();
     }
 
     function pendingRewardsAll(address _user) external view returns (uint256 pending) {
@@ -158,21 +173,22 @@ contract TreasuryMine is Ownable {
     }
 
     function deposit(uint256 _amount, Lock _lock) public refreshMagicRate updateRewards {
-        if (_lock == Lock.twoWeeks) {
-            // give 1 DAY of grace period
-            require(block.timestamp + TWO_WEEKS - DAY <= endTimestamp, "Less than 2 weeks left");
-        } else if (_lock == Lock.oneMonth) {
-            // give 3 DAY of grace period
-            require(block.timestamp + ONE_MONTH - 3 * DAY<= endTimestamp, "Less than 1 month left");
-        } else if (_lock == Lock.threeMonths) {
-            // give ONE_WEEK of grace period
-            require(block.timestamp + THREE_MONTHS - ONE_WEEK <= endTimestamp, "Less than 3 months left");
-        } else {
-            revert("Invalid lock value");
+        if (endTimestamp != 0) {
+            if (_lock == Lock.twoWeeks) {
+                // give 1 DAY of grace period
+                require(block.timestamp + TWO_WEEKS - DAY <= endTimestamp, "Less than 2 weeks left");
+            } else if (_lock == Lock.oneMonth) {
+                // give 3 DAY of grace period
+                require(block.timestamp + ONE_MONTH - 3 * DAY<= endTimestamp, "Less than 1 month left");
+            } else if (_lock == Lock.threeMonths) {
+                // give ONE_WEEK of grace period
+                require(block.timestamp + THREE_MONTHS - ONE_WEEK <= endTimestamp, "Less than 3 months left");
+            } else {
+                revert("Invalid lock value");
+            }
         }
 
         (UserInfo storage user, uint256 depositId) = _addDeposit(msg.sender);
-
         user.depositAmount = _amount;
         magicTotalDeposits += _amount;
         (uint256 boost, uint256 timelock) = getBoost(_lock);
@@ -180,7 +196,7 @@ contract TreasuryMine is Ownable {
         user.lpAmount = lpAmount;
         totalLpToken += lpAmount;
         user.lockedUntil = block.timestamp + timelock;
-        user.rewardDebt = lpAmount * accMagicPerShare / ONE;
+        user.rewardDebt = (lpAmount * accMagicPerShare / ONE).toInt256();
 
         magic.safeTransferFrom(msg.sender, address(this), _amount);
 
@@ -190,13 +206,14 @@ contract TreasuryMine is Ownable {
     function withdrawPosition(uint256 _depositId, uint256 _amount) public refreshMagicRate updateRewards {
         UserInfo storage user = userInfo[msg.sender][_depositId];
         uint256 depositAmount = user.depositAmount;
+        require(depositAmount > 0, "Position does not exists");
+
         if (_amount > depositAmount) {
             _amount = depositAmount;
         }
-
         // anyone can withdraw when mine ends or kill swith was used
         if (block.timestamp < endTimestamp && !unlockAll) {
-            require(user.lockedUntil >= block.timestamp, "Position is still locked");
+            require(block.timestamp >= user.lockedUntil, "Position is still locked");
         }
 
         // Effects
@@ -207,11 +224,7 @@ contract TreasuryMine is Ownable {
         magicTotalDeposits -= _amount;
         user.lpAmount -= lpAmount;
         totalLpToken -= lpAmount;
-        user.rewardDebt -= lpAmount * accMagicPerShare / ONE;
-
-        if (user.depositAmount == 0) {
-            _removeDeposit(msg.sender, _depositId);
-        }
+        user.rewardDebt -= (lpAmount * accMagicPerShare / ONE).toInt256();
 
         // Interactions
         magic.safeTransfer(msg.sender, _amount);
@@ -220,9 +233,10 @@ contract TreasuryMine is Ownable {
     }
 
     function withdrawAll() public {
-        uint256 len = allUserDepositIds[msg.sender].length;
+        uint256[] memory depositIds = allUserDepositIds[msg.sender];
+        uint256 len = depositIds.length;
         for (uint256 i = 0; i < len; ++i) {
-            uint256 depositId = allUserDepositIds[msg.sender][i];
+            uint256 depositId = depositIds[i];
             withdrawPosition(depositId, type(uint256).max);
         }
     }
@@ -230,11 +244,16 @@ contract TreasuryMine is Ownable {
     function harvestPosition(uint256 _depositId) public refreshMagicRate updateRewards {
         UserInfo storage user = userInfo[msg.sender][_depositId];
 
-        uint256 accumulatedMagic = user.lpAmount * accMagicPerShare / ONE;
-        uint256 _pendingMagic = accumulatedMagic - user.rewardDebt;
+        int256 accumulatedMagic = (user.lpAmount * accMagicPerShare / ONE).toInt256();
+        uint256 _pendingMagic = (accumulatedMagic - user.rewardDebt).toUint256();
 
         // Effects
         user.rewardDebt = accumulatedMagic;
+
+        if (user.depositAmount == 0 && user.lpAmount == 0) {
+            _removeDeposit(msg.sender, _depositId);
+        }
+
 
         // Interactions
         if (_pendingMagic != 0) {
@@ -245,9 +264,10 @@ contract TreasuryMine is Ownable {
     }
 
     function harvestAll() public {
-        uint256 len = allUserDepositIds[msg.sender].length;
+        uint256[] memory depositIds = allUserDepositIds[msg.sender];
+        uint256 len = depositIds.length;
         for (uint256 i = 0; i < len; ++i) {
-            uint256 depositId = allUserDepositIds[msg.sender][i];
+            uint256 depositId = depositIds[i];
             harvestPosition(depositId);
         }
     }
@@ -258,9 +278,10 @@ contract TreasuryMine is Ownable {
     }
 
     function withdrawAndHarvestAll() public {
-        uint256 len = allUserDepositIds[msg.sender].length;
+        uint256[] memory depositIds = allUserDepositIds[msg.sender];
+        uint256 len = depositIds.length;
         for (uint256 i = 0; i < len; ++i) {
-            uint256 depositId = allUserDepositIds[msg.sender][i];
+            uint256 depositId = depositIds[i];
             withdrawAndHarvestPosition(depositId, type(uint256).max);
         }
     }
@@ -268,15 +289,22 @@ contract TreasuryMine is Ownable {
     function burnLeftovers() public refreshMagicRate updateRewards {
         require(block.timestamp > endTimestamp, "Will not burn before end");
         address blackhole = 0x000000000000000000000000000000000000dEaD;
-        uint256 burnAmount = LIFECYCLE * maxMagicPerSecond - totalRewardsEarned;
+        uint256 burnAmount =
+            LIFECYCLE * maxMagicPerSecond // rewards originally sent
+            - totalRewardsEarned // rewards distributed to users
+            - totalRewardsEarned / 9; // rewards distributed to treasury
         magic.safeTransfer(blackhole, burnAmount);
     }
 
     /// @notice EMERGENCY ONLY
     function kill() external onlyOwner refreshMagicRate updateRewards {
         require(block.timestamp <= endTimestamp, "Will not kill after end");
+        require(!unlockAll, "Already dead");
 
-        uint256 withdrawAmount = LIFECYCLE * maxMagicPerSecond - totalRewardsEarned;
+        uint256 withdrawAmount =
+            LIFECYCLE * maxMagicPerSecond // rewards originally sent
+            - totalRewardsEarned // rewards distributed to users
+            - totalRewardsEarned / 9;  // rewards distributed to treasury
         magic.safeTransfer(owner(), withdrawAmount);
         maxMagicPerSecond = 0;
         magicPerSecond = 0;
@@ -287,13 +315,13 @@ contract TreasuryMine is Ownable {
     function _addDeposit(address _user) internal returns (UserInfo storage user, uint256 newDepositId) {
         // start depositId from 1
         newDepositId = ++currentId[_user];
-        depositIdIndex[newDepositId] = allUserDepositIds[_user].length;
+        depositIdIndex[_user][newDepositId] = allUserDepositIds[_user].length;
         allUserDepositIds[_user].push(newDepositId);
         user = userInfo[_user][newDepositId];
     }
 
     function _removeDeposit(address _user, uint256 _depositId) internal {
-        uint256 depositIndex = depositIdIndex[_depositId];
+        uint256 depositIndex = depositIdIndex[_user][_depositId];
 
         require(allUserDepositIds[_user][depositIndex] == _depositId, 'depositId !exists');
 
@@ -301,11 +329,10 @@ contract TreasuryMine is Ownable {
         if (depositIndex != lastDepositIndex) {
             uint256 lastDepositId = allUserDepositIds[_user][lastDepositIndex];
             allUserDepositIds[_user][depositIndex] = lastDepositId;
-            depositIdIndex[lastDepositId] = depositIndex;
+            depositIdIndex[_user][lastDepositId] = depositIndex;
         }
-
-        delete allUserDepositIds[_user][lastDepositIndex];
-        delete depositIdIndex[_depositId];
+        allUserDepositIds[_user].pop();
+        delete depositIdIndex[_user][_depositId];
     }
 
     function _fundTreasury(uint256 _amount) internal {
