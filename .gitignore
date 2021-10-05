@@ -145,6 +145,7 @@ package-lock.json
 
 deployments/localhost
 deployments/rinkeby
+deployments/hardhat
 
 coverage.json
 
