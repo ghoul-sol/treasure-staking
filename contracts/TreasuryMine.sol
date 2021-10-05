@@ -189,12 +189,13 @@ contract TreasuryMine is Ownable {
         }
 
         (UserInfo storage user, uint256 depositId) = _addDeposit(msg.sender);
-        user.depositAmount = _amount;
-        magicTotalDeposits += _amount;
         (uint256 boost, uint256 timelock) = getBoost(_lock);
         uint256 lpAmount = _amount + _amount * boost / ONE;
-        user.lpAmount = lpAmount;
+        magicTotalDeposits += _amount;
         totalLpToken += lpAmount;
+
+        user.depositAmount = _amount;
+        user.lpAmount = lpAmount;
         user.lockedUntil = block.timestamp + timelock;
         user.rewardDebt = (lpAmount * accMagicPerShare / ONE).toInt256();
 
@@ -253,7 +254,6 @@ contract TreasuryMine is Ownable {
         if (user.depositAmount == 0 && user.lpAmount == 0) {
             _removeDeposit(msg.sender, _depositId);
         }
-
 
         // Interactions
         if (_pendingMagic != 0) {
