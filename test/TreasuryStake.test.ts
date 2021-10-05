@@ -1,7 +1,5 @@
 import hre from 'hardhat';
 import {expect} from 'chai';
-import {ETH_PRICEFEED, LINK_PRICEFEED} from './utils/constants/eth';
-import {getBlockTime, increaseTime, mineBlock, getCurrentTime} from './utils';
 
 const {ethers, deployments, getNamedAccounts} = hre;
 const { deploy } = deployments;
