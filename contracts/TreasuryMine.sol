@@ -123,6 +123,10 @@ contract TreasuryMine is Ownable {
         lastRewardTimestamp = block.timestamp;
     }
 
+    function isInitialized() public view returns (bool) {
+        return endTimestamp != 0;
+    }
+
     function getAllUserDepositIds(address _user) public view returns (uint256[] memory) {
         return allUserDepositIds[_user];
     }
@@ -173,19 +177,19 @@ contract TreasuryMine is Ownable {
     }
 
     function deposit(uint256 _amount, Lock _lock) public refreshMagicRate updateRewards {
-        if (endTimestamp != 0) {
-            if (_lock == Lock.twoWeeks) {
-                // give 1 DAY of grace period
-                require(block.timestamp + TWO_WEEKS - DAY <= endTimestamp, "Less than 2 weeks left");
-            } else if (_lock == Lock.oneMonth) {
-                // give 3 DAY of grace period
-                require(block.timestamp + ONE_MONTH - 3 * DAY<= endTimestamp, "Less than 1 month left");
-            } else if (_lock == Lock.threeMonths) {
-                // give ONE_WEEK of grace period
-                require(block.timestamp + THREE_MONTHS - ONE_WEEK <= endTimestamp, "Less than 3 months left");
-            } else {
-                revert("Invalid lock value");
-            }
+        require(isInitialized(), "Not initialized");
+
+        if (_lock == Lock.twoWeeks) {
+            // give 1 DAY of grace period
+            require(block.timestamp + TWO_WEEKS - DAY <= endTimestamp, "Less than 2 weeks left");
+        } else if (_lock == Lock.oneMonth) {
+            // give 3 DAY of grace period
+            require(block.timestamp + ONE_MONTH - 3 * DAY<= endTimestamp, "Less than 1 month left");
+        } else if (_lock == Lock.threeMonths) {
+            // give ONE_WEEK of grace period
+            require(block.timestamp + THREE_MONTHS - ONE_WEEK <= endTimestamp, "Less than 3 months left");
+        } else {
+            revert("Invalid lock value");
         }
 
         (UserInfo storage user, uint256 depositId) = _addDeposit(msg.sender);
