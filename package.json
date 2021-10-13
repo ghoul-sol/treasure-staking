@@ -10,7 +10,7 @@
     "type": "git",
     "url": "git@github.com:ghoul-sol/treasure-staking.git"
   },
-  "author": "",
+  "author": "Ghoul.sol",
   "license": "",
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",

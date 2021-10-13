@@ -24,7 +24,7 @@ const config: HardhatUserConfig = {
     },
     localhost: {
       url: "http://localhost:8545",
-      chainId : 61337
+      chainId : 1337
     },
     rinkeby: {
       url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
