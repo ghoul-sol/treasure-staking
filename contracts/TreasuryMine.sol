@@ -43,6 +43,7 @@ contract TreasuryMine is Ownable {
         uint256 lpAmount;
         uint256 lockedUntil;
         int256 rewardDebt;
+        Lock lock;
     }
 
     /// @notice user => depositId => UserInfo
@@ -202,6 +203,7 @@ contract TreasuryMine is Ownable {
         user.lpAmount = lpAmount;
         user.lockedUntil = block.timestamp + timelock;
         user.rewardDebt = (lpAmount * accMagicPerShare / ONE).toInt256();
+        user.lock = _lock;
 
         magic.safeTransferFrom(msg.sender, address(this), _amount);
 
