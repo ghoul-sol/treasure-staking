@@ -6,8 +6,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     const { deploy } = deployments;
     const { deployer } = await getNamedAccounts();
 
-    const magicToken = '';
-    const lpToken = '';
+    const magicToken = (await deployments.get("ERC20Mintable")).address;
+    const treasure = await deploy('ERC721Mintable', {
+      from: deployer,
+      log: true
+    })
+    const lpToken = treasure.address;
     await deploy('TreasuryStake', {
       from: deployer,
       log: true,
