@@ -63,19 +63,19 @@ contract TreasuryMine is Ownable {
 
     modifier refreshMagicRate() {
         _;
-        uint256 utilization = magicTotalDeposits * ONE / magic.totalSupply();
-        if (utilization < 2e17) {
+        uint256 util = utilization();
+        if (util < 2e17) {
             magicPerSecond = 0;
-        } else if (utilization < 3e17) { // >20%
+        } else if (util < 3e17) { // >20%
             // 50%
             magicPerSecond = maxMagicPerSecond * 5 / 10;
-        } else if (utilization < 4e17) { // >30%
+        } else if (util < 4e17) { // >30%
             // 60%
             magicPerSecond = maxMagicPerSecond * 6 / 10;
-        } else if (utilization < 5e17) { // >40%
+        } else if (util < 5e17) { // >40%
             // 80%
             magicPerSecond = maxMagicPerSecond * 8 / 10;
-        } else if (utilization < 6e17) { // >50%
+        } else if (util < 6e17) { // >50%
             // 90%
             magicPerSecond = maxMagicPerSecond * 9 / 10;
         } else { // >60%
@@ -126,6 +126,10 @@ contract TreasuryMine is Ownable {
 
     function isInitialized() public view returns (bool) {
         return endTimestamp != 0;
+    }
+
+    function utilization() public view returns (uint256) {
+        return magicTotalDeposits * ONE / magic.totalSupply();
     }
 
     function getAllUserDepositIds(address _user) public view returns (uint256[] memory) {
