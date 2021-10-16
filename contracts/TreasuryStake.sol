@@ -2,11 +2,12 @@
 pragma solidity 0.8.7;
 
 import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
+import '@openzeppelin/contracts/token/ERC1155/IERC1155.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/utils/math/SafeCast.sol';
+import '@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol';
 
-contract TreasuryStake {
+contract TreasuryStake is ERC1155Holder {
     using SafeERC20 for ERC20;
     using SafeCast for uint256;
     using SafeCast for int256;
@@ -21,7 +22,7 @@ contract TreasuryStake {
 
     // Magic token addr
     ERC20 public immutable magic;
-    ERC721 public immutable lpToken;
+    IERC1155 public immutable lpToken;
 
     uint256 public totalRewardsEarned;
     uint256 public accMagicPerShare;
@@ -29,6 +30,7 @@ contract TreasuryStake {
     uint256 public undistributedRewards;
 
     struct UserInfo {
+        uint256 depositAmount;
         uint256 tokenId;
         uint256 lpAmount;
         int256 rewardDebt;
@@ -41,17 +43,17 @@ contract TreasuryStake {
     // @notice user => tokenId => index in allUserIndex
     mapping (address => mapping(uint256 => uint256)) public tokenIdIndex;
 
-    event Deposit(address indexed user, uint256 lpAmount, uint256 tokenId);
-    event Withdraw(address indexed user, uint256 tokenId);
+    event Deposit(address indexed user, uint256 lpAmount, uint256 tokenId, uint256 depositAmount);
+    event Withdraw(address indexed user, uint256 tokenId, uint256 withdrawAmount);
     event Harvest(address indexed user, uint256 indexed index, uint256 amount);
     event LogUpdateRewards(uint256 lpSupply, uint256 accMagicPerShare);
 
     constructor(address _magic, address _lpToken) {
         magic = ERC20(_magic);
-        lpToken = ERC721(_lpToken);
+        lpToken = IERC1155(_lpToken);
     }
 
-    function getLpAmount(uint256 _tokenId) public pure returns (uint256) {
+    function getLpAmount(uint256 _tokenId, uint256 _amount) public pure returns (uint256) {
         uint256 boost;
         uint256 boostDecimal = 1e10;
 
@@ -151,7 +153,7 @@ contract TreasuryStake {
         } else {
             boost = 0;
         }
-        return ONE + ONE * boost / boostDecimal;
+        return _amount + _amount * boost / boostDecimal;
     }
 
     function getAllUserTokenIds(address _user) public view returns (uint256[] memory) {
@@ -171,37 +173,46 @@ contract TreasuryStake {
         }
     }
 
-    function deposit(uint256 _tokenId) public {
+    function deposit(uint256 _tokenId, uint256 _amount) public {
         UserInfo storage user = _addDeposit(msg.sender, _tokenId);
 
-        uint256 lpAmount = getLpAmount(_tokenId);
+        uint256 lpAmount = getLpAmount(_tokenId, _amount);
         totalLpToken += lpAmount;
 
         user.tokenId = _tokenId;
-        user.lpAmount = lpAmount;
+        user.depositAmount += _amount;
+        user.lpAmount += lpAmount;
         user.rewardDebt += (lpAmount * accMagicPerShare / ONE).toInt256();
 
-        lpToken.transferFrom(msg.sender, address(this), _tokenId);
+        lpToken.safeTransferFrom(msg.sender, address(this), _tokenId, _amount, bytes(""));
 
-        emit Deposit(msg.sender, lpAmount, _tokenId);
+        emit Deposit(msg.sender, lpAmount, _tokenId, _amount);
     }
 
-    function withdrawPosition(uint256 _tokenId) public {
+    function withdrawPosition(uint256 _tokenId, uint256 _amount) public {
         UserInfo storage user = userInfo[msg.sender][_tokenId];
         uint256 lpAmount = user.lpAmount;
-        require(lpAmount > 0, "Position invalid");
+        uint256 depositAmount = user.depositAmount;
+        require(depositAmount > 0, "Position does not exists");
+
+        if (_amount > depositAmount) {
+            _amount = depositAmount;
+        }
 
         // Effects
+        uint256 ratio = _amount * ONE / depositAmount;
+        lpAmount = lpAmount * ratio / ONE;
+
         totalLpToken -= lpAmount;
 
-        user.tokenId -= _tokenId;
+        user.depositAmount -= _amount;
         user.lpAmount -= lpAmount;
         user.rewardDebt -= (lpAmount * accMagicPerShare / ONE).toInt256();
 
         // Interactions
-        lpToken.transferFrom(address(this), msg.sender, _tokenId);
+        lpToken.safeTransferFrom(address(this), msg.sender, _tokenId, _amount, bytes(""));
 
-        emit Withdraw(msg.sender, _tokenId);
+        emit Withdraw(msg.sender, _tokenId, _amount);
     }
 
     function withdrawAll() public {
@@ -209,7 +220,7 @@ contract TreasuryStake {
         uint256 len = tokenIds.length;
         for (uint256 i = 0; i < len; ++i) {
             uint256 tokenId = tokenIds[i];
-            withdrawPosition(tokenId);
+            withdrawPosition(tokenId, type(uint256).max);
         }
     }
 
@@ -243,8 +254,8 @@ contract TreasuryStake {
         }
     }
 
-    function withdrawAndHarvestPosition(uint256 _tokenId) public {
-        withdrawPosition(_tokenId);
+    function withdrawAndHarvestPosition(uint256 _tokenId, uint256 _amount) public {
+        withdrawPosition(_tokenId, _amount);
         harvestPosition(_tokenId);
     }
 
@@ -253,7 +264,7 @@ contract TreasuryStake {
         uint256 len = tokenIds.length;
         for (uint256 i = 0; i < len; ++i) {
             uint256 tokenId = tokenIds[i];
-            withdrawAndHarvestPosition(tokenId);
+            withdrawAndHarvestPosition(tokenId, type(uint256).max);
         }
     }
 
@@ -275,9 +286,13 @@ contract TreasuryStake {
     }
 
     function _addDeposit(address _user, uint256 _tokenId) internal returns (UserInfo storage user) {
-        tokenIdIndex[_user][_tokenId] = allUserTokenIds[_user].length;
-        allUserTokenIds[_user].push(_tokenId);
         user = userInfo[_user][_tokenId];
+        uint256 tokenIndex = tokenIdIndex[_user][_tokenId];
+        if (allUserTokenIds[_user].length == 0 || allUserTokenIds[_user][tokenIndex] != _tokenId) {
+            tokenIdIndex[_user][_tokenId] = allUserTokenIds[_user].length;
+            allUserTokenIds[_user].push(_tokenId);
+            user = userInfo[_user][_tokenId];
+        }
     }
 
     function _removeDeposit(address _user, uint256 _tokenId) internal {

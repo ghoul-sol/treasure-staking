@@ -12,6 +12,8 @@ describe('TreasuryStake', function () {
   let checkDeposit: any;
   let checkPendingRewardsPosition: any;
   let checkIndexes: any;
+  const tokenId = 1;
+  const tokenAmount = 12;
 
   before(async function () {
     const namedAccounts = await getNamedAccounts();
@@ -33,8 +35,8 @@ describe('TreasuryStake', function () {
     magicToken = await ERC20Mintable.deploy()
     await magicToken.deployed();
 
-    const ERC721Mintable = await ethers.getContractFactory('ERC721Mintable')
-    lpToken = await ERC721Mintable.deploy()
+    const ERC1155Mintable = await ethers.getContractFactory('ERC1155Mintable')
+    lpToken = await ERC1155Mintable.deploy()
     await lpToken.deployed();
 
     const TreasuryStake = await ethers.getContractFactory('TreasuryStake')
@@ -52,10 +54,11 @@ describe('TreasuryStake', function () {
     user: any,
     totalLpTokenPrev: any,
     allUserDepositIdsLenPrev: any,
+    depositAmount: any
   ) => {
 
     allUserDepositIdsLenPrev = ethers.BigNumber.from(allUserDepositIdsLenPrev);
-    const lpAmount = await treasuryStake.getLpAmount(tokenId);
+    const lpAmount = await treasuryStake.getLpAmount(tokenId, depositAmount);
     expect(await treasuryStake.totalLpToken()).to.be.equal(totalLpTokenPrev.add(lpAmount));
     const allUserDepositIds = await treasuryStake.getAllUserTokenIds(user);
     expect(allUserDepositIds[allUserDepositIds.length - 1]).to.be.equal(tokenId);
@@ -63,6 +66,7 @@ describe('TreasuryStake', function () {
     expect(await treasuryStake.tokenIdIndex(user, tokenId)).to.be.equal(allUserDepositIds.length - 1);
 
     const userInfo = await treasuryStake.userInfo(user, tokenId);
+    expect(userInfo.depositAmount).to.be.equal(depositAmount);
     expect(userInfo.tokenId).to.be.equal(tokenId);
     expect(userInfo.lpAmount).to.be.equal(lpAmount);
     expect(userInfo.rewardDebt).to.be.equal((await treasuryStake.accMagicPerShare()).mul(lpAmount).div(await treasuryMine.ONE()));
@@ -79,29 +83,59 @@ describe('TreasuryStake', function () {
     const allUserTokenIds = await treasuryStake.getAllUserTokenIds(wallet);
     expect(allUserTokenIds.length).to.be.equal(allUserTokenIdsLen);
     for (let index = 0; index < allUserTokenIds.length; index++) {
-      const element = allUserTokenIds[index];
-      expect(element).to.be.equal(allUserTokenIdsExpected[index]);
+      expect(allUserTokenIds[index]).to.be.equal(allUserTokenIdsExpected[index]);
     }
   }
 
   it('getBoost()');
 
   it('deposit()', async function () {
-    const totalLpTokenPrev = await treasuryStake.totalLpToken();
-    const allUserDepositIdsLenPrev = (await treasuryStake.getAllUserTokenIds(staker1)).length;
+    let totalLpTokenPrev = await treasuryStake.totalLpToken();
+    let allUserDepositIdsLenPrev = (await treasuryStake.getAllUserTokenIds(staker1)).length;
 
-    const tokenId = await lpToken.totalSupply();
-    await lpToken.mint(staker1)
-    await lpToken.connect(staker1Signer).approve(treasuryStake.address, tokenId);
-    await treasuryStake.connect(staker1Signer).deposit(tokenId);
-    const lpAmount = await treasuryStake.getLpAmount(tokenId);
+    await lpToken.functions['mint(address,uint256,uint256)'](staker1, tokenId, tokenAmount);
+    expect(await lpToken.balanceOf(staker1, tokenId)).to.be.equal(tokenAmount);
+    await lpToken.connect(staker1Signer).setApprovalForAll(treasuryStake.address, true);
+
+    let depositAmount = 5;
+    await treasuryStake.connect(staker1Signer).deposit(tokenId, depositAmount);
+    let lpAmount = await treasuryStake.getLpAmount(tokenId, depositAmount);
 
     await checkDeposit(
       tokenId,
       staker1,
       totalLpTokenPrev,
-      allUserDepositIdsLenPrev
+      allUserDepositIdsLenPrev,
+      depositAmount
     );
+
+    await checkIndexes(
+      staker1, // wallet
+      tokenId, // tokenId
+      0, // tokenIdIndex
+      1, // allUserTokenIdsLen
+      [tokenId], // allUserTokenIdsExpected
+    )
+
+    totalLpTokenPrev = await treasuryStake.totalLpToken();
+    allUserDepositIdsLenPrev = (await treasuryStake.getAllUserTokenIds(staker1)).length;
+
+    await treasuryStake.connect(staker1Signer).deposit(tokenId, depositAmount);
+    lpAmount = await treasuryStake.getLpAmount(tokenId, depositAmount);
+
+    allUserDepositIdsLenPrev = ethers.BigNumber.from(allUserDepositIdsLenPrev);
+    lpAmount = await treasuryStake.getLpAmount(tokenId, depositAmount);
+    expect(await treasuryStake.totalLpToken()).to.be.equal(totalLpTokenPrev.add(lpAmount));
+    const allUserDepositIds = await treasuryStake.getAllUserTokenIds(staker1);
+    expect(allUserDepositIds[allUserDepositIds.length - 1]).to.be.equal(tokenId);
+    expect(allUserDepositIds.length).to.be.equal(allUserDepositIdsLenPrev);
+    expect(await treasuryStake.tokenIdIndex(staker1, tokenId)).to.be.equal(allUserDepositIds.length - 1);
+
+    const userInfo = await treasuryStake.userInfo(staker1, tokenId);
+    expect(userInfo.depositAmount).to.be.equal(depositAmount + depositAmount);
+    expect(userInfo.tokenId).to.be.equal(tokenId);
+    expect(userInfo.lpAmount).to.be.equal(lpAmount.add(lpAmount));
+    expect(userInfo.rewardDebt).to.be.equal((await treasuryStake.accMagicPerShare()).mul(lpAmount).div(await treasuryMine.ONE()));
 
     await checkIndexes(
       staker1, // wallet
@@ -122,11 +156,13 @@ describe('TreasuryStake', function () {
     expect(await treasuryStake.accMagicPerShare()).to.be.equal(0);
     expect(await treasuryStake.undistributedRewards()).to.be.equal(rewards);
 
-    const tokenId = await lpToken.totalSupply();
-    await lpToken.mint(staker1)
-    await lpToken.connect(staker1Signer).approve(treasuryStake.address, tokenId);
-    await treasuryStake.connect(staker1Signer).deposit(tokenId);
-    const lpAmount = await treasuryStake.getLpAmount(tokenId);
+    await lpToken.functions['mint(address,uint256,uint256)'](staker1, tokenId, tokenAmount);
+    expect(await lpToken.balanceOf(staker1, tokenId)).to.be.equal(tokenAmount);
+    await lpToken.connect(staker1Signer).setApprovalForAll(treasuryStake.address, true);
+
+    const depositAmount = 5;
+    await treasuryStake.connect(staker1Signer).deposit(tokenId, depositAmount);
+    const lpAmount = await treasuryStake.getLpAmount(tokenId, depositAmount);
 
     await treasuryStake.notifyRewards(0);
 
@@ -144,30 +180,32 @@ describe('TreasuryStake', function () {
     beforeEach(async function () {
       deposits = [
         [staker1, staker1Signer, 0],
-        [staker2, staker2Signer, 0],
-        [staker3, staker3Signer, 0],
+        [staker2, staker2Signer, 1],
+        [staker3, staker3Signer, 2],
       ]
 
       for (let index = 0; index < deposits.length; index++) {
         const staker = deposits[index][0];
         const stakerSigner = deposits[index][1];
+        const tokenIdLocal = deposits[index][2];
 
         const totalLpTokenPrev = await treasuryStake.totalLpToken();
         const allUserDepositIdsLenPrev = (await treasuryStake.getAllUserTokenIds(staker)).length;
 
-        const tokenId = await lpToken.totalSupply();
-        deposits[index][2] = tokenId;
-        await lpToken.mint(staker)
-        await lpToken.connect(stakerSigner).approve(treasuryStake.address, tokenId);
-        let tx = await treasuryStake.connect(stakerSigner).deposit(tokenId);
+        await lpToken.functions['mint(address,uint256,uint256)'](staker, tokenIdLocal, tokenAmount);
+        expect(await lpToken.balanceOf(staker, tokenIdLocal)).to.be.equal(tokenAmount);
+        await lpToken.connect(stakerSigner).setApprovalForAll(treasuryStake.address, true);
+
+        let tx = await treasuryStake.connect(stakerSigner).deposit(tokenIdLocal, tokenAmount);
         tx = await tx.wait();
-        const lpAmount = await treasuryStake.getLpAmount(tokenId);
+        const lpAmount = await treasuryStake.getLpAmount(tokenIdLocal, tokenAmount);
 
         await checkDeposit(
-          tokenId,
+          tokenIdLocal,
           staker,
           totalLpTokenPrev,
-          allUserDepositIdsLenPrev
+          allUserDepositIdsLenPrev,
+          tokenAmount
         );
 
         await checkIndexes(
@@ -175,7 +213,7 @@ describe('TreasuryStake', function () {
           tokenId, // tokenId
           0, // tokenIdIndex
           1, // allUserTokenIdsLen
-          [tokenId], // allUserTokenIdsExpected
+          [tokenIdLocal], // allUserTokenIdsExpected
         )
       }
     });
@@ -190,13 +228,34 @@ describe('TreasuryStake', function () {
         const totalLpTokenPrev = await treasuryStake.totalLpToken();
         const userInfoPrev = await treasuryStake.userInfo(staker, tokenId);
 
-        await treasuryStake.connect(stakerSigner).withdrawPosition(tokenId);
+        await treasuryStake.connect(stakerSigner).withdrawPosition(tokenId, tokenAmount);
 
         const userInfo = await treasuryStake.userInfo(staker, tokenId);
         expect(await treasuryStake.totalLpToken()).to.be.equal(totalLpTokenPrev.sub(userInfoPrev.lpAmount));
-        expect(userInfo.tokenId).to.be.equal(0);
+        expect(userInfo.tokenId).to.be.equal(tokenId);
+        expect(userInfo.depositAmount).to.be.equal(0);
         expect(userInfo.lpAmount).to.be.equal(0);
         expect(userInfo.rewardDebt).to.be.equal(0);
+      }
+    });
+
+    it('withdrawPosition()', async function () {
+      let totalLpToken = ethers.utils.parseUnits('0', 'ether')
+
+      for (let index = 0; index < deposits.length; index++) {
+        const staker = deposits[index][0];
+        const stakerSigner = deposits[index][1];
+        const tokenId = deposits[index][2];
+        const totalLpTokenPrev = await treasuryStake.totalLpToken();
+        const userInfoPrev = await treasuryStake.userInfo(staker, tokenId);
+
+        await treasuryStake.connect(stakerSigner).withdrawPosition(tokenId, tokenAmount / 2);
+
+        const userInfo = await treasuryStake.userInfo(staker, tokenId);
+        expect(await treasuryStake.totalLpToken()).to.be.equal(totalLpTokenPrev.sub(userInfoPrev.lpAmount.div(2)));
+        expect(userInfo.tokenId).to.be.equal(tokenId);
+        expect(userInfo.depositAmount).to.be.equal(userInfoPrev.depositAmount.div(2));
+        expect(userInfo.lpAmount.sub(userInfoPrev.lpAmount.div(2)) < 2).to.be.true;
       }
     });
 
@@ -205,39 +264,42 @@ describe('TreasuryStake', function () {
 
       beforeEach(async function () {
         secondDeposits = [
-          [staker1, staker1Signer, 0],
-          [staker2, staker2Signer, 0],
-          [staker3, staker3Signer, 0],
+          [staker1, staker1Signer, 3],
+          [staker2, staker2Signer, 4],
+          [staker3, staker3Signer, 5],
         ]
 
         for (let index = 0; index < secondDeposits.length; index++) {
           const staker = secondDeposits[index][0];
           const stakerSigner = secondDeposits[index][1];
+          const tokenIdLocal = secondDeposits[index][2];
 
           const totalLpTokenPrev = await treasuryStake.totalLpToken();
           const allUserDepositIdsLenPrev = (await treasuryStake.getAllUserTokenIds(staker)).length;
 
-          const tokenId = await lpToken.totalSupply();
-          secondDeposits[index][2] = tokenId;
-          await lpToken.mint(staker)
-          await lpToken.connect(stakerSigner).approve(treasuryStake.address, tokenId);
-          let tx = await treasuryStake.connect(stakerSigner).deposit(tokenId);
+          await lpToken.functions['mint(address,uint256,uint256)'](staker, tokenIdLocal, tokenAmount);
+          expect(await lpToken.balanceOf(staker, tokenIdLocal)).to.be.equal(tokenAmount);
+          await lpToken.connect(stakerSigner).setApprovalForAll(treasuryStake.address, true);
+
+          let tx = await treasuryStake.connect(stakerSigner).deposit(tokenIdLocal, tokenAmount);
           tx = await tx.wait();
-          const lpAmount = await treasuryStake.getLpAmount(tokenId);
+          const lpAmount = await treasuryStake.getLpAmount(tokenIdLocal, tokenAmount);
+
 
           await checkDeposit(
-            tokenId,
+            tokenIdLocal,
             staker,
             totalLpTokenPrev,
-            allUserDepositIdsLenPrev
+            allUserDepositIdsLenPrev,
+            tokenAmount
           );
 
           await checkIndexes(
             staker, // wallet
-            tokenId, // tokenId
+            tokenIdLocal, // tokenId
             1, // tokenIdIndex
             2, // allUserTokenIdsLen
-            [deposits[index][2], tokenId], // allUserTokenIdsExpected
+            [deposits[index][2], tokenIdLocal], // allUserTokenIdsExpected
           )
         }
       });
@@ -259,7 +321,7 @@ describe('TreasuryStake', function () {
 
           for (let i = 0; i < 2; i++) {
             const userInfo = await treasuryStake.userInfo(staker, tokenId[i]);
-            expect(userInfo.tokenId).to.be.equal(0);
+            expect(userInfo.tokenId).to.be.equal(tokenId[i]);
             expect(userInfo.lpAmount).to.be.equal(0);
             expect(userInfo.rewardDebt).to.be.equal(0);
 
@@ -365,9 +427,11 @@ describe('TreasuryStake', function () {
               expect(actualRewards.div(100)).to.be.equal(expectedRewards.div(100));
 
               const balBefore = await magicToken.balanceOf(staker);
-              expect(await lpToken.ownerOf(tokenId[i])).to.be.equal(treasuryStake.address);
-              await treasuryStake.connect(stakerSigner).withdrawAndHarvestPosition(tokenId[i]);
-              expect(await lpToken.ownerOf(tokenId[i])).to.be.equal(staker);
+              expect(await lpToken.balanceOf(treasuryStake.address, tokenId[i])).to.be.equal(tokenAmount);
+              expect(await lpToken.balanceOf(staker, tokenId[i])).to.be.equal(0);
+              await treasuryStake.connect(stakerSigner).withdrawAndHarvestPosition(tokenId[i], tokenAmount);
+              expect(await lpToken.balanceOf(treasuryStake.address, tokenId[i])).to.be.equal(0);
+              expect(await lpToken.balanceOf(staker, tokenId[i])).to.be.equal(tokenAmount);
               const balAfter = await magicToken.balanceOf(staker);
 
               expect(balAfter.sub(balBefore)).to.be.equal(actualRewards);
@@ -406,7 +470,7 @@ describe('TreasuryStake', function () {
               const accMagicPerShare = await treasuryStake.accMagicPerShare();
               expectedRewards = expectedRewards.add(userInfo.lpAmount.mul(accMagicPerShare).div(ONE).sub(userInfo.rewardDebt));
 
-              expect(await lpToken.ownerOf(tokenId[i])).to.be.equal(treasuryStake.address);
+              expect(await lpToken.balanceOf(treasuryStake.address, tokenId[i])).to.be.equal(tokenAmount);
 
               await checkIndexes(
                 staker, // wallet
@@ -425,8 +489,8 @@ describe('TreasuryStake', function () {
             const balAfter = await magicToken.balanceOf(staker);
 
             expect(balAfter.sub(balBefore)).to.be.equal(actualRewards);
-            expect(await lpToken.ownerOf(tokenId[0])).to.be.equal(staker);
-            expect(await lpToken.ownerOf(tokenId[1])).to.be.equal(staker);
+            expect(await lpToken.balanceOf(staker, tokenId[0])).to.be.equal(tokenAmount);
+            expect(await lpToken.balanceOf(staker, tokenId[1])).to.be.equal(tokenAmount);
 
             await checkIndexes(
               staker, // wallet

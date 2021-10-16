@@ -38,6 +38,8 @@ contract TreasuryMine is Ownable {
     uint256 public magicTotalDeposits;
     uint256 public lastRewardTimestamp;
 
+    address[] public excludedAddresses;
+
     struct UserInfo {
         uint256 depositAmount;
         uint256 lpAmount;
@@ -129,11 +131,20 @@ contract TreasuryMine is Ownable {
     }
 
     function utilization() public view returns (uint256) {
-        return magicTotalDeposits * ONE / magic.totalSupply();
+        uint256 circulatingSupply = magic.totalSupply();
+        uint256 len = excludedAddresses.length;
+        for (uint256 i = 0; i < len; i++) {
+            circulatingSupply -= magic.balanceOf(excludedAddresses[i]);
+        }
+        return magicTotalDeposits * ONE / circulatingSupply;
     }
 
     function getAllUserDepositIds(address _user) public view returns (uint256[] memory) {
         return allUserDepositIds[_user];
+    }
+
+    function getExcludedAddresses() public view returns (address[] memory) {
+        return excludedAddresses;
     }
 
     function getBoost(Lock _lock) public pure returns (uint256 boost, uint256 timelock) {
@@ -228,13 +239,14 @@ contract TreasuryMine is Ownable {
         }
 
         // Effects
-        uint256 ratio = user.lpAmount * ONE / depositAmount;
-        uint256 lpAmount = _amount * ratio / ONE;
+        uint256 ratio = _amount * ONE / depositAmount;
+        uint256 lpAmount = user.lpAmount * ratio / ONE;
+
+        totalLpToken -= lpAmount;
+        magicTotalDeposits -= _amount;
 
         user.depositAmount -= _amount;
-        magicTotalDeposits -= _amount;
         user.lpAmount -= lpAmount;
-        totalLpToken -= lpAmount;
         user.rewardDebt -= (lpAmount * accMagicPerShare / ONE).toInt256();
 
         // Interactions
@@ -304,6 +316,33 @@ contract TreasuryMine is Ownable {
             - totalRewardsEarned // rewards distributed to users
             - totalRewardsEarned / 9; // rewards distributed to treasury
         magic.safeTransfer(blackhole, burnAmount);
+    }
+
+    function addExcludedAddress(address exclude) external onlyOwner refreshMagicRate updateRewards {
+        uint256 len = excludedAddresses.length;
+        for (uint256 i = 0; i < len; ++i) {
+            require(excludedAddresses[i] != exclude, "Already excluded");
+        }
+        excludedAddresses.push(exclude);
+    }
+
+    function removeExcludedAddress(address include) external onlyOwner refreshMagicRate updateRewards {
+        uint256 index;
+        uint256 len = excludedAddresses.length;
+        require(len > 0, "no excluded addresses");
+        for (uint256 i = 0; i < len; ++i) {
+            if (excludedAddresses[i] == include) {
+                index = i;
+                break;
+            }
+        }
+        require(excludedAddresses[index] == include, "address not excluded");
+
+        uint256 lastIndex = len - 1;
+        if (index != lastIndex) {
+            excludedAddresses[index] = excludedAddresses[lastIndex];
+        }
+        excludedAddresses.pop();
     }
 
     /// @notice EMERGENCY ONLY

@@ -228,6 +228,51 @@ describe('TreasuryMine', function () {
       }
     });
 
+    it('addExcludedAddress() && removeExcludedAddress()', async function () {
+      const totalSupply = await magicToken.totalSupply();
+      const magicTotalDeposits = await treasuryMine.magicTotalDeposits();
+      const ONE = await treasuryMine.ONE();
+      const util = await treasuryMine.utilization();
+      expect(magicTotalDeposits.mul(ONE).div(totalSupply)).to.be.equal(util);
+
+      await magicToken.mint(deployer, totalSupply);
+      const newUtil = await treasuryMine.utilization();
+      expect(newUtil).to.be.equal(util.div(2));
+
+      await treasuryMine.addExcludedAddress(deployer);
+      expect(await treasuryMine.getExcludedAddresses()).to.be.deep.equal([deployer]);
+      expect(await treasuryMine.utilization()).to.be.equal(util);
+
+      await treasuryMine.addExcludedAddress(staker1);
+      expect(await treasuryMine.getExcludedAddresses()).to.be.deep.equal([deployer, staker1]);
+
+      await treasuryMine.addExcludedAddress(staker2);
+      expect(await treasuryMine.getExcludedAddresses()).to.be.deep.equal([deployer, staker1, staker2]);
+
+      await treasuryMine.addExcludedAddress(staker3);
+      expect(await treasuryMine.getExcludedAddresses()).to.be.deep.equal([deployer, staker1, staker2, staker3]);
+
+      await treasuryMine.removeExcludedAddress(staker1);
+      expect(await treasuryMine.getExcludedAddresses()).to.be.deep.equal([deployer, staker3, staker2]);
+
+      await treasuryMine.removeExcludedAddress(deployer);
+      expect(await treasuryMine.getExcludedAddresses()).to.be.deep.equal([staker2, staker3]);
+
+      await treasuryMine.removeExcludedAddress(staker3);
+      expect(await treasuryMine.getExcludedAddresses()).to.be.deep.equal([staker2]);
+
+      await expect(treasuryMine.removeExcludedAddress(staker3)).to.be.revertedWith("address not excluded");
+
+      await treasuryMine.removeExcludedAddress(staker2);
+      expect(await treasuryMine.getExcludedAddresses()).to.be.deep.equal([]);
+
+      await expect(treasuryMine.removeExcludedAddress(staker2)).to.be.revertedWith("no excluded addresses");
+
+      expect(await treasuryMine.utilization()).to.be.equal(newUtil);
+      await treasuryMine.addExcludedAddress(deployer);
+      expect(await treasuryMine.utilization()).to.be.equal(util);
+    });
+
     it('pendingRewardsPosition()', async function () {
       const timeDelta = 600;
       await mineBlock(depositTimestamp[2] + timeDelta);
