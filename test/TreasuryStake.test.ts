@@ -374,7 +374,7 @@ describe('TreasuryStake', function () {
               const userInfo = await treasuryStake.userInfo(staker, tokenId[i]);
               const expectedRewards = rewards.mul(userInfo.lpAmount).div(totalLpToken);
               const actualRewards = await treasuryStake.pendingRewardsPosition(staker, tokenId[i]);
-              expect(actualRewards.div(100)).to.be.equal(expectedRewards.div(100));
+              expect(actualRewards.div(1000)).to.be.equal(expectedRewards.div(1000));
 
               const balBefore = await magicToken.balanceOf(staker);
               await treasuryStake.connect(stakerSigner).harvestPosition(tokenId[i]);
@@ -400,7 +400,7 @@ describe('TreasuryStake', function () {
             }
 
             const actualRewards = await treasuryStake.pendingRewardsAll(staker);
-            expect(actualRewards.div(100)).to.be.equal(expectedRewards.div(100));
+            expect(actualRewards.div(1000)).to.be.equal(expectedRewards.div(1000));
 
             const balBefore = await magicToken.balanceOf(staker);
             await treasuryStake.connect(stakerSigner).harvestAll();

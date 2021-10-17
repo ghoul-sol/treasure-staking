@@ -153,7 +153,12 @@ contract TreasuryStake is ERC1155Holder {
         } else {
             boost = 0;
         }
+        _amount = addDecimals(_amount);
         return _amount + _amount * boost / boostDecimal;
+    }
+
+    function addDecimals(uint256 _amount) public pure returns (uint256) {
+        return _amount * ONE;
     }
 
     function getAllUserTokenIds(address _user) public view returns (uint256[] memory) {
