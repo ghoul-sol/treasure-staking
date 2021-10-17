@@ -121,6 +121,8 @@ contract TreasuryMine is Ownable {
         require(endTimestamp == 0, "Cannot init again");
 
         uint256 rewardsAmount = magic.balanceOf(address(this)) - magicTotalDeposits;
+        require(rewardsAmount > 0, "No rewards sent");
+
         maxMagicPerSecond = rewardsAmount / LIFECYCLE;
         endTimestamp = block.timestamp + LIFECYCLE;
         lastRewardTimestamp = block.timestamp;
@@ -130,13 +132,17 @@ contract TreasuryMine is Ownable {
         return endTimestamp != 0;
     }
 
-    function utilization() public view returns (uint256) {
+    function utilization() public view returns (uint256 util) {
         uint256 circulatingSupply = magic.totalSupply();
         uint256 len = excludedAddresses.length;
         for (uint256 i = 0; i < len; i++) {
             circulatingSupply -= magic.balanceOf(excludedAddresses[i]);
         }
-        return magicTotalDeposits * ONE / circulatingSupply;
+        uint256 rewardsAmount = magic.balanceOf(address(this)) - magicTotalDeposits;
+        circulatingSupply -= rewardsAmount;
+        if (circulatingSupply != 0) {
+            util = magicTotalDeposits * ONE / circulatingSupply;
+        }
     }
 
     function getAllUserDepositIds(address _user) public view returns (uint256[] memory) {
@@ -173,11 +179,11 @@ contract TreasuryMine is Ownable {
             } else {
                 timeDelta = block.timestamp - lastRewardTimestamp;
             }
-
             uint256 magicReward = timeDelta * magicPerSecond;
             // send 10% to treasury
             uint256 treasuryReward = magicReward / 10;
             magicReward -= treasuryReward;
+
             _accMagicPerShare += magicReward * ONE / lpSupply;
         }
 
@@ -311,11 +317,11 @@ contract TreasuryMine is Ownable {
     function burnLeftovers() public refreshMagicRate updateRewards {
         require(block.timestamp > endTimestamp, "Will not burn before end");
         address blackhole = 0x000000000000000000000000000000000000dEaD;
-        uint256 burnAmount =
-            LIFECYCLE * maxMagicPerSecond // rewards originally sent
-            - totalRewardsEarned // rewards distributed to users
-            - totalRewardsEarned / 9; // rewards distributed to treasury
-        magic.safeTransfer(blackhole, burnAmount);
+        int256 burnAmount =
+            (LIFECYCLE * maxMagicPerSecond).toInt256() // rewards originally sent
+            - (totalRewardsEarned).toInt256() // rewards distributed to users
+            - (totalRewardsEarned / 9).toInt256(); // rewards distributed to treasury
+        if (burnAmount > 0) magic.safeTransfer(blackhole, uint256(burnAmount));
     }
 
     function addExcludedAddress(address exclude) external onlyOwner refreshMagicRate updateRewards {
@@ -350,15 +356,17 @@ contract TreasuryMine is Ownable {
         require(block.timestamp <= endTimestamp, "Will not kill after end");
         require(!unlockAll, "Already dead");
 
-        uint256 withdrawAmount =
-            LIFECYCLE * maxMagicPerSecond // rewards originally sent
-            - totalRewardsEarned // rewards distributed to users
-            - totalRewardsEarned / 9;  // rewards distributed to treasury
-        magic.safeTransfer(owner(), withdrawAmount);
+        int256 withdrawAmount =
+            (LIFECYCLE * maxMagicPerSecond).toInt256() // rewards originally sent
+            - (totalRewardsEarned).toInt256() // rewards distributed to users
+            - (totalRewardsEarned / 9).toInt256(); // rewards distributed to treasury
+        if (withdrawAmount > 0) {
+            magic.safeTransfer(owner(), uint256(withdrawAmount));
+            emit EmergencyWithdraw(owner(), uint256(withdrawAmount));
+        }
         maxMagicPerSecond = 0;
         magicPerSecond = 0;
         unlockAll = true;
-        emit EmergencyWithdraw(owner(), withdrawAmount);
     }
 
     function _addDeposit(address _user) internal returns (UserInfo storage user, uint256 newDepositId) {

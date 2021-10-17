@@ -85,11 +85,12 @@ describe('TreasuryMine', function () {
   ) => {
     let magicReward = (await treasuryMine.magicPerSecond()).mul(timeDelta);
     magicReward = magicReward.sub(magicReward.div(10));
+
     const userInfo = await treasuryMine.userInfo(wallet, 1);
     const ONE = await treasuryMine.ONE();
     const lpSupply = await treasuryMine.totalLpToken();
-    let accMagicPerShare = await treasuryStake.accMagicPerShare();
-    accMagicPerShare = accMagicPerShare.add(magicReward).mul(ONE).div(lpSupply);
+    let accMagicPerShare = await treasuryMine.accMagicPerShare();
+    accMagicPerShare = accMagicPerShare.add(magicReward.mul(ONE).div(lpSupply));
     const pending = userInfo.lpAmount.mul(accMagicPerShare).div(ONE).sub(userInfo.rewardDebt);
     // const pending = userInfo.lpAmount.mul(magicReward.mul(ONE).div(lpSupply)).div(ONE).sub(userInfo.rewardDebt);
     expect(await treasuryMine.pendingRewardsPosition(wallet, 1)).to.be.equal(pending)
@@ -231,17 +232,20 @@ describe('TreasuryMine', function () {
     it('addExcludedAddress() && removeExcludedAddress()', async function () {
       const totalSupply = await magicToken.totalSupply();
       const magicTotalDeposits = await treasuryMine.magicTotalDeposits();
+      const bal = await magicToken.balanceOf(treasuryMine.address);
+      const rewards = bal.sub(magicTotalDeposits);
+      const circulatingSupply = totalSupply.sub(rewards);
       const ONE = await treasuryMine.ONE();
       const util = await treasuryMine.utilization();
-      expect(magicTotalDeposits.mul(ONE).div(totalSupply)).to.be.equal(util);
+      expect(magicTotalDeposits.mul(ONE).div(circulatingSupply)).to.be.equal(util);
 
-      await magicToken.mint(deployer, totalSupply);
+      await magicToken.mint(deployer, magicTotalDeposits);
       const newUtil = await treasuryMine.utilization();
-      expect(newUtil).to.be.equal(util.div(2));
+      expect(newUtil).to.be.equal("499999888710850981");
 
       await treasuryMine.addExcludedAddress(deployer);
       expect(await treasuryMine.getExcludedAddresses()).to.be.deep.equal([deployer]);
-      expect(await treasuryMine.utilization()).to.be.equal(util);
+      expect(await treasuryMine.utilization()).to.be.equal("999999455919890831");
 
       await treasuryMine.addExcludedAddress(staker1);
       expect(await treasuryMine.getExcludedAddresses()).to.be.deep.equal([deployer, staker1]);
@@ -268,9 +272,9 @@ describe('TreasuryMine', function () {
 
       await expect(treasuryMine.removeExcludedAddress(staker2)).to.be.revertedWith("no excluded addresses");
 
-      expect(await treasuryMine.utilization()).to.be.equal(newUtil);
+      expect(await treasuryMine.utilization()).to.be.equal("499999772475570454");
       await treasuryMine.addExcludedAddress(deployer);
-      expect(await treasuryMine.utilization()).to.be.equal(util);
+      expect(await treasuryMine.utilization()).to.be.equal("999999010763878240");
     });
 
     it('pendingRewardsPosition()', async function () {
@@ -317,7 +321,9 @@ describe('TreasuryMine', function () {
         const userInfo = await treasuryMine.userInfo(wallet, 1);
         const ONE = await treasuryMine.ONE();
         const lpSupply = await treasuryMine.totalLpToken();
-        const pending = userInfo.lpAmount.mul(magicReward.mul(ONE).div(lpSupply)).div(ONE).sub(userInfo.rewardDebt);
+        let accMagicPerShare = await treasuryMine.accMagicPerShare();
+        accMagicPerShare = accMagicPerShare.add(magicReward.mul(ONE).div(lpSupply));
+        const pending = userInfo.lpAmount.mul(accMagicPerShare).div(ONE).sub(userInfo.rewardDebt);
         expect(await treasuryMine.pendingRewardsAll(wallet)).to.be.equal(pending)
 
         await checkIndexes(
@@ -488,8 +494,8 @@ describe('TreasuryMine', function () {
           const totalRewardsEarned = await treasuryMine.totalRewardsEarned();
           const magicTotalDeposits = await treasuryMine.magicTotalDeposits();
 
-          expect(await magicToken.balanceOf(await treasuryMine.treasuryStake()))
-            .to.be.equal(totalRewardsEarned.div(9))
+          const treasuryStakeBal = await magicToken.balanceOf(await treasuryMine.treasuryStake())
+          expect(treasuryStakeBal.div(1000)).to.be.equal(totalRewardsEarned.div(9).div(1000))
 
           const currentBalance = await magicToken.balanceOf(treasuryMine.address);
           const expectedBalance = rewards
