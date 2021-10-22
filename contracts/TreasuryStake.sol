@@ -295,7 +295,6 @@ contract TreasuryStake is ERC1155Holder {
         if (allUserTokenIds[_user].length == 0 || allUserTokenIds[_user][tokenIndex] != _tokenId) {
             tokenIdIndex[_user][_tokenId] = allUserTokenIds[_user].length;
             allUserTokenIds[_user].push(_tokenId);
-            user = userInfo[_user][_tokenId];
         }
     }
 
