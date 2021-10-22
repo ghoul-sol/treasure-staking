@@ -515,7 +515,7 @@ describe('TreasuryMine', function () {
 
           const magicTotalDeposits = await treasuryMine.magicTotalDeposits();
           const ONE = await treasuryMine.ONE();
-          const utilization = magicTotalDeposits.mul(ONE).div(await magicToken.totalSupply());
+          const utilization = await treasuryMine.utilization();
           console.log('utilization', utilization.toString())
           const magicPerSecond = await treasuryMine.magicPerSecond();
           const maxMagicPerSecond = await treasuryMine.maxMagicPerSecond();
