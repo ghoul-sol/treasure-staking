@@ -87,7 +87,65 @@ describe('TreasuryStake', function () {
     }
   }
 
-  it('getBoost()');
+  it('getBoost()', async function () {
+    const tests = [
+      {tokenId: 39, boost:	1003},
+      {tokenId: 46, boost:	821},
+      {tokenId: 47, boost:	973},
+      {tokenId: 48, boost:	100},
+      {tokenId: 49, boost:	204},
+      {tokenId: 51, boost:	1015},
+      {tokenId: 52, boost:	1015},
+      {tokenId: 53, boost:	809},
+      {tokenId: 54, boost:	977},
+      {tokenId: 68, boost:	752},
+      {tokenId: 69, boost:	450},
+      {tokenId: 71, boost:	287},
+      {tokenId: 72, boost:	774},
+      {tokenId: 73, boost:	104},
+      {tokenId: 74, boost:	846},
+      {tokenId: 75, boost:	762},
+      {tokenId: 76, boost:	162},
+      {tokenId: 77, boost:	103},
+      {tokenId: 79, boost:	101},
+      {tokenId: 82, boost:	739},
+      {tokenId: 91, boost:	779},
+      {tokenId: 92, boost:	103},
+      {tokenId: 93, boost:	429},
+      {tokenId: 94, boost:	436},
+      {tokenId: 95, boost:	1047},
+      {tokenId: 96, boost:	105},
+      {tokenId: 97, boost:	1052},
+      {tokenId: 98, boost:	965},
+      {tokenId: 99, boost:	849},
+      {tokenId: 100, boost:	710},
+      {tokenId: 103, boost:	402},
+      {tokenId: 104, boost:	830},
+      {tokenId: 105, boost:	896},
+      {tokenId: 114, boost:	212},
+      {tokenId: 115, boost:	103},
+      {tokenId: 116, boost:	772},
+      {tokenId: 117, boost:	100},
+      {tokenId: 132, boost:	851},
+      {tokenId: 133, boost:	103},
+      {tokenId: 141, boost:	794},
+      {tokenId: 151, boost:	105},
+      {tokenId: 152, boost:	798},
+      {tokenId: 153, boost:	854},
+      {tokenId: 161, boost:	977},
+      {tokenId: 162, boost:	791},
+      {tokenId: 164, boost:	676}
+    ]
+
+    for (let index = 0; index < tests.length; index++) {
+      const test = tests[index];
+      const amount = ethers.utils.parseUnits('1', 'ether')
+
+      expect(await treasuryStake.getLpAmount(test.tokenId, 1)).to.be.equal(
+        amount.add(amount.mul(test.boost).div(100))
+      )
+    }
+  });
 
   it('deposit()', async function () {
     let totalLpTokenPrev = await treasuryStake.totalLpToken();
@@ -179,9 +237,9 @@ describe('TreasuryStake', function () {
 
     beforeEach(async function () {
       deposits = [
-        [staker1, staker1Signer, 0],
-        [staker2, staker2Signer, 1],
-        [staker3, staker3Signer, 2],
+        [staker1, staker1Signer, 39],
+        [staker2, staker2Signer, 77],
+        [staker3, staker3Signer, 92],
       ]
 
       for (let index = 0; index < deposits.length; index++) {
@@ -256,6 +314,34 @@ describe('TreasuryStake', function () {
         expect(userInfo.tokenId).to.be.equal(tokenId);
         expect(userInfo.depositAmount).to.be.equal(userInfoPrev.depositAmount.div(2));
         expect(userInfo.lpAmount.sub(userInfoPrev.lpAmount.div(2)) < 2).to.be.true;
+      }
+    });
+
+    it('notifyRewards()', async function () {
+      expect(await treasuryStake.totalLpToken()).to.be.equal('181080000000000000000');
+      expect(await treasuryStake.accMagicPerShare()).to.be.equal(0);
+      expect(await treasuryStake.undistributedRewards()).to.be.equal(0);
+
+      const rewards = ethers.utils.parseUnits('100', 'ether');
+      await magicToken.mint(deployer, rewards);
+      await magicToken.approve(treasuryStake.address, rewards);
+      await treasuryStake.notifyRewards(rewards);
+
+      const expectedRewards = [
+        '73094764744864148359',
+        '13452617627567925763',
+        '13452617627567925763'
+      ]
+
+      for (let index = 0; index < deposits.length; index++) {
+        const staker = deposits[index][0];
+        const stakerSigner = deposits[index][1];
+        const tokenId = deposits[index][2];
+
+        expect(await treasuryStake.pendingRewardsPosition(staker, tokenId)).to.be.equal(expectedRewards[index])
+        await treasuryStake.connect(stakerSigner).harvestPosition(tokenId);
+
+        expect(await magicToken.balanceOf(staker)).to.be.equal(expectedRewards[index])
       }
     });
 

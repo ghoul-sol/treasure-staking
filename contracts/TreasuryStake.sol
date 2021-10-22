@@ -55,101 +55,100 @@ contract TreasuryStake is ERC1155Holder {
 
     function getLpAmount(uint256 _tokenId, uint256 _amount) public pure returns (uint256) {
         uint256 boost;
-        uint256 boostDecimal = 1e10;
+        uint256 boostDecimal = 100;
 
-        // TODO: set proper token ids
-        if (_tokenId == 0) { // Honeycomb	10.5232558139535
-            boost = 105232558139;
-        } else if (_tokenId == 1) { // Grin	10.474537037037
-            boost = 104745370370;
-        } else if (_tokenId == 2) { // Cap of Invisibility	10.1457399103139
-            boost = 101457399103;
-        } else if (_tokenId == 3) { // Bottomless Elixir	10.1457399103139
-            boost = 101457399103;
-        } else if (_tokenId == 1) { // Ancient Relic	10.0332594235033
-            boost = 100332594235;
-        } else if (_tokenId == 1) { // Thread of Divine Silk	9.7732181425486
-            boost = 97732181425;
-        } else if (_tokenId == 1) { // Castle	9.7732181425486
-            boost = 97732181425;
-        } else if (_tokenId == 1) { // Bait for Monster	9.73118279569892
-            boost = 97311827956;
-        } else if (_tokenId == 1) { // Immovable Stone	9.64818763326226
-            boost = 96481876332;
-        } else if (_tokenId == 1) { // Mollusk Shell	8.96039603960396
-            boost = 89603960396;
-        } else if (_tokenId == 1) { // Red FeatherSnowWhiteFeather	8.5377358490566
-            boost = 85377358490;
-        } else if (_tokenId == 1) { // Red Feather	8.50563909774436
-            boost = 85056390977;
-        } else if (_tokenId == 1) { // Ivory Breastpin	8.48968105065666
-            boost = 84896810506;
-        } else if (_tokenId == 1) { // Divine Hourglass	8.45794392523364
-            boost = 84579439252;
-        } else if (_tokenId == 1) { // Military Stipend	8.30275229357798
-            boost = 83027522935;
-        } else if (_tokenId == 1) { // Bag of Rare Mushrooms	8.21234119782214
-            boost = 82123411978;
-        } else if (_tokenId == 1) { // Carriage	8.09481216457961
-            boost = 80948121645;
-        } else if (_tokenId == 1) { // Small Bird	7.98059964726631
-            boost = 79805996472;
-        } else if (_tokenId == 1) { // Score of Ivory	7.93859649122807
-            boost = 79385964912;
-        } else if (_tokenId == 1) { // Unbreakable Pocketwatch	7.91083916083916
-            boost = 79108391608;
-        } else if (_tokenId == 1) { // Framed Butterfly	7.78829604130809
-            boost = 77882960413;
-        } else if (_tokenId == 1) { // Cow	7.73504273504274
-            boost = 77350427350;
-        } else if (_tokenId == 1) { // Pot of Gold	7.72184300341297
-            boost = 77218430034;
-        } else if (_tokenId == 1) { // Divine Mask	7.61784511784512
-            boost = 76178451178;
-        } else if (_tokenId == 1) { // Common Bead	7.51661129568106
-            boost = 75166112956;
-        } else if (_tokenId == 1) { // Favor from the Gods	7.3937908496732
-            boost = 73937908496;
-        } else if (_tokenId == 1) { // Jar of Fairies	7.10361067503925
-            boost = 71036106750;
-        } else if (_tokenId == 1) { // Witches Broom	6.76382660687593
-            boost = 67638266068;
-        } else if (_tokenId == 1) { // Common Feather	4.50248756218905
-            boost = 45024875621;
-        } else if (_tokenId == 1) { // Green Rupee	4.35934489402698
-            boost = 43593448940;
-        } else if (_tokenId == 1) { // Grain	4.29316888045541
-            boost = 42931688804;
-        } else if (_tokenId == 1) { // Lumber	4.02222222222222
-            boost = 40222222222;
-        } else if (_tokenId == 1) { // Common Relic	2.87119289340102
-            boost = 28711928934;
-        } else if (_tokenId == 1) { // Ox	2.11646398503274
-            boost = 21164639850;
-        } else if (_tokenId == 1) { // Blue Rupee	2.03645364536454
-            boost = 20364536453;
-        } else if (_tokenId == 1) { // Donkey	1.62360961607463
-            boost = 16236096160;
-        } else if (_tokenId == 1) { // Half-Penny	1.04624277456647
-            boost = 10462427745;
-        } else if (_tokenId == 1) { // Silver Penny	1.04503464203233
-            boost = 10450346420;
-        } else if (_tokenId == 1) { // Diamond	1.04190651623302
-            boost = 10419065162;
-        } else if (_tokenId == 1) { // Pearl	1.03334094542133
-            boost = 10333409454;
-        } else if (_tokenId == 1) { // Dragon Tail	1.02747502270663
-            boost = 10274750227;
-        } else if (_tokenId == 1) { // Red Rupee	1.02677558429771
-            boost = 10267755842;
-        } else if (_tokenId == 1) { // Gold Coin	1.02537956038976
-            boost = 10253795603;
-        } else if (_tokenId == 1) { // Emerald	1.01004464285714
-            boost = 10100446428;
-        } else if (_tokenId == 1) { // Beetle-wing	1.00310352471736
-            boost = 10031035247;
-        } else if (_tokenId == 1) { // Quarter-Penny	1
-            boost = 10000000000;
+        if (_tokenId == 39) { // Ancient Relic 10.03
+            boost = 1003;
+        } else if (_tokenId == 46) { // Bag of Rare Mushrooms 8.21
+            boost = 821;
+        } else if (_tokenId == 47) { // Bait for Monsters 9.73
+            boost = 973;
+        } else if (_tokenId == 48) { // Beetle-wing 1.00
+            boost = 100;
+        } else if (_tokenId == 49) { // Blue Rupee 2.04
+            boost = 204;
+        } else if (_tokenId == 51) { // Bottomless Elixir 10.15
+            boost = 1015;
+        } else if (_tokenId == 52) { // Cap of Invisibility 10.15
+            boost = 1015;
+        } else if (_tokenId == 53) { // Carriage 8.09
+            boost = 809;
+        } else if (_tokenId == 54) { // Castle 9.77
+            boost = 977;
+        } else if (_tokenId == 68) { // Common Bead 7.52
+            boost = 752;
+        } else if (_tokenId == 69) { // Common Feather 4.50
+            boost = 450;
+        } else if (_tokenId == 71) { // Common Relic 2.87
+            boost = 287;
+        } else if (_tokenId == 72) { // Cow 7.74
+            boost = 774;
+        } else if (_tokenId == 73) { // Diamond 1.04
+            boost = 104;
+        } else if (_tokenId == 74) { // Divine Hourglass 8.46
+            boost = 846;
+        } else if (_tokenId == 75) { // Divine Mask 7.62
+            boost = 762;
+        } else if (_tokenId == 76) { // Donkey 1.62
+            boost = 162;
+        } else if (_tokenId == 77) { // Dragon Tail 1.03
+            boost = 103;
+        } else if (_tokenId == 79) { // Emerald 1.01
+            boost = 101;
+        } else if (_tokenId == 82) { // Favor from the Gods 7.39
+            boost = 739;
+        } else if (_tokenId == 91) { // Framed Butterfly 7.79
+            boost = 779;
+        } else if (_tokenId == 92) { // Gold Coin 1.03
+            boost = 103;
+        } else if (_tokenId == 93) { // Grain 4.29
+            boost = 429;
+        } else if (_tokenId == 94) { // Green Rupee 4.36
+            boost = 436;
+        } else if (_tokenId == 95) { // Grin 10.47
+            boost = 1047;
+        } else if (_tokenId == 96) { // Half-Penny 1.05
+            boost = 105;
+        } else if (_tokenId == 97) { // Honeycomb 10.52
+            boost = 1052;
+        } else if (_tokenId == 98) { // Immovable Stone 9.65
+            boost = 965;
+        } else if (_tokenId == 99) { // Ivory Breastpin 8.49
+            boost = 849;
+        } else if (_tokenId == 100) { // Jar of Fairies 7.10
+            boost = 710;
+        } else if (_tokenId == 103) { // Lumber 4.02
+            boost = 402;
+        } else if (_tokenId == 104) { // Military Stipend 8.30
+            boost = 830;
+        } else if (_tokenId == 105) { // Mollusk Shell 8.96
+            boost = 896;
+        } else if (_tokenId == 114) { // Ox 2.12
+            boost = 212;
+        } else if (_tokenId == 115) { // Pearl 1.03
+            boost = 103;
+        } else if (_tokenId == 116) { // Pot of Gold 7.72
+            boost = 772;
+        } else if (_tokenId == 117) { // Quarter-Penny 1.00
+            boost = 100;
+        } else if (_tokenId == 132) { // Red Feather 8.51
+            boost = 851;
+        } else if (_tokenId == 133) { // Red Rupee 1.03
+            boost = 103;
+        } else if (_tokenId == 141) { // Score of Ivory 7.94
+            boost = 794;
+        } else if (_tokenId == 151) { // Silver Coin 1.05
+            boost = 105;
+        } else if (_tokenId == 152) { // Small Bird 7.98
+            boost = 798;
+        } else if (_tokenId == 153) { // Snow White Feather 8.54
+            boost = 854;
+        } else if (_tokenId == 161) { // Thread of Divine Silk 9.77
+            boost = 977;
+        } else if (_tokenId == 162) { // Unbreakable Pocketwatch 7.91
+            boost = 791;
+        } else if (_tokenId == 164) { // Witches Broom 6.76
+            boost = 676;
         } else {
             boost = 0;
         }
