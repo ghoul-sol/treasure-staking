@@ -7,24 +7,25 @@ import 'hardhat-deploy-ethers';
 import 'hardhat-gas-reporter';
 
 const privateKey = process.env.DEV_PRIVATE_KEY || "a35028be607c31f34f141f1a565b66ff519399d6ec05d16f565c2b7b3a9b90a8"; // address: 0xa60C5868cE00D2a011144b741cFeFB368C19e057
-const INFURA_ID = process.env.INFURA_ID;
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
       forking: {
         enabled: process.env.FORKING === "true",
-        url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
-        blockNumber: 13334370
+        // url: `https://arb-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+        url: `https://arbitrum-mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
+        blockNumber: 2459794
       },
       live: false,
       saveDeployments: true,
       tags: ["test", "local"],
-      chainId : 1337
+      chainId : 1337,
+      deploy: ["deploy/fork"],
     },
     localhost: {
       url: "http://localhost:8545",
-      chainId : 1337
+      chainId : 1337,
     },
     rinkeby: {
       url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
@@ -66,6 +67,15 @@ const config: HardhatUserConfig = {
       saveDeployments: true,
       gasMultiplier: 2,
       deploy: ["deploy/arbitrum"],
+    },
+    arbitrumStaging: {
+      url: "https://arb1.arbitrum.io/rpc",
+      accounts: [`${privateKey}`],
+      chainId: 42161,
+      live: true,
+      saveDeployments: true,
+      gasMultiplier: 2,
+      deploy: ["deploy/arbitrumStaging"],
     }
   },
   solidity: {
@@ -93,7 +103,7 @@ const config: HardhatUserConfig = {
   },
   gasReporter: {
     currency: 'USD',
-    enabled: false,
+    enabled: true,
   },
   paths: {
     artifacts: "artifacts",
