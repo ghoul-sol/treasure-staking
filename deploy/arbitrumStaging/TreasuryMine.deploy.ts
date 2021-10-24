@@ -7,7 +7,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     const { deployer } = await getNamedAccounts();
 
     const newOwner = deployer;
-    const magicArbitrum = "0xfab95915359bdCa523c0EFe55e73B30b77897e1f";
+    const magicArbitrum = "0x86083653fef09AB89BEC7dA3815dD76AF9bCc006";
     await deploy('TreasuryMine', {
       from: deployer,
       log: true,
