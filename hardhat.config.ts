@@ -13,15 +13,15 @@ const config: HardhatUserConfig = {
     hardhat: {
       forking: {
         enabled: process.env.FORKING === "true",
-        // url: `https://arb-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
-        url: `https://arbitrum-mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
-        blockNumber: 2459794
+        url: `https://arb-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+        // url: `https://arbitrum-mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
+        blockNumber: 2836024
       },
       live: false,
       saveDeployments: true,
       tags: ["test", "local"],
       chainId : 1337,
-      deploy: ["deploy/fork"],
+      deploy: ["deploy/arbitrum"],
     },
     localhost: {
       url: "http://localhost:8545",
