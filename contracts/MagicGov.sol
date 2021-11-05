@@ -9,12 +9,12 @@ import '@openzeppelin/contracts/utils/math/SafeCast.sol';
 import './interfaces/IUniswapV2Pair.sol';
 import './TreasuryMine.sol';
 
-contract MagicGov is ERC20 {
+contract TreasureDAO is ERC20 {
     TreasuryMine public treasuryMine;
     IUniswapV2Pair public sushiLP;
     ERC20 public lpRewards;
 
-    constructor(address _treasuryMine, address _sushiLP, address _lpRewards) ERC20("Magic Gov", "MAGIC GOV") {
+    constructor(address _treasuryMine, address _sushiLP, address _lpRewards) ERC20("Treasure DAO Governance", "gMAGIC") {
         treasuryMine = TreasuryMine(_treasuryMine);
         sushiLP = IUniswapV2Pair(_sushiLP);
         lpRewards = ERC20(_lpRewards);
