@@ -3,11 +3,11 @@ pragma solidity 0.8.11;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
-import '@openzeppelin/contracts/access/AccessControlEnumerable.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
-import 'hardhat/console.sol';
+import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract MasterOfCoin is AccessControlEnumerable {
+contract MasterOfCoin is Initializable, AccessControlEnumerableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
 
@@ -51,20 +51,19 @@ contract MasterOfCoin is AccessControlEnumerable {
     event RewardsPaid(address indexed stream, uint256 rewardsPaid, uint256 rewardsPaidInTotal);
     event Withdraw(address to, uint256 amount);
 
-    function init(address _magic) external {
-        require(address(magic) == address(0), "Already initialized");
-
+    function init(address _magic) external initializer {
         magic = IERC20(_magic);
 
         _setRoleAdmin(MASTER_OF_COIN_ADMIN_ROLE, MASTER_OF_COIN_ADMIN_ROLE);
         _grantRole(MASTER_OF_COIN_ADMIN_ROLE, msg.sender);
+
+        __AccessControlEnumerable_init();
     }
 
     function requestRewards() public returns (uint256 rewardsPaid) {
         CoinStream storage stream = streamConfig[msg.sender];
 
         rewardsPaid = getPendingRewards(msg.sender);
-        console.log('rewardsPaid', rewardsPaid);
 
         if (rewardsPaid == 0 || magic.balanceOf(address(this)) < rewardsPaid) {
             return 0;
@@ -73,7 +72,6 @@ contract MasterOfCoin is AccessControlEnumerable {
 
         stream.paid += rewardsPaid;
         stream.lastRewardTimestamp = block.timestamp;
-        console.log('stream.paid', stream.paid);
 
         // this should never happen but better safe than sorry
         require(stream.paid <= stream.totalRewards, "Rewards overflow");
@@ -91,6 +89,10 @@ contract MasterOfCoin is AccessControlEnumerable {
 
     function getStreams() external view returns (address[] memory) {
         return streams.values();
+    }
+
+    function getStreamConfig(address _stream) external view returns (CoinStream memory) {
+        return streamConfig[_stream];
     }
 
     function getGlobalRatePerSecond() external view returns (uint256 globalRatePerSecond) {
@@ -228,5 +230,9 @@ contract MasterOfCoin is AccessControlEnumerable {
     function withdrawMagic(address _to, uint256 _amount) external onlyRole(MASTER_OF_COIN_ADMIN_ROLE) {
         magic.safeTransfer(_to, _amount);
         emit Withdraw(_to, _amount);
+    }
+
+    function setMagicToken(address _magic) external onlyRole(MASTER_OF_COIN_ADMIN_ROLE) {
+        magic = IERC20(_magic);
     }
 }

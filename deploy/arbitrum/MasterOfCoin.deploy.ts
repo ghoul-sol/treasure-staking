@@ -13,8 +13,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       from: deployer,
       log: true,
       proxy: {
-        owner: newOwner,
-        proxyContract: "EIP173Proxy",
         execute: {
           methodName: "init",
           args: [magicArbitrum]
@@ -22,15 +20,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       }
     })
 
-    if(await read('MasterOfCoin', 'owner') != newOwner) {
+    const MASTER_OF_COIN_ADMIN_ROLE = await read('MasterOfCoin', 'MASTER_OF_COIN_ADMIN_ROLE');
+
+    if(!(await read('MasterOfCoin', 'hasRole', MASTER_OF_COIN_ADMIN_ROLE, newOwner))) {
       await execute(
         'MasterOfCoin',
         { from: deployer, log: true },
-        'transferOwnership',
+        'grantRole',
+        MASTER_OF_COIN_ADMIN_ROLE,
         newOwner
       );
     }
 };
 export default func;
 func.tags = ['MasterOfCoin'];
-// func.dependencies = ['treasuryStake']
