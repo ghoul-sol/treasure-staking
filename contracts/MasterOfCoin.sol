@@ -7,28 +7,25 @@ import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract MasterOfCoin is Initializable, AccessControlEnumerableUpgradeable {
+import './interfaces/IMasterOfCoin.sol';
+import './interfaces/IStream.sol';
+
+contract MasterOfCoin is IMasterOfCoin, Initializable, AccessControlEnumerableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
 
     bytes32 public constant MASTER_OF_COIN_ADMIN_ROLE = keccak256("MASTER_OF_COIN_ADMIN_ROLE");
 
-    struct CoinStream {
-        uint256 totalRewards;
-        uint256 startTimestamp;
-        uint256 endTimestamp;
-        uint256 lastRewardTimestamp;
-        uint256 ratePerSecond;
-        uint256 paid;
-    }
-
     IERC20 public magic;
 
-    /// @notice contract => CoinStream
+    /// @notice stream address => CoinStream
     mapping (address => CoinStream) public streamConfig;
 
     /// @notice stream ID => stream address
     EnumerableSet.AddressSet private streams;
+
+    /// @notice stream address => bool
+    mapping (address => bool) public callbackRegistry;
 
     modifier streamExists(address _stream) {
         require(streams.contains(_stream), "Stream does not exist");
@@ -38,6 +35,12 @@ contract MasterOfCoin is Initializable, AccessControlEnumerableUpgradeable {
     modifier streamActive(address _stream) {
         require(streamConfig[_stream].endTimestamp > block.timestamp, "Stream ended");
         _;
+    }
+
+    modifier callbackStream(address _stream) {
+        if (callbackRegistry[_stream]) IStream(_stream).preRateUpdate();
+        _;
+        if (callbackRegistry[_stream]) IStream(_stream).postRateUpdate();
     }
 
     event StreamAdded(address indexed stream, uint256 amount, uint256 startTimestamp, uint256 endTimestamp);
@@ -50,6 +53,7 @@ contract MasterOfCoin is Initializable, AccessControlEnumerableUpgradeable {
 
     event RewardsPaid(address indexed stream, uint256 rewardsPaid, uint256 rewardsPaidInTotal);
     event Withdraw(address to, uint256 amount);
+    event CallbackSet(address stream, bool value);
 
     function init(address _magic) external initializer {
         magic = IERC20(_magic);
@@ -69,7 +73,6 @@ contract MasterOfCoin is Initializable, AccessControlEnumerableUpgradeable {
             return 0;
         }
 
-
         stream.paid += rewardsPaid;
         stream.lastRewardTimestamp = block.timestamp;
 
@@ -80,7 +83,11 @@ contract MasterOfCoin is Initializable, AccessControlEnumerableUpgradeable {
         emit RewardsPaid(msg.sender, rewardsPaid, stream.paid);
     }
 
-    function grantTokenToStream(address _stream, uint256 _amount) public streamExists(_stream) streamActive(_stream) {
+    function grantTokenToStream(address _stream, uint256 _amount)
+        public
+        streamExists(_stream)
+        streamActive(_stream)
+    {
         _fundStream(_stream, _amount);
 
         magic.safeTransferFrom(msg.sender, address(this), _amount);
@@ -132,7 +139,7 @@ contract MasterOfCoin is Initializable, AccessControlEnumerableUpgradeable {
         }
     }
 
-    function _fundStream(address _stream, uint256 _amount) internal {
+    function _fundStream(address _stream, uint256 _amount) internal callbackStream(_stream) {
         CoinStream storage stream = streamConfig[_stream];
 
         uint256 secondsToEnd = stream.endTimestamp - stream.lastRewardTimestamp;
@@ -147,7 +154,8 @@ contract MasterOfCoin is Initializable, AccessControlEnumerableUpgradeable {
         address _stream,
         uint256 _totalRewards,
         uint256 _startTimestamp,
-        uint256 _endTimestamp
+        uint256 _endTimestamp,
+        bool _callback
     ) external onlyRole(MASTER_OF_COIN_ADMIN_ROLE) {
         require(_endTimestamp > _startTimestamp, "Rewards must last > 1 sec");
         require(!streams.contains(_stream), "Stream for address already exists");
@@ -162,6 +170,8 @@ contract MasterOfCoin is Initializable, AccessControlEnumerableUpgradeable {
                 paid: 0
             });
             emit StreamAdded(_stream, _totalRewards, _startTimestamp, _endTimestamp);
+
+            setCallback(_stream, _callback);
         }
     }
 
@@ -180,6 +190,7 @@ contract MasterOfCoin is Initializable, AccessControlEnumerableUpgradeable {
         onlyRole(MASTER_OF_COIN_ADMIN_ROLE)
         streamExists(_stream)
         streamActive(_stream)
+        callbackStream(_stream)
     {
         CoinStream storage stream = streamConfig[_stream];
 
@@ -198,6 +209,7 @@ contract MasterOfCoin is Initializable, AccessControlEnumerableUpgradeable {
         external
         onlyRole(MASTER_OF_COIN_ADMIN_ROLE)
         streamExists(_stream)
+        callbackStream(_stream)
     {
         CoinStream storage stream = streamConfig[_stream];
 
@@ -220,11 +232,26 @@ contract MasterOfCoin is Initializable, AccessControlEnumerableUpgradeable {
         emit StreamTimeUpdated(_stream, _startTimestamp, _endTimestamp);
     }
 
-    function removeStream(address _stream) external onlyRole(MASTER_OF_COIN_ADMIN_ROLE) streamExists(_stream) {
+    function removeStream(address _stream)
+        external
+        onlyRole(MASTER_OF_COIN_ADMIN_ROLE)
+        streamExists(_stream)
+        callbackStream(_stream)
+    {
         if (streams.remove(_stream)) {
             delete streamConfig[_stream];
             emit StreamRemoved(_stream);
         }
+    }
+
+    function setCallback(address _stream, bool _value)
+        public
+        onlyRole(MASTER_OF_COIN_ADMIN_ROLE)
+        streamExists(_stream)
+        callbackStream(_stream)
+    {
+        callbackRegistry[_stream] = _value;
+        emit CallbackSet(_stream, _value);
     }
 
     function withdrawMagic(address _to, uint256 _amount) external onlyRole(MASTER_OF_COIN_ADMIN_ROLE) {
