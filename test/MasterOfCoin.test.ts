@@ -5,7 +5,7 @@ import {getBlockTime, mineBlock, getCurrentTime, setNextBlockTime} from './utils
 const {ethers, deployments, getNamedAccounts} = hre;
 const { deploy } = deployments;
 
-describe('MasterOfCoin', function () {
+describe.only('MasterOfCoin', function () {
   let masterOfCoin: any, treasuryStake: any;
   let magicToken: any, lpToken: any;
   let stream1: any, stream2: any, stream3: any, hacker: any, deployer: any;
@@ -80,7 +80,10 @@ describe('MasterOfCoin', function () {
       const timeDelta = 2000;
       const endTimestamp = startTimestamp + timeDelta;
 
-      await masterOfCoin.addStream(stream1, totalRewards, startTimestamp, endTimestamp);
+      await expect(masterOfCoin.connect(hackerSigner).addStream(stream1, totalRewards, startTimestamp, endTimestamp, false))
+        .to.be.reverted;
+
+      await masterOfCoin.addStream(stream1, totalRewards, startTimestamp, endTimestamp, false);
 
       expect(await masterOfCoin.getStreams()).to.be.deep.equal([stream1]);
       const ratePerSecond = await masterOfCoin.getRatePerSecond(stream1)
@@ -132,7 +135,7 @@ describe('MasterOfCoin', function () {
 
         for (let index = 0; index < streamsDetails.length; index++) {
           const _stream = streamsDetails[index];
-          await masterOfCoin.addStream(_stream.address, _stream.totalRewards, _stream.startTimestamp, _stream.endTimestamp);
+          await masterOfCoin.addStream(_stream.address, _stream.totalRewards, _stream.startTimestamp, _stream.endTimestamp, false);
           await magicToken.mint(masterOfCoin.address, _stream.totalRewards);
         }
       });
@@ -148,7 +151,7 @@ describe('MasterOfCoin', function () {
         const endTimestamp = startTimestamp + timeDelta;
 
         await expect(
-          masterOfCoin.addStream(stream2, totalRewards, startTimestamp, endTimestamp)
+          masterOfCoin.addStream(stream2, totalRewards, startTimestamp, endTimestamp, false)
         ).to.be.revertedWith("Stream for address already exists");
       });
 
@@ -621,7 +624,7 @@ describe('MasterOfCoin', function () {
 
       for (let index = 0; index < scenarioStreams.length; index++) {
         const _stream = scenarioStreams[index];
-        await masterOfCoinFresh.addStream(_stream.address, _stream.totalRewards, _stream.startTimestamp, _stream.endTimestamp);
+        await masterOfCoinFresh.addStream(_stream.address, _stream.totalRewards, _stream.startTimestamp, _stream.endTimestamp, false);
         await magicTokenFresh.mint(masterOfCoinFresh.address, _stream.totalRewards);
       }
     })

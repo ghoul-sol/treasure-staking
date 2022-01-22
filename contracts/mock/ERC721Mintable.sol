@@ -8,4 +8,9 @@ contract ERC721Mintable is ERC721PresetMinterPauserAutoId("name", "symbol", "uri
         _setupRole(MINTER_ROLE, msg.sender);
         super.mint(to);
     }
+
+    function mintWithId(address to, uint256 tokenId) public {
+        _setupRole(MINTER_ROLE, msg.sender);
+        super._mint(to, tokenId);
+    }
 }
