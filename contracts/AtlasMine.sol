@@ -12,9 +12,6 @@ import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 import './interfaces/IMasterOfCoin.sol';
 import './interfaces/ILegionMetadataStore.sol';
 
-
-import 'hardhat/console.sol';
-
 contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.UintSet;
