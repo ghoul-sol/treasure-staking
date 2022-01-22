@@ -150,6 +150,11 @@ contract MasterOfCoin is IMasterOfCoin, Initializable, AccessControlEnumerableUp
 
     // ADMIN
 
+    /// @param _stream address of the contract that gets rewards
+    /// @param _totalRewards amount of MAGIC that should be distributed in total
+    /// @param _startTimestamp when MAGIC stream should start
+    /// @param _endTimestamp when MAGIC stream should end
+    /// @param _callback should callback be used (if you don't know, set false)
     function addStream(
         address _stream,
         uint256 _totalRewards,
