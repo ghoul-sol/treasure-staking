@@ -88,6 +88,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable {
     event UndistributedRewardsWithdraw(address indexed to, uint256 amount);
     event Harvest(address indexed user, uint256 indexed index, uint256 amount);
     event LogUpdateRewards(uint256 distributedRewards, uint256 undistributedRewards, uint256 lpSupply, uint256 accMagicPerShare);
+    event UtilizationRate(uint256 util);
 
     modifier updateRewards() {
         uint256 lpSupply = totalLpToken;
@@ -98,6 +99,9 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable {
             accMagicPerShare += distributedRewards * ONE / lpSupply;
             emit LogUpdateRewards(distributedRewards, undistributedRewards, lpSupply, accMagicPerShare);
         }
+
+        uint256 util = utilization();
+        emit UtilizationRate(util);
         _;
     }
 
@@ -530,7 +534,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable {
 
     function getTreasureBoost(uint256 _tokenId) public pure returns (uint256 boost) {
         if (_tokenId == 39) { // Ancient Relic 8%
-            boost = 80e15;
+            boost = 75e15;
         } else if (_tokenId == 46) { // Bag of Rare Mushrooms 6.2%
             boost = 62e15;
         } else if (_tokenId == 47) { // Bait for Monsters 7.3%

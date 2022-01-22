@@ -6,7 +6,7 @@ import { deployMockContract } from 'ethereum-waffle';
 const {ethers, deployments, getNamedAccounts, artifacts} = hre;
 const { deploy } = deployments;
 
-describe('AtlasMine', function () {
+describe.only('AtlasMine', function () {
   let atlasMine: any, masterOfCoin: any, mockILegionMetadataStore: any;
   let magicToken: any, treasure: any, legion: any;
   let staker1: any, staker2: any, staker3: any, hacker: any, deployer: any;
