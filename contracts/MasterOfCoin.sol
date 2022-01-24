@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.11;
 
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
-import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
@@ -11,18 +11,18 @@ import './interfaces/IMasterOfCoin.sol';
 import './interfaces/IStream.sol';
 
 contract MasterOfCoin is IMasterOfCoin, Initializable, AccessControlEnumerableUpgradeable {
-    using EnumerableSet for EnumerableSet.AddressSet;
-    using SafeERC20 for IERC20;
+    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     bytes32 public constant MASTER_OF_COIN_ADMIN_ROLE = keccak256("MASTER_OF_COIN_ADMIN_ROLE");
 
-    IERC20 public magic;
+    IERC20Upgradeable public magic;
 
     /// @notice stream address => CoinStream
     mapping (address => CoinStream) public streamConfig;
 
     /// @notice stream ID => stream address
-    EnumerableSet.AddressSet private streams;
+    EnumerableSetUpgradeable.AddressSet private streams;
 
     /// @notice stream address => bool
     mapping (address => bool) public callbackRegistry;
@@ -56,7 +56,7 @@ contract MasterOfCoin is IMasterOfCoin, Initializable, AccessControlEnumerableUp
     event CallbackSet(address stream, bool value);
 
     function init(address _magic) external initializer {
-        magic = IERC20(_magic);
+        magic = IERC20Upgradeable(_magic);
 
         _setRoleAdmin(MASTER_OF_COIN_ADMIN_ROLE, MASTER_OF_COIN_ADMIN_ROLE);
         _grantRole(MASTER_OF_COIN_ADMIN_ROLE, msg.sender);
@@ -265,6 +265,6 @@ contract MasterOfCoin is IMasterOfCoin, Initializable, AccessControlEnumerableUp
     }
 
     function setMagicToken(address _magic) external onlyRole(MASTER_OF_COIN_ADMIN_ROLE) {
-        magic = IERC20(_magic);
+        magic = IERC20Upgradeable(_magic);
     }
 }

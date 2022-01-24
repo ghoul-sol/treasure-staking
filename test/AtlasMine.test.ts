@@ -41,10 +41,11 @@ describe.only('AtlasMine', function () {
     masterOfCoin = new ethers.Contract(MasterOfCoin.address, MasterOfCoin.abi, deployerSigner);
     await masterOfCoin.setMagicToken(magicToken.address);
 
-    const ERC721Mintable = await ethers.getContractFactory('ERC721Mintable')
-    treasure = await ERC721Mintable.deploy()
+    const ERC1155Mintable = await ethers.getContractFactory('ERC1155Mintable')
+    treasure = await ERC1155Mintable.deploy()
     await treasure.deployed();
 
+    const ERC721Mintable = await ethers.getContractFactory('ERC721Mintable')
     legion = await ERC721Mintable.deploy()
     await legion.deployed();
 
@@ -172,12 +173,12 @@ describe.only('AtlasMine', function () {
         constellationRanks: [0,1,2,3,4,5]
     };
     await mockILegionMetadataStore.mock.metadataForLegion.withArgs(tokenId).returns(metadata);
-    expect(await atlasMine.isLegion1_1(legion.address, tokenId)).to.be.true;
+    expect(await atlasMine.isLegion1_1(tokenId)).to.be.true;
 
     for (let index = 1; index < 6; index++) {
       metadata.legionRarity = index;
       await mockILegionMetadataStore.mock.metadataForLegion.withArgs(index).returns(metadata);
-      expect(await atlasMine.isLegion1_1(legion.address, index)).to.be.false;
+      expect(await atlasMine.isLegion1_1(index)).to.be.false;
     }
   })
 
@@ -681,13 +682,13 @@ describe.only('AtlasMine', function () {
     describe('NFT staking', function () {
       let boostScenarios: any[];
       let metadata: any;
-      let harvestScenariosWithStaking: any[];
 
       beforeEach(async function () {
         boostScenarios = [
           {
             nft: treasure.address,
             tokenId: 96,
+            amount: 10,
             metadata: {
               legionGeneration: 0,
               legionRarity: 0,
@@ -697,6 +698,7 @@ describe.only('AtlasMine', function () {
           {
             nft: treasure.address,
             tokenId: 105,
+            amount: 5,
             metadata: {
               legionGeneration: 0,
               legionRarity: 0,
@@ -706,6 +708,7 @@ describe.only('AtlasMine', function () {
           {
             nft: treasure.address,
             tokenId: 47,
+            amount: 5,
             metadata: {
               legionGeneration: 0,
               legionRarity: 0,
@@ -715,6 +718,7 @@ describe.only('AtlasMine', function () {
           {
             nft: legion.address,
             tokenId: 98,
+            amount: 1,
             metadata: {
               legionGeneration: 0,
               legionRarity: 0,
@@ -724,6 +728,7 @@ describe.only('AtlasMine', function () {
           {
             nft: legion.address,
             tokenId: 77,
+            amount: 1,
             metadata: {
               legionGeneration: 0,
               legionRarity: 1,
@@ -733,6 +738,7 @@ describe.only('AtlasMine', function () {
           {
             nft: legion.address,
             tokenId: 44,
+            amount: 1,
             metadata: {
               legionGeneration: 0,
               legionRarity: 2,
@@ -742,6 +748,7 @@ describe.only('AtlasMine', function () {
           {
             nft: legion.address,
             tokenId: 33,
+            amount: 1,
             metadata: {
               legionGeneration: 1,
               legionRarity: 2,
@@ -751,6 +758,7 @@ describe.only('AtlasMine', function () {
           {
             nft: legion.address,
             tokenId: 22,
+            amount: 1,
             metadata: {
               legionGeneration: 1,
               legionRarity: 1,
@@ -768,11 +776,6 @@ describe.only('AtlasMine', function () {
             constellationRanks: [0,1,2,3,4,5]
         };
 
-        harvestScenariosWithStaking = [
-          ethers.utils.parseEther('706.711653676492898802'),
-          ethers.utils.parseEther('193.288346323507099360'),
-        ]
-
         for (let index = 0; index < boostScenarios.length; index++) {
           const scenario = boostScenarios[index];
           if (scenario.nft == legion.address) {
@@ -786,33 +789,71 @@ describe.only('AtlasMine', function () {
       it('getNftBoost()', async function () {
         for (let index = 0; index < boostScenarios.length; index++) {
           const scenario = boostScenarios[index];
-          expect(await atlasMine.getNftBoost(scenario.nft, scenario.tokenId)).to.be.equal(scenario.boost);
+          expect(await atlasMine.getNftBoost(scenario.nft, scenario.tokenId, scenario.amount))
+            .to.be.equal(scenario.boost.mul(scenario.amount));
         }
       });
 
-      describe('stake()', function () {
-        it('NTF cannot be staked', async function () {
-          await expect(atlasMine.stake(hacker, 1)).to.be.revertedWith("NTF cannot be staked");
+      describe('stakeTreasure()', function () {
+        it('Cannot stake Treasure', async function () {
+          await atlasMine.setTreasure(ethers.constants.AddressZero);
+          await expect(atlasMine.stakeTreasure(1, 1)).to.be.revertedWith("Cannot stake Treasure");
         });
 
-        it('NFT already staked', async function () {
-          await treasure.mint(deployer)
-          await treasure.approve(atlasMine.address, 0);
-          await atlasMine.stake(treasure.address, 0);
-          await expect(atlasMine.stake(treasure.address, 0)).to.be.revertedWith("NFT already staked");
+        it('Amount is 0', async function () {
+          await expect(atlasMine.stakeTreasure(1, 0)).to.be.revertedWith("Amount is 0");
         });
 
         it('Max 20 treasures per wallet', async function () {
-          for (let index = 0; index < 21; index++) {
-            await treasure.mint(deployer)
-            await treasure.approve(atlasMine.address, index);
+          for (let index = 0; index < 5; index++) {
+            await treasure.functions['mint(address,uint256,uint256)'](staker1, index, 5);
+            await treasure.connect(staker1Signer).setApprovalForAll(atlasMine.address, true);
 
-            if (index == 20) {
-              await expect(atlasMine.stake(treasure.address, index)).to.be.revertedWith("Max 20 treasures per wallet");
+            if (index == 4) {
+              await expect(atlasMine.connect(staker1Signer).stakeTreasure(index, 5))
+                .to.be.revertedWith("Max 20 treasures per wallet");
             } else {
-              await atlasMine.stake(treasure.address, index);
+              await atlasMine.connect(staker1Signer).stakeTreasure(index, 5);
             }
           }
+        });
+
+        it('stake boosts', async function () {
+          let totalBoost = ethers.utils.parseEther("0");
+
+          for (let index = 0; index < boostScenarios.length; index++) {
+            const scenario = boostScenarios[index];
+
+            if (scenario.nft == treasure.address) {
+              const boostBefore = await atlasMine.boosts(staker1);
+
+              await treasure.functions['mint(address,uint256,uint256)'](staker1, scenario.tokenId, scenario.amount);
+              await treasure.connect(staker1Signer).setApprovalForAll(atlasMine.address, true);
+              await atlasMine.connect(staker1Signer).stakeTreasure(scenario.tokenId, scenario.amount);
+
+              expect(await treasure.balanceOf(atlasMine.address, scenario.tokenId)).to.be.equal(scenario.amount);
+              const boostAfter = await atlasMine.boosts(staker1);
+              const boostDiff = boostAfter.sub(boostBefore);
+              expect(boostDiff).to.be.equal(scenario.boost.mul(scenario.amount));
+              totalBoost = totalBoost.add(boostDiff);
+            }
+          }
+
+          expect(await atlasMine.boosts(staker1)).to.be.equal(totalBoost);
+        })
+      })
+
+      describe('stakeLegion()', function () {
+        it('Cannot stake Legion', async function () {
+          await atlasMine.setLegion(ethers.constants.AddressZero);
+          await expect(atlasMine.stakeLegion(1)).to.be.revertedWith("Cannot stake Legion");
+        });
+
+        it('NFT already staked', async function () {
+          await legion.mint(staker1)
+          await legion.connect(staker1Signer).approve(atlasMine.address, 0);
+          await atlasMine.connect(staker1Signer).stakeLegion(0);
+          await expect(atlasMine.connect(staker1Signer).stakeLegion(0)).to.be.revertedWith("NFT already staked");
         });
 
         it('Max 3 legions per wallet', async function () {
@@ -831,9 +872,9 @@ describe.only('AtlasMine', function () {
             await legion.approve(atlasMine.address, index);
 
             if (index == 3) {
-              await expect(atlasMine.stake(legion.address, index)).to.be.revertedWith("Max 3 legions per wallet");
+              await expect(atlasMine.stakeLegion(index)).to.be.revertedWith("Max 3 legions per wallet");
             } else {
-              await atlasMine.stake(legion.address, index);
+              await atlasMine.stakeLegion(index);
             }
           }
         });
@@ -848,39 +889,34 @@ describe.only('AtlasMine', function () {
               constellationRanks: [0,1,2,3,4,5]
           };
           await mockILegionMetadataStore.mock.metadataForLegion.withArgs(0).returns(metadata);
-          await legion.mint(deployer)
-          await legion.approve(atlasMine.address, 0);
-          await atlasMine.stake(legion.address, 0);
+          await legion.mint(staker1)
+          await legion.connect(staker1Signer).approve(atlasMine.address, 0);
+          await atlasMine.connect(staker1Signer).stakeLegion(0);
 
           await mockILegionMetadataStore.mock.metadataForLegion.withArgs(1).returns(metadata);
-          await legion.mint(deployer)
-          await legion.approve(atlasMine.address, 1);
-          await expect(atlasMine.stake(legion.address, 1)).to.be.revertedWith("Max 1 1/1 legion per wallet");
+          await legion.mint(staker1)
+          await legion.connect(staker1Signer).approve(atlasMine.address, 1);
+          await expect(atlasMine.connect(staker1Signer).stakeLegion(1)).to.be.revertedWith("Max 1 1/1 legion per wallet");
         });
 
         it('stake boosts', async function () {
           let totalBoost = ethers.utils.parseEther("0");
 
-          for (let index = 0; index < boostScenarios.slice(0, -2).length; index++) {
+          for (let index = 0; index < boostScenarios.length; index++) {
             const scenario = boostScenarios[index];
-            const boostBefore = await atlasMine.boosts(staker1);
 
-            if (scenario.nft == legion.address) {
+            const stakedLegions = await atlasMine.getStakedLegions(staker1);
+
+            if (scenario.nft == legion.address && stakedLegions.length < 3) {
+              const boostBefore = await atlasMine.boosts(staker1);
               await legion.mintWithId(staker1, scenario.tokenId);
               await legion.connect(staker1Signer).approve(atlasMine.address, scenario.tokenId);
-              await atlasMine.connect(staker1Signer).stake(legion.address, scenario.tokenId);
+              await atlasMine.connect(staker1Signer).stakeLegion(scenario.tokenId);
               expect(await legion.ownerOf(scenario.tokenId)).to.be.equal(atlasMine.address);
-            } else {
-              await treasure.mintWithId(staker1, scenario.tokenId);
-              await treasure.connect(staker1Signer).approve(atlasMine.address, scenario.tokenId);
-              await atlasMine.connect(staker1Signer).stake(treasure.address, scenario.tokenId);
-              expect(await treasure.ownerOf(scenario.tokenId)).to.be.equal(atlasMine.address);
+              const boostAfter = await atlasMine.boosts(staker1);
+              expect(boostAfter.sub(boostBefore)).to.be.equal(scenario.boost);
+              totalBoost = totalBoost.add(scenario.boost);
             }
-
-            const boostAfter = await atlasMine.boosts(staker1);
-            expect(boostAfter.sub(boostBefore)).to.be.equal(scenario.boost);
-
-            totalBoost = totalBoost.add(scenario.boost);
           }
 
           expect(await atlasMine.boosts(staker1)).to.be.equal(totalBoost);
@@ -969,26 +1005,28 @@ describe.only('AtlasMine', function () {
           for (let i = 0; i < step.stake.length; i++) {
             const stake = step.stake[i];
             const tokenId = boostScenarios[stake.index].tokenId;
+            const amount = boostScenarios[stake.index].amount;
 
             if (boostScenarios[stake.index].nft == legion.address) {
               await legion.mintWithId(stake.address, tokenId);
               await legion.connect(stake.signer).approve(atlasMine.address, tokenId);
-              await atlasMine.connect(stake.signer).stake(legion.address, tokenId);
+              await atlasMine.connect(stake.signer).stakeLegion(tokenId);
             } else {
-              await treasure.mintWithId(stake.address, tokenId);
-              await treasure.connect(stake.signer).approve(atlasMine.address, tokenId);
-              await atlasMine.connect(stake.signer).stake(treasure.address, tokenId);
+              await treasure.functions['mint(address,uint256,uint256)'](stake.address, tokenId, amount);
+              await treasure.connect(stake.signer).setApprovalForAll(atlasMine.address, true);
+              await atlasMine.connect(stake.signer).stakeTreasure(tokenId, amount);
             }
           }
 
           for (let i = 0; i < step.unstake.length; i++) {
             const unstake = step.unstake[i];
             const tokenId = boostScenarios[unstake.index].tokenId;
+            const amount = boostScenarios[unstake.index].amount;
 
             if (boostScenarios[unstake.index].nft == legion.address) {
-              await atlasMine.connect(unstake.signer).unstake(legion.address, tokenId);
+              await atlasMine.connect(unstake.signer).unstakeLegion(tokenId);
             } else {
-              await atlasMine.connect(unstake.signer).unstake(treasure.address, tokenId);
+              await atlasMine.connect(unstake.signer).unstakeTreasure(tokenId, amount);
             }
           }
 
@@ -1002,12 +1040,12 @@ describe.only('AtlasMine', function () {
           {
             address: depositsScenarios[0].address,
             signer: depositsScenarios[0].signer,
-            reward: harvestScenariosWithStaking[0]
+            reward: ethers.utils.parseEther('707.994049297877092636')
           },
           {
             address: depositsScenarios[3].address,
             signer: depositsScenarios[3].signer,
-            reward: harvestScenariosWithStaking[1]
+            reward: ethers.utils.parseEther('192.005950702122902940')
           }
         ]
 
@@ -1026,22 +1064,28 @@ describe.only('AtlasMine', function () {
             if (scenario.nft == legion.address) {
               await legion.mintWithId(staker1, scenario.tokenId);
               await legion.connect(staker1Signer).approve(atlasMine.address, scenario.tokenId);
-              await atlasMine.connect(staker1Signer).stake(legion.address, scenario.tokenId);
+              await atlasMine.connect(staker1Signer).stakeLegion(scenario.tokenId);
               expect(await legion.ownerOf(scenario.tokenId)).to.be.equal(atlasMine.address);
             } else {
-              await treasure.mintWithId(staker1, scenario.tokenId);
-              await treasure.connect(staker1Signer).approve(atlasMine.address, scenario.tokenId);
-              await atlasMine.connect(staker1Signer).stake(treasure.address, scenario.tokenId);
-              expect(await treasure.ownerOf(scenario.tokenId)).to.be.equal(atlasMine.address);
+              await treasure.functions['mint(address,uint256,uint256)'](staker1, scenario.tokenId, scenario.amount);
+              await treasure.connect(staker1Signer).setApprovalForAll(atlasMine.address, true);
+              await atlasMine.connect(staker1Signer).stakeTreasure(scenario.tokenId, scenario.amount);
+              expect(await treasure.balanceOf(atlasMine.address, scenario.tokenId)).to.be.equal(scenario.amount);
             }
           }
         })
 
-        it('NFT is not staked', async function () {
+        it('Withdraw amount too big', async function () {
           const scenario = boostScenarios[0];
-          await expect(atlasMine.connect(staker2Signer).unstake(treasure.address, scenario.tokenId))
+          await expect(atlasMine.connect(staker2Signer).unstakeTreasure(scenario.tokenId, scenario.amount))
+            .to.be.revertedWith("Withdraw amount too big");
+          expect(await treasure.balanceOf(atlasMine.address, scenario.tokenId)).to.be.equal(scenario.amount);
+        })
+
+        it('NFT is not staked', async function () {
+          const scenario = boostScenarios[7];
+          await expect(atlasMine.connect(staker2Signer).unstakeLegion(scenario.tokenId))
             .to.be.revertedWith("NFT is not staked");
-          expect(await treasure.ownerOf(scenario.tokenId)).to.be.equal(atlasMine.address);
         })
 
         it('unstake boosts', async function () {
@@ -1052,15 +1096,15 @@ describe.only('AtlasMine', function () {
             const boostBefore = await atlasMine.boosts(staker1);
 
             if (scenario.nft == legion.address) {
-              await atlasMine.connect(staker1Signer).unstake(legion.address, scenario.tokenId);
+              await atlasMine.connect(staker1Signer).unstakeLegion(scenario.tokenId);
               expect(await legion.ownerOf(scenario.tokenId)).to.be.equal(staker1);
             } else {
-              await atlasMine.connect(staker1Signer).unstake(treasure.address, scenario.tokenId);
-              expect(await treasure.ownerOf(scenario.tokenId)).to.be.equal(staker1);
+              await atlasMine.connect(staker1Signer).unstakeTreasure(scenario.tokenId, scenario.amount);
+              expect(await treasure.balanceOf(staker1, scenario.tokenId)).to.be.equal(scenario.amount);
             }
 
             const boostAfter = await atlasMine.boosts(staker1);
-            expect(boostBefore.sub(boostAfter)).to.be.equal(scenario.boost);
+            expect(boostBefore.sub(boostAfter)).to.be.equal(scenario.boost.mul(scenario.amount));
           }
 
           expect(await atlasMine.boosts(staker1)).to.be.equal(0);

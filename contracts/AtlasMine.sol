@@ -1,24 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.11;
 
-import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
-import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
-import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC1155/IERC1155Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import '@openzeppelin/contracts/utils/math/SafeCast.sol';
-import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
+import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol';
 
 import './interfaces/IMasterOfCoin.sol';
 import './interfaces/ILegionMetadataStore.sol';
 
-contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable {
-    using EnumerableSet for EnumerableSet.AddressSet;
-    using EnumerableSet for EnumerableSet.UintSet;
+contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155HolderUpgradeable {
+    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
+    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.UintSet;
 
-    using SafeERC20 for IERC20;
-    using SafeCast for uint256;
-    using SafeCast for int256;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeCastUpgradeable for uint256;
+    using SafeCastUpgradeable for int256;
 
     enum Lock { twoWeeks, oneMonth, threeMonths, sixMonths, twelveMonths }
 
@@ -44,7 +46,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable {
     uint256 public constant ONE = 1e18;
 
     // Magic token addr
-    IERC20 public magic;
+    IERC20Upgradeable public magic;
     IMasterOfCoin public masterOfCoin;
 
     bool public unlockAll;
@@ -56,7 +58,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable {
     uint256 public magicTotalDeposits;
 
     uint256 public utilizationOverride;
-    EnumerableSet.AddressSet private excludedAddresses;
+    EnumerableSetUpgradeable.AddressSet private excludedAddresses;
 
     address public legionMetadataStore;
     address public treasure;
@@ -69,21 +71,23 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable {
     /// @notice user => depositId => UserInfo
     mapping (address => mapping (uint256 => UserInfo)) public userInfo;
     /// @notice user => depositId[]
-    mapping (address => EnumerableSet.UintSet) private allUserDepositIds;
+    mapping (address => EnumerableSetUpgradeable.UintSet) private allUserDepositIds;
     /// @notice user => deposit index
     mapping (address => uint256) public currentId;
 
-    // user => nft => tokenIds
-    mapping (address => mapping(address => EnumerableSet.UintSet)) private nftStaked;
-    // user => nft addresses
-    mapping (address => EnumerableSet.AddressSet) private userNfts;
+    // user => tokenIds
+    mapping (address => EnumerableSetUpgradeable.UintSet) private legionStaked;
+    // user => tokenId => amount
+    mapping (address => mapping(uint256 => uint256)) public treasureStaked;
+    // user => total amount staked
+    mapping (address => uint256) public treasureStakedAmount;
     // user => boost
     mapping (address => uint256) public boosts;
 
-    event Staked(address nft, uint256 tokenId, uint256 currentBoost);
-    event Unstaked(address nft, uint256 tokenId, uint256 currentBoost);
+    event Staked(address nft, uint256 tokenId, uint256 amount, uint256 currentBoost);
+    event Unstaked(address nft, uint256 tokenId, uint256 amount, uint256 currentBoost);
 
-    event Deposit(address indexed user, uint256 indexed index, uint256 amount);
+    event Deposit(address indexed user, uint256 indexed index, uint256 amount, Lock lock);
     event Withdraw(address indexed user, uint256 indexed index, uint256 amount);
     event UndistributedRewardsWithdraw(address indexed to, uint256 amount);
     event Harvest(address indexed user, uint256 indexed index, uint256 amount);
@@ -106,7 +110,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable {
     }
 
     function init(address _magic, address _masterOfCoin) external initializer {
-        magic = IERC20(_magic);
+        magic = IERC20Upgradeable(_magic);
         masterOfCoin = IMasterOfCoin(_masterOfCoin);
 
         _setRoleAdmin(ATLAS_MINE_ADMIN_ROLE, ATLAS_MINE_ADMIN_ROLE);
@@ -126,14 +130,21 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable {
         ];
 
         __AccessControlEnumerable_init();
+        __ERC1155Holder_init();
     }
 
-    function getStakedNfts(address _user) external view returns (address[] memory) {
-        return userNfts[_user].values();
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC1155ReceiverUpgradeable, AccessControlEnumerableUpgradeable)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
     }
 
-    function getStakedTokenIds(address _user, address _nft) external view returns (uint256[] memory) {
-        return nftStaked[_user][_nft].values();
+    function getStakedLegions(address _user) external view returns (uint256[] memory) {
+        return legionStaked[_user].values();
     }
 
     function getUserBoost(address _user) external view returns (uint256) {
@@ -286,7 +297,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable {
 
         magic.safeTransferFrom(msg.sender, address(this), _amount);
 
-        emit Deposit(msg.sender, depositId, _amount);
+        emit Deposit(msg.sender, depositId, _amount, _lock);
     }
 
     function withdrawPosition(uint256 _depositId, uint256 _amount) public updateRewards returns (bool) {
@@ -374,77 +385,96 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable {
         }
     }
 
-    function stake(address _nft, uint256 _tokenId) external updateRewards {
-        require(_nft == treasure || _nft == legion, "NTF cannot be staked");
+    function stakeTreasure(uint256 _tokenId, uint256 _amount) external updateRewards {
+        require(treasure != address(0), "Cannot stake Treasure");
+        require(_amount > 0, "Amount is 0");
 
-        userNfts[msg.sender].add(_nft);
-        require(nftStaked[msg.sender][_nft].add(_tokenId), "NFT already staked");
+        treasureStaked[msg.sender][_tokenId] += _amount;
+        treasureStakedAmount[msg.sender] += _amount;
 
-        if (treasure != address(0)) {
-            require(nftStaked[msg.sender][treasure].length() <= 20, "Max 20 treasures per wallet");
-        }
+        require(treasureStakedAmount[msg.sender] <= 20, "Max 20 treasures per wallet");
 
-        if (legion != address(0)) {
-            require(nftStaked[msg.sender][legion].length() <= 3, "Max 3 legions per wallet");
-        }
-
-        if (isLegion1_1(_nft, _tokenId)) {
-            require(!isLegion1_1Staked[msg.sender], "Max 1 1/1 legion per wallet");
-            isLegion1_1Staked[msg.sender] = true;
-        }
-
-        uint256 boost = getNftBoost(_nft, _tokenId);
+        uint256 boost = getNftBoost(treasure, _tokenId, _amount);
         boosts[msg.sender] += boost;
 
         _recalculateLpAmount(msg.sender);
 
-        IERC721(_nft).transferFrom(msg.sender, address(this), _tokenId);
+        IERC1155Upgradeable(treasure).safeTransferFrom(msg.sender, address(this), _tokenId, _amount, bytes(""));
 
-        emit Staked(_nft, _tokenId, boosts[msg.sender]);
-
+        emit Staked(legion, _tokenId, _amount, boosts[msg.sender]);
     }
 
-    function unstake(address _nft, uint256 _tokenId) external updateRewards {
-        require(nftStaked[msg.sender][_nft].remove(_tokenId), "NFT is not staked");
+    function unstakeTreasure(uint256 _tokenId, uint256 _amount) external updateRewards {
+        require(treasure != address(0), "Cannot stake Treasure");
+        require(_amount > 0, "Amount is 0");
+        require(treasureStaked[msg.sender][_tokenId] >= _amount, "Withdraw amount too big");
 
-        if (nftStaked[msg.sender][_nft].length() == 0) {
-            userNfts[msg.sender].remove(_nft);
-        }
+        treasureStaked[msg.sender][_tokenId] -= _amount;
+        treasureStakedAmount[msg.sender] -= _amount;
 
-        if (isLegion1_1(_nft, _tokenId)) {
-            isLegion1_1Staked[msg.sender] = false;
-        }
-
-        uint256 boost = getNftBoost(_nft, _tokenId);
+        uint256 boost = getNftBoost(treasure, _tokenId, _amount);
         boosts[msg.sender] -= boost;
 
         _recalculateLpAmount(msg.sender);
 
-        IERC721(_nft).transferFrom(address(this), msg.sender, _tokenId);
+        IERC1155Upgradeable(treasure).safeTransferFrom(address(this), msg.sender, _tokenId, _amount, bytes(""));
 
-        emit Unstaked(_nft, _tokenId, boosts[msg.sender]);
-
+        emit Unstaked(treasure, _tokenId, _amount, boosts[msg.sender]);
     }
 
-    function isLegion1_1(address _nft, uint256 _tokenId) public view returns (bool) {
-        if (_nft == legion) {
-            try ILegionMetadataStore(legionMetadataStore).metadataForLegion(_tokenId) returns (ILegionMetadataStore.LegionMetadata memory metadata) {
-                return metadata.legionGeneration == ILegionMetadataStore.LegionGeneration.GENESIS &&
-                    metadata.legionRarity == ILegionMetadataStore.LegionRarity.LEGENDARY;
-            } catch Error(string memory /*reason*/) {
-                return false;
-            } catch Panic(uint256) {
-                return false;
-            } catch (bytes memory /*lowLevelData*/) {
-                return false;
-            }
+    function stakeLegion(uint256 _tokenId) external updateRewards {
+        require(legion != address(0), "Cannot stake Legion");
+        require(legionStaked[msg.sender].add(_tokenId), "NFT already staked");
+        require(legionStaked[msg.sender].length() <= 3, "Max 3 legions per wallet");
+
+        if (isLegion1_1(_tokenId)) {
+            require(!isLegion1_1Staked[msg.sender], "Max 1 1/1 legion per wallet");
+            isLegion1_1Staked[msg.sender] = true;
         }
-        return false;
+
+        uint256 boost = getNftBoost(legion, _tokenId, 1);
+        boosts[msg.sender] += boost;
+
+        _recalculateLpAmount(msg.sender);
+
+        IERC721Upgradeable(legion).transferFrom(msg.sender, address(this), _tokenId);
+
+        emit Staked(legion, _tokenId, 1, boosts[msg.sender]);
     }
 
-    function getNftBoost(address _nft, uint256 _tokenId) public view returns (uint256) {
+    function unstakeLegion(uint256 _tokenId) external updateRewards {
+        require(legionStaked[msg.sender].remove(_tokenId), "NFT is not staked");
+
+        if (isLegion1_1(_tokenId)) {
+            isLegion1_1Staked[msg.sender] = false;
+        }
+
+        uint256 boost = getNftBoost(legion, _tokenId, 1);
+        boosts[msg.sender] -= boost;
+
+        _recalculateLpAmount(msg.sender);
+
+        IERC721Upgradeable(legion).transferFrom(address(this), msg.sender, _tokenId);
+
+        emit Unstaked(legion, _tokenId, 1, boosts[msg.sender]);
+    }
+
+    function isLegion1_1(uint256 _tokenId) public view returns (bool) {
+        try ILegionMetadataStore(legionMetadataStore).metadataForLegion(_tokenId) returns (ILegionMetadataStore.LegionMetadata memory metadata) {
+            return metadata.legionGeneration == ILegionMetadataStore.LegionGeneration.GENESIS &&
+                metadata.legionRarity == ILegionMetadataStore.LegionRarity.LEGENDARY;
+        } catch Error(string memory /*reason*/) {
+            return false;
+        } catch Panic(uint256) {
+            return false;
+        } catch (bytes memory /*lowLevelData*/) {
+            return false;
+        }
+    }
+
+    function getNftBoost(address _nft, uint256 _tokenId, uint256 _amount) public view returns (uint256) {
         if (_nft == treasure) {
-            return getTreasureBoost(_tokenId);
+            return getTreasureBoost(_tokenId, _amount);
         } else if (_nft == legion) {
             try ILegionMetadataStore(legionMetadataStore).metadataForLegion(_tokenId) returns (ILegionMetadataStore.LegionMetadata memory metadata) {
                 return getLegionBoost(uint256(metadata.legionGeneration), uint256(metadata.legionRarity));
@@ -500,7 +530,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable {
     }
 
     function setMagicToken(address _magic) external onlyRole(ATLAS_MINE_ADMIN_ROLE) {
-        magic = IERC20(_magic);
+        magic = IERC20Upgradeable(_magic);
     }
 
     function setTreasure(address _treasure) external onlyRole(ATLAS_MINE_ADMIN_ROLE) {
@@ -532,7 +562,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable {
         emit UndistributedRewardsWithdraw(_to, _totalUndistributedRewards);
     }
 
-    function getTreasureBoost(uint256 _tokenId) public pure returns (uint256 boost) {
+    function getTreasureBoost(uint256 _tokenId, uint256 _amount) public pure returns (uint256 boost) {
         if (_tokenId == 39) { // Ancient Relic 8%
             boost = 75e15;
         } else if (_tokenId == 46) { // Bag of Rare Mushrooms 6.2%
@@ -626,6 +656,8 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable {
         } else if (_tokenId == 164) { // Witches Broom 5.1%
             boost = 51e15;
         }
+
+        boost = boost * _amount;
     }
 
     function _vestedPrincipal(address _user, uint256 _depositId) internal returns (uint256 amount) {
