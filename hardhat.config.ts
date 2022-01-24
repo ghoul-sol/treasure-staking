@@ -68,6 +68,15 @@ const config: HardhatUserConfig = {
       gasMultiplier: 2,
       deploy: ["deploy/arbitrum"],
     },
+    arbitrumRinkeby: {
+      url: "https://rinkeby.arbitrum.io/rpc",
+      accounts: [`${privateKey}`],
+      chainId: 421611,
+      live: true,
+      saveDeployments: true,
+      gasMultiplier: 2,
+      deploy: ["deploy/arbitrumRinkeby"],
+    },
     arbitrumStaging: {
       url: "https://arb1.arbitrum.io/rpc",
       accounts: [`${privateKey}`],

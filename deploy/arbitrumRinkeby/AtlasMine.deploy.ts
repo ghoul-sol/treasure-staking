@@ -6,8 +6,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     const { deploy, execute, read } = deployments;
     const { deployer } = await getNamedAccounts();
 
-    const magicArbitrum = "0x539bdE0d7Dbd336b79148AA742883198BBF60342";
-    const newOwner = "0x3D210e741cDeDeA81efCd9711Ce7ef7FEe45684B";
+    const magicArbitrum = "0x7693604341fDC5B73c920b8825518Ec9b6bBbb8b";
+    const newOwner = "0x032F84aEfF59ddEBC55797F321624826d873bF65";
 
     const treasure = "0x6333F38F98f5c46dA6F873aCbF25DCf8748DDc2c";
     const legion = "0x96F791C0C11bAeE97526D5a9674494805aFBEc1c";
@@ -39,15 +39,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         { from: deployer, log: true },
         'setLegion',
         legion
-      );
-    }
-
-    if(await read('AtlasMine', 'legionMetadataStore') != legionMetadataStore) {
-      await execute(
-        'AtlasMine',
-        { from: deployer, log: true },
-        'setLegionMetadataStore',
-        legionMetadataStore
       );
     }
 
