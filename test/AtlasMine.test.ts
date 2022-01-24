@@ -829,7 +829,8 @@ describe.only('AtlasMine', function () {
 
               await treasure.functions['mint(address,uint256,uint256)'](staker1, scenario.tokenId, scenario.amount);
               await treasure.connect(staker1Signer).setApprovalForAll(atlasMine.address, true);
-              await atlasMine.connect(staker1Signer).stakeTreasure(scenario.tokenId, scenario.amount);
+              await expect(atlasMine.connect(staker1Signer).stakeTreasure(scenario.tokenId, scenario.amount))
+                .to.emit(atlasMine, "Staked").withArgs(treasure.address, scenario.tokenId, scenario.amount, boostBefore.add(scenario.boost.mul(scenario.amount)))
 
               expect(await treasure.balanceOf(atlasMine.address, scenario.tokenId)).to.be.equal(scenario.amount);
               const boostAfter = await atlasMine.boosts(staker1);

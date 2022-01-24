@@ -64,7 +64,7 @@ contract MasterOfCoin is IMasterOfCoin, Initializable, AccessControlEnumerableUp
         __AccessControlEnumerable_init();
     }
 
-    function requestRewards() public returns (uint256 rewardsPaid) {
+    function requestRewards() public virtual returns (uint256 rewardsPaid) {
         CoinStream storage stream = streamConfig[msg.sender];
 
         rewardsPaid = getPendingRewards(msg.sender);
@@ -85,6 +85,7 @@ contract MasterOfCoin is IMasterOfCoin, Initializable, AccessControlEnumerableUp
 
     function grantTokenToStream(address _stream, uint256 _amount)
         public
+        virtual
         streamExists(_stream)
         streamActive(_stream)
     {
@@ -94,22 +95,22 @@ contract MasterOfCoin is IMasterOfCoin, Initializable, AccessControlEnumerableUp
         emit StreamGrant(_stream, msg.sender, _amount);
     }
 
-    function getStreams() external view returns (address[] memory) {
+    function getStreams() external view virtual returns (address[] memory) {
         return streams.values();
     }
 
-    function getStreamConfig(address _stream) external view returns (CoinStream memory) {
+    function getStreamConfig(address _stream) external view virtual returns (CoinStream memory) {
         return streamConfig[_stream];
     }
 
-    function getGlobalRatePerSecond() external view returns (uint256 globalRatePerSecond) {
+    function getGlobalRatePerSecond() external view virtual returns (uint256 globalRatePerSecond) {
         uint256 len = streams.length();
         for (uint256 i = 0; i < len; i++) {
             globalRatePerSecond += getRatePerSecond(streams.at(i));
         }
     }
 
-    function getRatePerSecond(address _stream) public view returns (uint256 ratePerSecond) {
+    function getRatePerSecond(address _stream) public view virtual returns (uint256 ratePerSecond) {
         CoinStream storage stream = streamConfig[_stream];
 
         if (stream.startTimestamp < block.timestamp && block.timestamp < stream.endTimestamp) {
@@ -117,7 +118,7 @@ contract MasterOfCoin is IMasterOfCoin, Initializable, AccessControlEnumerableUp
         }
     }
 
-    function getPendingRewards(address _stream) public view returns (uint256 pendingRewards) {
+    function getPendingRewards(address _stream) public view virtual returns (uint256 pendingRewards) {
         CoinStream storage stream = streamConfig[_stream];
 
         uint256 paid = stream.paid;
@@ -139,7 +140,7 @@ contract MasterOfCoin is IMasterOfCoin, Initializable, AccessControlEnumerableUp
         }
     }
 
-    function _fundStream(address _stream, uint256 _amount) internal callbackStream(_stream) {
+    function _fundStream(address _stream, uint256 _amount) internal virtual callbackStream(_stream) {
         CoinStream storage stream = streamConfig[_stream];
 
         uint256 secondsToEnd = stream.endTimestamp - stream.lastRewardTimestamp;
@@ -161,7 +162,7 @@ contract MasterOfCoin is IMasterOfCoin, Initializable, AccessControlEnumerableUp
         uint256 _startTimestamp,
         uint256 _endTimestamp,
         bool _callback
-    ) external onlyRole(MASTER_OF_COIN_ADMIN_ROLE) {
+    ) external virtual onlyRole(MASTER_OF_COIN_ADMIN_ROLE) {
         require(_endTimestamp > _startTimestamp, "Rewards must last > 1 sec");
         require(!streams.contains(_stream), "Stream for address already exists");
 
@@ -182,6 +183,7 @@ contract MasterOfCoin is IMasterOfCoin, Initializable, AccessControlEnumerableUp
 
     function fundStream(address _stream, uint256 _amount)
         external
+        virtual
         onlyRole(MASTER_OF_COIN_ADMIN_ROLE)
         streamExists(_stream)
         streamActive(_stream)
@@ -192,6 +194,7 @@ contract MasterOfCoin is IMasterOfCoin, Initializable, AccessControlEnumerableUp
 
     function defundStream(address _stream, uint256 _amount)
         external
+        virtual
         onlyRole(MASTER_OF_COIN_ADMIN_ROLE)
         streamExists(_stream)
         streamActive(_stream)
@@ -212,6 +215,7 @@ contract MasterOfCoin is IMasterOfCoin, Initializable, AccessControlEnumerableUp
 
     function updateStreamTime(address _stream, uint256 _startTimestamp, uint256 _endTimestamp)
         external
+        virtual
         onlyRole(MASTER_OF_COIN_ADMIN_ROLE)
         streamExists(_stream)
         callbackStream(_stream)
@@ -239,6 +243,7 @@ contract MasterOfCoin is IMasterOfCoin, Initializable, AccessControlEnumerableUp
 
     function removeStream(address _stream)
         external
+        virtual
         onlyRole(MASTER_OF_COIN_ADMIN_ROLE)
         streamExists(_stream)
         callbackStream(_stream)
@@ -251,6 +256,7 @@ contract MasterOfCoin is IMasterOfCoin, Initializable, AccessControlEnumerableUp
 
     function setCallback(address _stream, bool _value)
         public
+        virtual
         onlyRole(MASTER_OF_COIN_ADMIN_ROLE)
         streamExists(_stream)
         callbackStream(_stream)
@@ -259,12 +265,12 @@ contract MasterOfCoin is IMasterOfCoin, Initializable, AccessControlEnumerableUp
         emit CallbackSet(_stream, _value);
     }
 
-    function withdrawMagic(address _to, uint256 _amount) external onlyRole(MASTER_OF_COIN_ADMIN_ROLE) {
+    function withdrawMagic(address _to, uint256 _amount) external virtual onlyRole(MASTER_OF_COIN_ADMIN_ROLE) {
         magic.safeTransfer(_to, _amount);
         emit Withdraw(_to, _amount);
     }
 
-    function setMagicToken(address _magic) external onlyRole(MASTER_OF_COIN_ADMIN_ROLE) {
+    function setMagicToken(address _magic) external virtual onlyRole(MASTER_OF_COIN_ADMIN_ROLE) {
         magic = IERC20Upgradeable(_magic);
     }
 }

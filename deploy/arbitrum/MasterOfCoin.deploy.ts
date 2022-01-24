@@ -14,8 +14,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       log: true,
       proxy: {
         execute: {
-          methodName: "init",
-          args: [magicArbitrum]
+          init: {
+            methodName: "init",
+            args: [magicArbitrum]
+          }
         }
       }
     })

@@ -143,26 +143,26 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         return super.supportsInterface(interfaceId);
     }
 
-    function getStakedLegions(address _user) external view returns (uint256[] memory) {
+    function getStakedLegions(address _user) external view virtual returns (uint256[] memory) {
         return legionStaked[_user].values();
     }
 
-    function getUserBoost(address _user) external view returns (uint256) {
+    function getUserBoost(address _user) external view virtual returns (uint256) {
         return boosts[_user];
     }
 
-    function getLegionBoostMatrix() external view returns (uint256[][] memory) {
+    function getLegionBoostMatrix() external view virtual returns (uint256[][] memory) {
         return legionBoostMatrix;
     }
 
-    function getLegionBoost(uint256 _legionGeneration, uint256 _legionRarity) public view returns (uint256) {
+    function getLegionBoost(uint256 _legionGeneration, uint256 _legionRarity) public view virtual returns (uint256) {
         if (_legionGeneration < legionBoostMatrix.length && _legionRarity < legionBoostMatrix[_legionGeneration].length) {
             return legionBoostMatrix[_legionGeneration][_legionRarity];
         }
         return 0;
     }
 
-    function utilization() public view returns (uint256 util) {
+    function utilization() public view virtual returns (uint256 util) {
         if (utilizationOverride > 0) return utilizationOverride;
 
         uint256 circulatingSupply = magic.totalSupply();
@@ -180,6 +180,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
     function getRealMagicReward(uint256 _magicReward)
         public
         view
+        virtual
         returns (uint256 distributedRewards, uint256 undistributedRewards)
     {
         uint256 util = utilization();
@@ -203,15 +204,15 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         undistributedRewards = _magicReward - distributedRewards;
     }
 
-    function getAllUserDepositIds(address _user) public view returns (uint256[] memory) {
+    function getAllUserDepositIds(address _user) public view virtual returns (uint256[] memory) {
         return allUserDepositIds[_user].values();
     }
 
-    function getExcludedAddresses() public view returns (address[] memory) {
+    function getExcludedAddresses() public view virtual returns (address[] memory) {
         return excludedAddresses.values();
     }
 
-    function getLockBoost(Lock _lock) public pure returns (uint256 boost, uint256 timelock) {
+    function getLockBoost(Lock _lock) public pure virtual returns (uint256 boost, uint256 timelock) {
         if (_lock == Lock.twoWeeks) {
             // 10%
             return (10e16, TWO_WEEKS);
@@ -232,7 +233,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         }
     }
 
-    function getVestingTime(Lock _lock) public pure returns (uint256 vestingTime) {
+    function getVestingTime(Lock _lock) public pure virtual returns (uint256 vestingTime) {
         if (_lock == Lock.twoWeeks) {
             vestingTime = 0;
         } else if (_lock == Lock.oneMonth) {
@@ -246,7 +247,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         }
     }
 
-    function calcualteVestedPrincipal(address _user, uint256 _depositId) public view returns (uint256 amount) {
+    function calcualteVestedPrincipal(address _user, uint256 _depositId) public view virtual returns (uint256 amount) {
         UserInfo storage user = userInfo[_user][_depositId];
         Lock _lock = user.lock;
 
@@ -260,7 +261,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         }
     }
 
-    function pendingRewardsPosition(address _user, uint256 _depositId) public view returns (uint256 pending) {
+    function pendingRewardsPosition(address _user, uint256 _depositId) public view virtual returns (uint256 pending) {
         UserInfo storage user = userInfo[_user][_depositId];
         uint256 _accMagicPerShare = accMagicPerShare;
         uint256 lpSupply = totalLpToken;
@@ -271,7 +272,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         pending = ((user.lpAmount * _accMagicPerShare / ONE).toInt256() - user.rewardDebt).toUint256();
     }
 
-    function pendingRewardsAll(address _user) external view returns (uint256 pending) {
+    function pendingRewardsAll(address _user) external view virtual returns (uint256 pending) {
         uint256 len = allUserDepositIds[_user].length();
         for (uint256 i = 0; i < len; i++) {
             uint256 depositId = allUserDepositIds[_user].at(i);
@@ -279,7 +280,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         }
     }
 
-    function deposit(uint256 _amount, Lock _lock) public updateRewards {
+    function deposit(uint256 _amount, Lock _lock) public virtual updateRewards {
         (UserInfo storage user, uint256 depositId) = _addDeposit(msg.sender);
         (uint256 lockBoost, uint256 timelock) = getLockBoost(_lock);
         uint256 nftBoost = boosts[msg.sender];
@@ -300,7 +301,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         emit Deposit(msg.sender, depositId, _amount, _lock);
     }
 
-    function withdrawPosition(uint256 _depositId, uint256 _amount) public updateRewards returns (bool) {
+    function withdrawPosition(uint256 _depositId, uint256 _amount) public virtual updateRewards returns (bool) {
         UserInfo storage user = userInfo[msg.sender][_depositId];
         uint256 depositAmount = user.depositAmount;
         if (depositAmount == 0) return false;
@@ -336,14 +337,14 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         return true;
     }
 
-    function withdrawAll() public {
+    function withdrawAll() public virtual {
         uint256[] memory depositIds = allUserDepositIds[msg.sender].values();
         for (uint256 i = 0; i < depositIds.length; i++) {
             withdrawPosition(depositIds[i], type(uint256).max);
         }
     }
 
-    function harvestPosition(uint256 _depositId) public updateRewards {
+    function harvestPosition(uint256 _depositId) public virtual updateRewards {
         UserInfo storage user = userInfo[msg.sender][_depositId];
 
         int256 accumulatedMagic = (user.lpAmount * accMagicPerShare / ONE).toInt256();
@@ -366,26 +367,26 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         require(magic.balanceOf(address(this)) >= magicTotalDeposits, "Run on banks");
     }
 
-    function harvestAll() public {
+    function harvestAll() public virtual {
         uint256[] memory depositIds = allUserDepositIds[msg.sender].values();
         for (uint256 i = 0; i < depositIds.length; i++) {
             harvestPosition(depositIds[i]);
         }
     }
 
-    function withdrawAndHarvestPosition(uint256 _depositId, uint256 _amount) public {
+    function withdrawAndHarvestPosition(uint256 _depositId, uint256 _amount) public virtual {
         withdrawPosition(_depositId, _amount);
         harvestPosition(_depositId);
     }
 
-    function withdrawAndHarvestAll() public {
+    function withdrawAndHarvestAll() public virtual {
         uint256[] memory depositIds = allUserDepositIds[msg.sender].values();
         for (uint256 i = 0; i < depositIds.length; i++) {
             withdrawAndHarvestPosition(depositIds[i], type(uint256).max);
         }
     }
 
-    function stakeTreasure(uint256 _tokenId, uint256 _amount) external updateRewards {
+    function stakeTreasure(uint256 _tokenId, uint256 _amount) external virtual updateRewards {
         require(treasure != address(0), "Cannot stake Treasure");
         require(_amount > 0, "Amount is 0");
 
@@ -401,10 +402,10 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
 
         IERC1155Upgradeable(treasure).safeTransferFrom(msg.sender, address(this), _tokenId, _amount, bytes(""));
 
-        emit Staked(legion, _tokenId, _amount, boosts[msg.sender]);
+        emit Staked(treasure, _tokenId, _amount, boosts[msg.sender]);
     }
 
-    function unstakeTreasure(uint256 _tokenId, uint256 _amount) external updateRewards {
+    function unstakeTreasure(uint256 _tokenId, uint256 _amount) external virtual updateRewards {
         require(treasure != address(0), "Cannot stake Treasure");
         require(_amount > 0, "Amount is 0");
         require(treasureStaked[msg.sender][_tokenId] >= _amount, "Withdraw amount too big");
@@ -422,7 +423,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         emit Unstaked(treasure, _tokenId, _amount, boosts[msg.sender]);
     }
 
-    function stakeLegion(uint256 _tokenId) external updateRewards {
+    function stakeLegion(uint256 _tokenId) external virtual updateRewards {
         require(legion != address(0), "Cannot stake Legion");
         require(legionStaked[msg.sender].add(_tokenId), "NFT already staked");
         require(legionStaked[msg.sender].length() <= 3, "Max 3 legions per wallet");
@@ -442,7 +443,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         emit Staked(legion, _tokenId, 1, boosts[msg.sender]);
     }
 
-    function unstakeLegion(uint256 _tokenId) external updateRewards {
+    function unstakeLegion(uint256 _tokenId) external virtual updateRewards {
         require(legionStaked[msg.sender].remove(_tokenId), "NFT is not staked");
 
         if (isLegion1_1(_tokenId)) {
@@ -459,7 +460,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         emit Unstaked(legion, _tokenId, 1, boosts[msg.sender]);
     }
 
-    function isLegion1_1(uint256 _tokenId) public view returns (bool) {
+    function isLegion1_1(uint256 _tokenId) public view virtual returns (bool) {
         try ILegionMetadataStore(legionMetadataStore).metadataForLegion(_tokenId) returns (ILegionMetadataStore.LegionMetadata memory metadata) {
             return metadata.legionGeneration == ILegionMetadataStore.LegionGeneration.GENESIS &&
                 metadata.legionRarity == ILegionMetadataStore.LegionRarity.LEGENDARY;
@@ -472,7 +473,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         }
     }
 
-    function getNftBoost(address _nft, uint256 _tokenId, uint256 _amount) public view returns (uint256) {
+    function getNftBoost(address _nft, uint256 _tokenId, uint256 _amount) public view virtual returns (uint256) {
         if (_nft == treasure) {
             return getTreasureBoost(_tokenId, _amount);
         } else if (_nft == legion) {
@@ -490,7 +491,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         return 0;
     }
 
-    function _recalculateLpAmount(address _user) internal {
+    function _recalculateLpAmount(address _user) internal virtual {
         uint256 nftBoost = boosts[_user];
 
         uint256[] memory depositIds = allUserDepositIds[_user].values();
@@ -517,44 +518,44 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         }
     }
 
-    function addExcludedAddress(address _exclude) external onlyRole(ATLAS_MINE_ADMIN_ROLE) updateRewards {
+    function addExcludedAddress(address _exclude) external virtual onlyRole(ATLAS_MINE_ADMIN_ROLE) updateRewards {
         require(excludedAddresses.add(_exclude), "Address already excluded");
     }
 
-    function removeExcludedAddress(address _excluded) external onlyRole(ATLAS_MINE_ADMIN_ROLE) updateRewards {
+    function removeExcludedAddress(address _excluded) external virtual onlyRole(ATLAS_MINE_ADMIN_ROLE) updateRewards {
         require(excludedAddresses.remove(_excluded), "Address is not excluded");
     }
 
-    function setUtilizationOverride(uint256 _utilizationOverride) external onlyRole(ATLAS_MINE_ADMIN_ROLE) updateRewards {
+    function setUtilizationOverride(uint256 _utilizationOverride) external virtual onlyRole(ATLAS_MINE_ADMIN_ROLE) updateRewards {
         utilizationOverride = _utilizationOverride;
     }
 
-    function setMagicToken(address _magic) external onlyRole(ATLAS_MINE_ADMIN_ROLE) {
+    function setMagicToken(address _magic) external virtual onlyRole(ATLAS_MINE_ADMIN_ROLE) {
         magic = IERC20Upgradeable(_magic);
     }
 
-    function setTreasure(address _treasure) external onlyRole(ATLAS_MINE_ADMIN_ROLE) {
+    function setTreasure(address _treasure) external virtual onlyRole(ATLAS_MINE_ADMIN_ROLE) {
         treasure = _treasure;
     }
 
-    function setLegion(address _legion) external onlyRole(ATLAS_MINE_ADMIN_ROLE) {
+    function setLegion(address _legion) external virtual onlyRole(ATLAS_MINE_ADMIN_ROLE) {
         legion = _legion;
     }
 
-    function setLegionMetadataStore(address _legionMetadataStore) external onlyRole(ATLAS_MINE_ADMIN_ROLE) {
+    function setLegionMetadataStore(address _legionMetadataStore) external virtual onlyRole(ATLAS_MINE_ADMIN_ROLE) {
         legionMetadataStore = _legionMetadataStore;
     }
 
-    function setLegionBoostMatrix(uint256[][] memory _legionBoostMatrix) external onlyRole(ATLAS_MINE_ADMIN_ROLE) {
+    function setLegionBoostMatrix(uint256[][] memory _legionBoostMatrix) external virtual onlyRole(ATLAS_MINE_ADMIN_ROLE) {
         legionBoostMatrix = _legionBoostMatrix;
     }
 
     /// @notice EMERGENCY ONLY
-    function toggleUnlockAll() external onlyRole(ATLAS_MINE_ADMIN_ROLE) updateRewards {
+    function toggleUnlockAll() external virtual onlyRole(ATLAS_MINE_ADMIN_ROLE) updateRewards {
         unlockAll = unlockAll ? false : true;
     }
 
-    function withdrawUndistributedRewards(address _to) external onlyRole(ATLAS_MINE_ADMIN_ROLE) updateRewards {
+    function withdrawUndistributedRewards(address _to) external virtual onlyRole(ATLAS_MINE_ADMIN_ROLE) updateRewards {
         uint256 _totalUndistributedRewards = totalUndistributedRewards;
         totalUndistributedRewards = 0;
 
@@ -562,7 +563,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         emit UndistributedRewardsWithdraw(_to, _totalUndistributedRewards);
     }
 
-    function getTreasureBoost(uint256 _tokenId, uint256 _amount) public pure returns (uint256 boost) {
+    function getTreasureBoost(uint256 _tokenId, uint256 _amount) public pure virtual returns (uint256 boost) {
         if (_tokenId == 39) { // Ancient Relic 8%
             boost = 75e15;
         } else if (_tokenId == 46) { // Bag of Rare Mushrooms 6.2%
@@ -660,20 +661,20 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         boost = boost * _amount;
     }
 
-    function _vestedPrincipal(address _user, uint256 _depositId) internal returns (uint256 amount) {
+    function _vestedPrincipal(address _user, uint256 _depositId) internal virtual returns (uint256 amount) {
         amount = calcualteVestedPrincipal(_user, _depositId);
         UserInfo storage user = userInfo[_user][_depositId];
         user.vestingLastUpdate = block.timestamp;
     }
 
-    function _addDeposit(address _user) internal returns (UserInfo storage user, uint256 newDepositId) {
+    function _addDeposit(address _user) internal virtual returns (UserInfo storage user, uint256 newDepositId) {
         // start depositId from 1
         newDepositId = ++currentId[_user];
         allUserDepositIds[_user].add(newDepositId);
         user = userInfo[_user][newDepositId];
     }
 
-    function _removeDeposit(address _user, uint256 _depositId) internal {
+    function _removeDeposit(address _user, uint256 _depositId) internal virtual {
         require(allUserDepositIds[_user].remove(_depositId), 'depositId !exists');
     }
 }

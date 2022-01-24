@@ -18,8 +18,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       log: true,
       proxy: {
         execute: {
-          methodName: "init",
-          args: [magicArbitrum, (await deployments.get("MasterOfCoin")).address]
+          init: {
+            methodName: "init",
+            args: [magicArbitrum, (await deployments.get("MasterOfCoin")).address]
+          }
         }
       }
     })
