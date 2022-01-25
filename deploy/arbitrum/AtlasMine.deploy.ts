@@ -53,15 +53,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       );
     }
 
-    if(await read('AtlasMine', 'legionMetadataStore') != legionMetadataStore) {
-      await execute(
-        'AtlasMine',
-        { from: deployer, log: true },
-        'setLegionMetadataStore',
-        legionMetadataStore
-      );
-    }
-
     const ATLAS_MINE_ADMIN_ROLE = await read('AtlasMine', 'ATLAS_MINE_ADMIN_ROLE');
 
     if(!(await read('AtlasMine', 'hasRole', ATLAS_MINE_ADMIN_ROLE, newOwner))) {
