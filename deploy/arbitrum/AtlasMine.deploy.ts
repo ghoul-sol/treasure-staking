@@ -64,6 +64,26 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         newOwner
       );
     }
+
+    // setup MasterOfCoin stream
+    // if(streamConfig.totalRewards.eq(0)) {
+    //   const totalRewards = ethers.utils.parseEther('10000');
+    //   let ms = Date.now();
+    //   const startTimestamp = Math.floor(ms / 1000 + 20);
+    //   const endTimestamp = startTimestamp + 60 * 60 * 24 * 7;
+    //   const callback = false;
+    //
+    //   await execute(
+    //     'MasterOfCoin',
+    //     { from: deployer, log: true },
+    //     'addStream',
+    //     atlasMine.address,
+    //     totalRewards,
+    //     startTimestamp,
+    //     endTimestamp,
+    //     callback
+    //   );
+    // }
 };
 export default func;
 func.tags = ['AtlasMine'];
