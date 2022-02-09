@@ -6,7 +6,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     const { deploy, execute, read } = deployments;
     const { deployer } = await getNamedAccounts();
 
-    const magicArbitrum = "0x539bdE0d7Dbd336b79148AA742883198BBF60342";
+    const magicArbitrum = "0xA0A89db1C899c49F98E6326b764BAFcf167fC2CE";
     const newOwner = "0x3D210e741cDeDeA81efCd9711Ce7ef7FEe45684B";
 
     await deploy('MasterOfCoin', {

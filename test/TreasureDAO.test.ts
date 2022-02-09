@@ -13,9 +13,9 @@ describe('TreasureDAO', function () {
   const testWallet3 = "0x2b5321c1AfDDFb6680aAFFf4Df96A209e18dEa1c";
   const testWallet4 = "0x7c3410819f4Dd207358e48ADB7a8006d58fa828E";
 
-  const TreasuryMineArbitrum = "0xDf19f1216aA406DF8bC585246bee7D96933f285F";
+  const AtlasMineArbitrum = "0xA0A89db1C899c49F98E6326b764BAFcf167fC2CE";
 
-  let treasuryMine: any, treasuryStake: any;
+  let atlasMine: any, treasuryStake: any;
   let magicToken: any, lpToken: any, treasureDAO: any;
   let staker1: any, staker2: any, staker3: any, hacker: any, deployer: any;
   let staker1Signer: any, staker2Signer: any, staker3Signer: any, hackerSigner: any, deployerSigner: any;
@@ -47,25 +47,25 @@ describe('TreasureDAO', function () {
       await ethers.provider.getSigner(deployer)
     );
 
-    treasuryMine = new ethers.Contract(
-      TreasuryMineArbitrum,
-      (await deployments.get('TreasuryMine')).abi,
+    atlasMine = new ethers.Contract(
+      AtlasMineArbitrum,
+      (await deployments.get('AtlasMine')).abi,
       await ethers.provider.getSigner(deployer)
     );
 
     magicToken = new ethers.Contract(
-      await treasuryMine.magic(),
+      await atlasMine.magic(),
       (await artifacts.readArtifact('ERC20Mintable')).abi,
       await ethers.provider.getSigner(deployer)
     );
 
     const TreasureDAO = await ethers.getContractFactory('TreasureDAO')
-    treasureDAO = await TreasureDAO.deploy(TreasuryMineArbitrum, sushiLP, lpRewards);
+    treasureDAO = await TreasureDAO.deploy(AtlasMineArbitrum, sushiLP, lpRewards);
     await treasureDAO.deployed();
   });
 
   it('init()', async function () {
-    expect(await treasureDAO.treasuryMine()).to.be.equal(TreasuryMineArbitrum);
+    expect(await treasureDAO.atlasMine()).to.be.equal(AtlasMineArbitrum);
     expect(await treasureDAO.sushiLP()).to.be.equal(sushiLP);
     expect(await treasureDAO.lpRewards()).to.be.equal(lpRewards);
   });
@@ -75,23 +75,23 @@ describe('TreasureDAO', function () {
   });
 
   it('getMineBalance()', async function () {
-    expect(await treasureDAO.getMineBalance(testWallet)).to.be.equal('180196229813499272392755');
-    expect(await treasureDAO.getMineBalance(testWallet2)).to.be.equal('198134502090878928892509');
-    expect(await treasureDAO.getMineBalance(testWallet3)).to.be.equal('2411248209237196763986129');
-    expect(await treasureDAO.getMineBalance(testWallet4)).to.be.equal('11020797828861264508998');
+    expect(await treasureDAO.getMineBalance(testWallet)).to.be.equal('381464174845282622983837');
+    expect(await treasureDAO.getMineBalance(testWallet2)).to.be.equal('0');
+    expect(await treasureDAO.getMineBalance(testWallet3)).to.be.equal('5000000000000000000000000');
+    expect(await treasureDAO.getMineBalance(testWallet4)).to.be.equal('38006117332477996155295');
   });
 
   it('getLPBalance()', async function () {
-    expect(await treasureDAO.getLPBalance(testWallet)).to.be.equal('43865572860027005115');
-    expect(await treasureDAO.getLPBalance(testWallet2)).to.be.equal('24213755632936178359852');
-    expect(await treasureDAO.getLPBalance(testWallet3)).to.be.equal('17546229144010843988345');
-    expect(await treasureDAO.getLPBalance(testWallet4)).to.be.equal('1625012547464634236710');
+    expect(await treasureDAO.getLPBalance(testWallet)).to.be.equal('0');
+    expect(await treasureDAO.getLPBalance(testWallet2)).to.be.equal('0');
+    expect(await treasureDAO.getLPBalance(testWallet3)).to.be.equal('0');
+    expect(await treasureDAO.getLPBalance(testWallet4)).to.be.equal('0');
   });
 
   it('balanceOf()', async function () {
-    expect(await treasureDAO.balanceOf(testWallet)).to.be.equal('180240095386359299397870');
-    expect(await treasureDAO.balanceOf(testWallet2)).to.be.equal('222348257723815107252361');
-    expect(await treasureDAO.balanceOf(testWallet3)).to.be.equal('2428794438381207607974474');
-    expect(await treasureDAO.balanceOf(testWallet4)).to.be.equal('12645810376325898745708');
+    expect(await treasureDAO.balanceOf(testWallet)).to.be.equal('381464174845282622983837');
+    expect(await treasureDAO.balanceOf(testWallet2)).to.be.equal('0');
+    expect(await treasureDAO.balanceOf(testWallet3)).to.be.equal('5000000000000000000000000');
+    expect(await treasureDAO.balanceOf(testWallet4)).to.be.equal('38006117332477996155295');
   });
 });

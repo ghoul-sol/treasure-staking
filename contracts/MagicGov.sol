@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.7;
+pragma solidity 0.8.11;
 
 import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
@@ -7,21 +7,21 @@ import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/utils/math/SafeCast.sol';
 
 import './interfaces/IUniswapV2Pair.sol';
-import './TreasuryMine.sol';
+import './AtlasMine.sol';
 
 contract TreasureDAO is ERC20 {
-    TreasuryMine public treasuryMine;
+    AtlasMine public atlasMine;
     IUniswapV2Pair public sushiLP;
     ERC20 public lpRewards;
 
-    constructor(address _treasuryMine, address _sushiLP, address _lpRewards) ERC20("Treasure DAO Governance", "gMAGIC") {
-        treasuryMine = TreasuryMine(_treasuryMine);
+    constructor(address _atlasMine, address _sushiLP, address _lpRewards) ERC20("Treasure DAO Governance", "gMAGIC") {
+        atlasMine = AtlasMine(_atlasMine);
         sushiLP = IUniswapV2Pair(_sushiLP);
         lpRewards = ERC20(_lpRewards);
     }
 
     function totalSupply() public view override returns (uint256) {
-        return treasuryMine.magic().totalSupply();
+        return atlasMine.magic().totalSupply();
     }
 
     function balanceOf(address _account) public view override returns (uint256) {
@@ -29,11 +29,13 @@ contract TreasureDAO is ERC20 {
     }
 
     function getMineBalance(address _account) public view returns (uint256 userMineBalance) {
-        uint256[] memory allUserDepositIds = treasuryMine.getAllUserDepositIds(_account);
+        uint256[] memory allUserDepositIds = atlasMine.getAllUserDepositIds(_account);
         uint256 len = allUserDepositIds.length;
         for (uint256 i = 0; i < len; i++) {
             uint256 depositId = allUserDepositIds[i];
-            (, uint256 lpAmount,,,) = treasuryMine.userInfo(_account, depositId);
+            (, uint256 depositAmount,,,,, AtlasMine.Lock lock) = atlasMine.userInfo(_account, depositId);
+            (uint256 lockBoost, ) = atlasMine.getLockBoost(lock);
+            uint256 lpAmount = depositAmount + depositAmount * lockBoost / atlasMine.ONE();
             userMineBalance += lpAmount;
         }
     }
@@ -42,7 +44,7 @@ contract TreasureDAO is ERC20 {
         uint256 liquidity = lpRewards.balanceOf(_account);
         (uint112 _reserve0, uint112 _reserve1,) = sushiLP.getReserves();
 
-        if (address(treasuryMine.magic()) == sushiLP.token0()) {
+        if (address(atlasMine.magic()) == sushiLP.token0()) {
             return _reserve0 * liquidity / sushiLP.totalSupply();
         } else {
             return _reserve1 * liquidity / sushiLP.totalSupply();
@@ -53,7 +55,7 @@ contract TreasureDAO is ERC20 {
         address from,
         address to,
         uint256 amount
-    ) internal override {
+    ) internal pure override {
         revert("Non-transferable");
     }
 }

@@ -15,7 +15,7 @@ const config: HardhatUserConfig = {
         enabled: process.env.FORKING === "true",
         url: `https://arb-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
         // url: `https://arbitrum-mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
-        blockNumber: 2836024
+        blockNumber: 5672273
       },
       live: false,
       saveDeployments: true,
