@@ -88,6 +88,7 @@ contract MasterOfCoin is IMasterOfCoin, Initializable, AccessControlEnumerableUp
         virtual
         streamExists(_stream)
         streamActive(_stream)
+        callbackStream(_stream)
     {
         _fundStream(_stream, _amount);
 
@@ -140,7 +141,7 @@ contract MasterOfCoin is IMasterOfCoin, Initializable, AccessControlEnumerableUp
         }
     }
 
-    function _fundStream(address _stream, uint256 _amount) internal virtual callbackStream(_stream) {
+    function _fundStream(address _stream, uint256 _amount) internal virtual {
         CoinStream storage stream = streamConfig[_stream];
 
         uint256 secondsToEnd = stream.endTimestamp - stream.lastRewardTimestamp;
@@ -187,6 +188,7 @@ contract MasterOfCoin is IMasterOfCoin, Initializable, AccessControlEnumerableUp
         onlyRole(MASTER_OF_COIN_ADMIN_ROLE)
         streamExists(_stream)
         streamActive(_stream)
+        callbackStream(_stream)
     {
         _fundStream(_stream, _amount);
         emit StreamFunded(_stream, _amount);
