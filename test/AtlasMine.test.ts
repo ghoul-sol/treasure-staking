@@ -1057,6 +1057,54 @@ describe.only('AtlasMine', function () {
         }
       })
 
+      describe('limit of deposits', function () {
+        it('makes deposits and stakes NFT', async function () {
+          const makeDeposits = async (count: any) => {
+            for (let index = 0; index < count; index++) {
+              const deposit = depositsScenarios[0];
+              await magicToken.mint(deposit.address, deposit.amount);
+              await magicToken.connect(deposit.signer).approve(atlasMine.address, deposit.amount);
+              await atlasMine.connect(deposit.signer).deposit(deposit.amount, deposit.lock);
+            }
+          }
+
+          const deposit = depositsScenarios[0];
+          const tokenId = 1;
+          const tokenAmount = 1;
+
+          // Deposits: 3, GasLimit: 227321
+          // Deposits: 10, GasLimit: 241688
+          // Deposits: 50, GasLimit: 624958
+          // Deposits: 100, GasLimit: 1107476
+          // Deposits: 200, GasLimit: 2064629
+          // Deposits: 500, GasLimit: 4967974
+          // Deposits: 1000, GasLimit: 9693977
+          // Deposits: 1250, GasLimit: 12104647
+          // Deposits: 1500, GasLimit: 14497133
+          // Deposits: 1750, GasLimit: 16897584
+          // Deposits: 2000, GasLimit: 19313720
+          // Deposits: 2250, GasLimit: 21700950
+          // Deposits: 2500, GasLimit: 24082428
+          // Deposits: 2750, GasLimit: 26480028
+          // Deposits: 3000, GasLimit: 28905377
+          const listOfDeposits = [0, 7, 40, 50, 100, 300, 500, 250, 250, 250, 250, 250, 250, 250, 250]
+
+          for (let index = 0; index < listOfDeposits.length; index++) {
+            const element = listOfDeposits[index];
+            await makeDeposits(element);
+
+            const allIds = await atlasMine.getAllUserDepositIds(deposit.address);
+
+            await treasure.functions['mint(address,uint256,uint256)'](deposit.address, tokenId, tokenAmount);
+            await treasure.connect(deposit.signer).setApprovalForAll(atlasMine.address, true);
+
+            let tx = await atlasMine.connect(deposit.signer).stakeTreasure(tokenId, tokenAmount);
+            const gasLimit = tx.gasLimit.toString();
+            console.log(`Deposits: ${allIds.length}, GasLimit: ${gasLimit}`);
+          }
+        })
+      })
+
       describe('with NFTs staked', function () {
         beforeEach(async function () {
           for (let index = 0; index < boostScenarios.slice(0, -2).length; index++) {

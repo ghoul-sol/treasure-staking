@@ -281,6 +281,8 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
     }
 
     function deposit(uint256 _amount, Lock _lock) public virtual updateRewards {
+        require(allUserDepositIds[msg.sender].length() <= 3000, "Max deposits number reached");
+
         (UserInfo storage user, uint256 depositId) = _addDeposit(msg.sender);
         (uint256 lockBoost, uint256 timelock) = getLockBoost(_lock);
         uint256 nftBoost = boosts[msg.sender];

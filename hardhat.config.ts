@@ -120,7 +120,7 @@ const config: HardhatUserConfig = {
     hacker: 4
   },
   mocha: {
-    timeout: 60000,
+    timeout: 1560000,
   },
   gasReporter: {
     currency: 'USD',
