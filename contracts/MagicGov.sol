@@ -7,17 +7,20 @@ import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/utils/math/SafeCast.sol';
 
 import './interfaces/IUniswapV2Pair.sol';
+import './interfaces/IMiniChefV2.sol';
 import './AtlasMine.sol';
 
 contract TreasureDAO is ERC20 {
+    uint256 public constant PID = 13;
+
     AtlasMine public atlasMine;
     IUniswapV2Pair public sushiLP;
-    ERC20 public lpRewards;
+    IMiniChefV2 public miniChefV2;
 
-    constructor(address _atlasMine, address _sushiLP, address _lpRewards) ERC20("Treasure DAO Governance", "gMAGIC") {
+    constructor(address _atlasMine, address _sushiLP, address _miniChefV2) ERC20("Treasure DAO Governance", "gMAGIC") {
         atlasMine = AtlasMine(_atlasMine);
         sushiLP = IUniswapV2Pair(_sushiLP);
-        lpRewards = ERC20(_lpRewards);
+        miniChefV2 = IMiniChefV2(_miniChefV2);
     }
 
     function totalSupply() public view override returns (uint256) {
@@ -41,7 +44,7 @@ contract TreasureDAO is ERC20 {
     }
 
     function getLPBalance(address _account) public view returns (uint256) {
-        uint256 liquidity = lpRewards.balanceOf(_account);
+        (uint256 liquidity, ) = miniChefV2.userInfo(PID, _account);
         (uint112 _reserve0, uint112 _reserve1,) = sushiLP.getReserves();
 
         if (address(atlasMine.magic()) == sushiLP.token0()) {
