@@ -1102,6 +1102,13 @@ describe.only('AtlasMine', function () {
             const gasLimit = tx.gasLimit.toString();
             console.log(`Deposits: ${allIds.length}, GasLimit: ${gasLimit}`);
           }
+
+          let getAllUserDepositIds = await atlasMine.getAllUserDepositIds(deposit.address);
+          expect(getAllUserDepositIds.length).to.be.equal(3000);
+
+          await magicToken.mint(deposit.address, deposit.amount);
+          await magicToken.connect(deposit.signer).approve(atlasMine.address, deposit.amount);
+          await expect(atlasMine.connect(deposit.signer).deposit(deposit.amount, deposit.lock)).to.be.revertedWith("Max deposits number reached");
         })
       })
 
