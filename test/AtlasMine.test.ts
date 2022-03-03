@@ -63,6 +63,205 @@ describe.only('AtlasMine', function () {
     await expect(atlasMine.init(magicToken.address, masterOfCoin.address)).to.be.revertedWith("Initializable: contract is already initialized");
   });
 
+  it('getTreasureBoost()', async function () {
+    const TreasureBoost = [
+      {
+        tokenId: 39,
+        boost: ethers.utils.parseEther('0.075')
+      },
+      {
+        tokenId: 46,
+        boost: ethers.utils.parseEther('0.062')
+      },
+      {
+        tokenId: 47,
+        boost: ethers.utils.parseEther('0.073')
+      },
+      {
+        tokenId: 48,
+        boost: ethers.utils.parseEther('0.008')
+      },
+      {
+        tokenId: 49,
+        boost: ethers.utils.parseEther('0.015')
+      },
+      {
+        tokenId: 51,
+        boost: ethers.utils.parseEther('0.076')
+      },
+      {
+        tokenId: 52,
+        boost: ethers.utils.parseEther('0.076')
+      },
+      {
+        tokenId: 53,
+        boost: ethers.utils.parseEther('0.061')
+      },
+      {
+        tokenId: 54,
+        boost: ethers.utils.parseEther('0.071')
+      },
+      {
+        tokenId: 68,
+        boost: ethers.utils.parseEther('0.056')
+      },
+      {
+        tokenId: 69,
+        boost: ethers.utils.parseEther('0.034')
+      },
+      {
+        tokenId: 71,
+        boost: ethers.utils.parseEther('0.022')
+      },
+      {
+        tokenId: 72,
+        boost: ethers.utils.parseEther('0.058')
+      },
+      {
+        tokenId: 73,
+        boost: ethers.utils.parseEther('0.008')
+      },
+      {
+        tokenId: 74,
+        boost: ethers.utils.parseEther('0.063')
+      },
+      {
+        tokenId: 75,
+        boost: ethers.utils.parseEther('0.057')
+      },
+      {
+        tokenId: 76,
+        boost: ethers.utils.parseEther('0.012')
+      },
+      {
+        tokenId: 77,
+        boost: ethers.utils.parseEther('0.008')
+      },
+      {
+        tokenId: 79,
+        boost: ethers.utils.parseEther('0.008')
+      },
+      {
+        tokenId: 82,
+        boost: ethers.utils.parseEther('0.056')
+      },
+      {
+        tokenId: 91,
+        boost: ethers.utils.parseEther('0.058')
+      },
+      {
+        tokenId: 92,
+        boost: ethers.utils.parseEther('0.008')
+      },
+      {
+        tokenId: 93,
+        boost: ethers.utils.parseEther('0.032')
+      },
+      {
+        tokenId: 94,
+        boost: ethers.utils.parseEther('0.033')
+      },
+      {
+        tokenId: 95,
+        boost: ethers.utils.parseEther('0.157')
+      },
+      {
+        tokenId: 96,
+        boost: ethers.utils.parseEther('0.008')
+      },
+      {
+        tokenId: 97,
+        boost: ethers.utils.parseEther('0.158')
+      },
+      {
+        tokenId: 98,
+        boost: ethers.utils.parseEther('0.072')
+      },
+      {
+        tokenId: 99,
+        boost: ethers.utils.parseEther('0.064')
+      },
+      {
+        tokenId: 100,
+        boost: ethers.utils.parseEther('0.053')
+      },
+      {
+        tokenId: 103,
+        boost: ethers.utils.parseEther('0.03')
+      },
+      {
+        tokenId: 104,
+        boost: ethers.utils.parseEther('0.062')
+      },
+      {
+        tokenId: 105,
+        boost: ethers.utils.parseEther('0.067')
+      },
+      {
+        tokenId: 114,
+        boost: ethers.utils.parseEther('0.016')
+      },
+      {
+        tokenId: 115,
+        boost: ethers.utils.parseEther('0.008')
+      },
+      {
+        tokenId: 116,
+        boost: ethers.utils.parseEther('0.058')
+      },
+      {
+        tokenId: 117,
+        boost: ethers.utils.parseEther('0.008')
+      },
+      {
+        tokenId: 132,
+        boost: ethers.utils.parseEther('0.064')
+      },
+      {
+        tokenId: 133,
+        boost: ethers.utils.parseEther('0.008')
+      },
+      {
+        tokenId: 141,
+        boost: ethers.utils.parseEther('0.06')
+      },
+      {
+        tokenId: 151,
+        boost: ethers.utils.parseEther('0.008')
+      },
+      {
+        tokenId: 152,
+        boost: ethers.utils.parseEther('0.06')
+      },
+      {
+        tokenId: 153,
+        boost: ethers.utils.parseEther('0.064')
+      },
+      {
+        tokenId: 161,
+        boost: ethers.utils.parseEther('0.073')
+      },
+      {
+        tokenId: 162,
+        boost: ethers.utils.parseEther('0.059')
+      },
+      {
+        tokenId: 164,
+        boost: ethers.utils.parseEther('0.051')
+      },
+    ]
+
+    for (let index = 0; index < TreasureBoost.length; index++) {
+      const tokenId = TreasureBoost[index].tokenId;
+      const expectedBoost = TreasureBoost[index].boost;
+      const actualBoost = await atlasMine.getTreasureBoost(tokenId, 1);
+      expect(actualBoost).to.be.equal(expectedBoost);
+
+      const multiActualBoost = await atlasMine.getTreasureBoost(tokenId, 7);
+      expect(multiActualBoost).to.be.equal(expectedBoost.mul(7));
+    }
+  })
+
   it('getLockBoost()', async function () {
     expect((await atlasMine.getLockBoost(0)).boost).to.be.equal(ethers.utils.parseEther('0.1'));
     expect((await atlasMine.getLockBoost(1)).boost).to.be.equal(ethers.utils.parseEther('0.25'));
@@ -519,6 +718,7 @@ describe.only('AtlasMine', function () {
         expect(pendingRewardsPosition).to.be.equal(reward);
 
         const balBefore = await magicToken.balanceOf(deposit.address);
+        await atlasMine.connect(deposit.signer).harvestPosition(deposit.depositId)
         await atlasMine.connect(deposit.signer).harvestPosition(deposit.depositId)
         const balAfter = await magicToken.balanceOf(deposit.address);
         expect(balAfter.sub(balBefore)).to.be.equal(reward);
@@ -1057,7 +1257,7 @@ describe.only('AtlasMine', function () {
         }
       })
 
-      describe('limit of deposits', function () {
+      describe.skip('limit of deposits', function () {
         it('makes deposits and stakes NFT', async function () {
           const makeDeposits = async (count: any) => {
             for (let index = 0; index < count; index++) {

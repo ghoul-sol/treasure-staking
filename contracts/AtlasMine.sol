@@ -566,7 +566,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
     }
 
     function getTreasureBoost(uint256 _tokenId, uint256 _amount) public pure virtual returns (uint256 boost) {
-        if (_tokenId == 39) { // Ancient Relic 8%
+        if (_tokenId == 39) { // Ancient Relic 7.5%
             boost = 75e15;
         } else if (_tokenId == 46) { // Bag of Rare Mushrooms 6.2%
             boost = 62e15;
@@ -582,7 +582,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
             boost = 76e15;
         } else if (_tokenId == 53) { // Carriage 6.1%
             boost = 61e15;
-        } else if (_tokenId == 54) { // Castle 7.3%
+        } else if (_tokenId == 54) { // Castle 7.1%
             boost = 71e15;
         } else if (_tokenId == 68) { // Common Bead 5.6%
             boost = 56e15;
