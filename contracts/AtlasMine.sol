@@ -311,6 +311,7 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         if (_amount > depositAmount) {
             _amount = depositAmount;
         }
+
         // anyone can withdraw if kill swith was used
         if (!unlockAll) {
             require(block.timestamp >= user.lockedUntil, "Position is still locked");
