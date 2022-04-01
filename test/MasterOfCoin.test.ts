@@ -613,14 +613,15 @@ describe.only('MasterOfCoin', function () {
         ]
       ]
 
+      await deployments.fixture(['MasterOfCoin'], { fallbackToGlobal: true });
+
       const ERC20Mintable = await ethers.getContractFactory('ERC20Mintable')
       magicTokenFresh = await ERC20Mintable.deploy()
       await magicTokenFresh.deployed();
 
-      const MasterOfCoinFresh = await ethers.getContractFactory('MasterOfCoin')
-      masterOfCoinFresh = await MasterOfCoinFresh.deploy()
-      await masterOfCoinFresh.deployed();
-      await masterOfCoinFresh.init(magicTokenFresh.address);
+      const MasterOfCoin = await deployments.get('MasterOfCoin');
+      masterOfCoinFresh = new ethers.Contract(MasterOfCoin.address, MasterOfCoin.abi, deployerSigner);
+      await masterOfCoinFresh.setMagicToken(magicTokenFresh.address);
 
       for (let index = 0; index < scenarioStreams.length; index++) {
         const _stream = scenarioStreams[index];
