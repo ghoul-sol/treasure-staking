@@ -49,4 +49,12 @@ contract AtlasMine is AtlasMineV1 {
             }
         }
     }
+
+    function isLegion1_1(uint256 _tokenId) public view virtual override returns (bool) {
+        ILegionMetadataStore.LegionMetadata memory metadata =
+            ILegionMetadataStore(legionMetadataStore).metadataForLegion(_tokenId);
+        return
+            metadata.legionGeneration == ILegionMetadataStore.LegionGeneration.GENESIS
+            && metadata.legionRarity == ILegionMetadataStore.LegionRarity.LEGENDARY;
+    }
 }
