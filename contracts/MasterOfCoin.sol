@@ -64,7 +64,7 @@ contract MasterOfCoin is MasterOfCoinV1 {
         CoinStream storage stream = streamConfig[_stream];
 
         uint256 secondsToEnd = stream.endTimestamp - stream.lastRewardTimestamp;
-        uint256 rewardsLeft = secondsToEnd * stream.ratePerSecond;
+        uint256 rewardsLeft = stream.totalRewards - stream.paid;
 
         require(_amount <= rewardsLeft, "Reduce amount too large, rewards already paid");
 
