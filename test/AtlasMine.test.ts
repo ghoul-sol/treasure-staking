@@ -1051,6 +1051,16 @@ describe.only('AtlasMine', function () {
         });
 
         it('NFT already staked', async function () {
+          let metadata = {
+              legionGeneration: 0,
+              legionClass: 0,
+              legionRarity: 0,
+              questLevel: 0,
+              craftLevel: 0,
+              constellationRanks: [0,1,2,3,4,5]
+          };
+          await mockILegionMetadataStore.mock.metadataForLegion.withArgs(0).returns(metadata);
+          
           await legion.mint(staker1)
           await legion.connect(staker1Signer).approve(atlasMine.address, 0);
           await atlasMine.connect(staker1Signer).stakeLegion(0);
