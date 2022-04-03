@@ -10,6 +10,18 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import './interfaces/IMasterOfCoin.sol';
 import './interfaces/IStream.sol';
 
+/// @notice Contract is using an admin role to manage its configuration. Admin role is assigned to a multi-sig
+/// wallet controlled by trusted team members. Admin role aka MASTER_OF_COIN_ADMIN_ROLE, as initialized during init()
+/// to msg.sender can:
+/// • MASTER_OF_COIN_ADMIN_ROLE, as initialized during init() to msg.sender:
+/// • Add or remove streams, by calling addStream() and removeStream(), respectively.
+/// • Increasing an active stream's ratePerSecond and totalRewards, by calling fundStream().
+/// • Decrease an active stream's ratePerSecond and totalRewards, by calling defundStream().
+/// • Modify a stream's startTimestamp, lastRewardTimestamp, endTimestamp and indirectly ratePerSecond, by calling
+///   updateStreamTime().
+/// • Enable/Disable registered stream addresses as callbacks, by calling setCallback().
+/// • Withdraw an arbitrary magic token amount to an arbitrary address, by calling withdrawMagic().
+/// • Set the magic token address to an arbitrary address, by calling setMagicToken().
 contract MasterOfCoin is IMasterOfCoin, Initializable, AccessControlEnumerableUpgradeable {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
     using SafeERC20Upgradeable for IERC20Upgradeable;
