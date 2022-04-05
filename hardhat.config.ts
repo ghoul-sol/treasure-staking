@@ -5,6 +5,7 @@ import {HardhatUserConfig} from 'hardhat/types';
 import 'hardhat-deploy';
 import 'hardhat-deploy-ethers';
 import 'hardhat-gas-reporter';
+import 'solidity-coverage';
 
 const privateKey = process.env.DEV_PRIVATE_KEY || "a35028be607c31f34f141f1a565b66ff519399d6ec05d16f565c2b7b3a9b90a8"; // address: 0xa60C5868cE00D2a011144b741cFeFB368C19e057
 const config: HardhatUserConfig = {
@@ -15,7 +16,7 @@ const config: HardhatUserConfig = {
         enabled: process.env.FORKING === "true",
         url: `https://arb-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
         // url: `https://arbitrum-mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
-        blockNumber: 5672273
+        blockNumber: 7365993
       },
       live: false,
       saveDeployments: true,

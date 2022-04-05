@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@nomiclabs/hardhat-etherscan": "^3.0.0",
-    "@openzeppelin/contracts-upgradeable": "^4.4.2"
+    "@openzeppelin/contracts-upgradeable": "^4.4.2",
+    "solidity-coverage": "^0.7.20"
   }
 }
