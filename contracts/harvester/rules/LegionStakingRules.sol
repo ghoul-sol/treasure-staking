@@ -60,6 +60,7 @@ contract LegionStakingRules is IStakingRules, AccessControlEnumerable {
         ];
     }
 
+    /// @inheritdoc IStakingRules
     function canStake(address _user, address, uint256 _tokenId, uint256)
         external
         override
@@ -67,11 +68,13 @@ contract LegionStakingRules is IStakingRules, AccessControlEnumerable {
     {
         weightStaked[_user] += getWeight(_tokenId);
 
-        if (weightStaked[_user] > maxWeight) revert MaxWeight();
+        if (weightStaked[_user] > maxWeight) revert("MaxWeight()");
     }
 
+    /// @inheritdoc IStakingRules
     function canUnstake(address, address, uint256, uint256) external pure override {}
 
+    /// @inheritdoc IStakingRules
     function getBoost(address, address, uint256 _tokenId, uint256) external view override returns (uint256) {
         ILegionMetadataStore.LegionMetadata memory metadata = legionMetadataStore.metadataForLegion(_tokenId);
 

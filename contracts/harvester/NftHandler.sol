@@ -3,11 +3,14 @@ pragma solidity 0.8.11;
 
 import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import '@openzeppelin/contracts/token/ERC1155/IERC1155.sol';
+import '@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Burnable.sol';
+
 import '@openzeppelin/contracts/access/AccessControlEnumerable.sol';
 import '@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol';
 
 import '../interfaces/IHarvester.sol';
 import '../interfaces/IStakingRules.sol';
+import '../interfaces/IExtractorStakingRules.sol';
 
 import "./HarvesterError.sol";
 
@@ -35,7 +38,15 @@ contract NftHandler is AccessControlEnumerable, ERC1155Holder {
 
     event Staked(address indexed nft, uint256 tokenId, uint256 amount);
     event Unstaked(address indexed nft, uint256 tokenId, uint256 amount);
+    event Replaced(address indexed nft, uint256 tokenId, uint256 amount, uint256 replacedSpotId);
     event NftConfigUpdate(address indexed _nft, NftConfig _nftConfig);
+
+    modifier validateInput(address _nft, uint256 _amount) {
+        if (_nft == address(0)) revert("InvalidNftAddress()");
+        if (_amount == 0) revert("NothingToStake()");
+
+        _;
+    }
 
     modifier canStake(address _user, address _nft, uint256 _tokenId, uint256 _amount) {
         IStakingRules stakingRules = allowedNfts[_nft].stakingRules;
@@ -81,21 +92,19 @@ contract NftHandler is AccessControlEnumerable, ERC1155Holder {
     }
 
     function stakeNft(address _nft, uint256 _tokenId, uint256 _amount)
-        external
+        public
+        validateInput(_nft, _amount)
         canStake(msg.sender, _nft, _tokenId, _amount)
     {
-        if (_nft == address(0)) revert InvalidNftAddress(_nft);
-        if (_amount == 0) revert NothingToStake(_amount);
-
         if (allowedNfts[_nft].supportedInterface == Interfaces.ERC721) {
-            if (_amount != 1) revert WrongAmountForERC721(_amount);
-            if (stakedNfts[msg.sender][_nft][_tokenId] != 0) revert NftAlreadyStaked(_nft, _tokenId);
+            if (_amount != 1) revert("WrongAmountForERC721()");
+            if (stakedNfts[msg.sender][_nft][_tokenId] != 0) revert("NftAlreadyStaked()");
 
             IERC721(_nft).transferFrom(msg.sender, address(this), _tokenId);
         } else if (allowedNfts[_nft].supportedInterface == Interfaces.ERC1155) {
             IERC1155(_nft).safeTransferFrom(msg.sender, address(this), _tokenId, _amount, bytes(""));
         } else {
-            revert NftNotAllowed(_nft);
+            revert("NftNotAllowed()");
         }
 
         stakedNfts[msg.sender][_nft][_tokenId] += _amount;
@@ -108,29 +117,51 @@ contract NftHandler is AccessControlEnumerable, ERC1155Holder {
 
     function unstakeNft(address _nft, uint256 _tokenId, uint256 _amount)
         external
+        validateInput(_nft, _amount)
         canUnstake(msg.sender, _nft, _tokenId, _amount)
     {
-        if (_nft == address(0)) revert InvalidNftAddress(_nft);
-        if (_amount == 0) revert NothingToStake(_amount);
-
         if (allowedNfts[_nft].supportedInterface == Interfaces.ERC721) {
-            if (_amount != 1) revert WrongAmountForERC721(_amount);
-            if (stakedNfts[msg.sender][_nft][_tokenId] != 1) revert NftNotStaked(_nft, _tokenId);
+            if (_amount != 1) revert("WrongAmountForERC721()");
+            if (stakedNfts[msg.sender][_nft][_tokenId] != 1) revert("NftNotStaked()");
 
             IERC721(_nft).transferFrom(address(this), msg.sender, _tokenId);
         } else if (allowedNfts[_nft].supportedInterface == Interfaces.ERC1155) {
             IERC1155(_nft).safeTransferFrom(address(this), msg.sender, _tokenId, _amount, bytes(""));
         } else {
-            revert NftNotAllowed(_nft);
+            revert("NftNotAllowed()");
         }
 
-        stakedNfts[msg.sender][_nft][_tokenId] -= _amount;
+        uint256 staked = stakedNfts[msg.sender][_nft][_tokenId];
+        if (_amount > staked) revert("AmountTooBig()");
+        stakedNfts[msg.sender][_nft][_tokenId] = staked - _amount;
 
         boosts[msg.sender] -= getNftBoost(_nft, _tokenId, _amount);
         harvester.updateNftBoost(msg.sender, boosts[msg.sender]);
 
         emit Unstaked(_nft, _tokenId, _amount);
     }
+
+    function replaceExtractor(address _nft, uint256 _tokenId, uint256 _amount, uint256 _replacedSpotId)
+        external
+        validateInput(_nft, _amount)
+    {
+        IExtractorStakingRules stakingRules = IExtractorStakingRules(address(allowedNfts[_nft].stakingRules));
+
+        if (address(stakingRules) == address(0)) revert("StakingRulesRequired()");
+        if (allowedNfts[_nft].supportedInterface != Interfaces.ERC1155) revert("MustBeERC1155()");
+
+        (
+            uint256 replacedTokenId,
+            uint256 replacedAmount
+        ) = stakingRules.canReplace(msg.sender, _nft, _tokenId, _amount, _replacedSpotId);
+
+        IERC1155(_nft).safeTransferFrom(msg.sender, address(this), _tokenId, _amount, bytes(""));
+        ERC1155Burnable(_nft).burn(address(this), replacedTokenId, replacedAmount);
+
+        emit Replaced(_nft, _tokenId, _amount, _replacedSpotId);
+    }
+
+    // ADMIN
 
     function setNftConfig(address _nft, NftConfig memory _nftConfig) external onlyRole(NFT_HANDLER_ADMIN_ROLE) {
         allowedNfts[_nft] = _nftConfig;

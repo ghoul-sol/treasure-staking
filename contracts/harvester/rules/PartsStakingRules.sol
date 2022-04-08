@@ -22,18 +22,23 @@ contract PartsStakingRules is IStakingRules, AccessControlEnumerable {
         _grantRole(STAKING_RULES_ADMIN_ROLE, _admin);
     }
 
-    function canStake(address, address, uint256, uint256)
+    /// @inheritdoc IStakingRules
+    function canStake(address, address, uint256, uint256 _amount)
         external
         override
         onlyRole(STAKING_RULES_ADMIN_ROLE)
     {
-        staked++;
+        if (staked + _amount > maxStakeable) revert("MaxStakeable()");
 
-        if (staked > maxStakeable) revert MaxStakeable();
+        staked += _amount;
     }
 
-    function canUnstake(address, address, uint256, uint256) external pure override {}
+    /// @inheritdoc IStakingRules
+    function canUnstake(address, address, uint256, uint256 _amount) external override {
+        staked -= _amount;
+    }
 
+    /// @inheritdoc IStakingRules
     function getBoost(address, address, uint256, uint256) external pure override returns (uint256) {
         return 0;
     }
