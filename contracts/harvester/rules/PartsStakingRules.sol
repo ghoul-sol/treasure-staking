@@ -6,36 +6,47 @@ import '@openzeppelin/contracts/access/AccessControlEnumerable.sol';
 import '../../interfaces/ILegionMetadataStore.sol';
 import '../../interfaces/IStakingRules.sol';
 
-import "../HarvesterError.sol";
-
 contract PartsStakingRules is IStakingRules, AccessControlEnumerable {
     bytes32 public constant STAKING_RULES_ADMIN_ROLE = keccak256("STAKING_RULES_ADMIN_ROLE");
 
     uint256 public staked;
-    uint256 public maxStakeable;
+    uint256 public maxStakeableTotal;
+    uint256 public maxStakeablePerUser;
 
-    event MaxStakeableUpdate(uint256 maxStakeable);
+    mapping(address => uint256) public getAmountStaked;
 
-    constructor(address _admin) {
+    event MaxStakeableUpdate(uint256 maxStakeableTotal);
+    event MaxStakeablePerUserUpdate(uint256 maxStakeablePerUser);
+
+    constructor(address _admin, uint256 _maxStakeableTotal, uint256 _maxStakeablePerUser) {
         // TODO: setup roles
         _setRoleAdmin(STAKING_RULES_ADMIN_ROLE, STAKING_RULES_ADMIN_ROLE);
         _grantRole(STAKING_RULES_ADMIN_ROLE, _admin);
+
+        _setMaxStakeableTotal(_maxStakeableTotal);
+        _setMaxStakeablePerUser(_maxStakeablePerUser);
+
     }
 
     /// @inheritdoc IStakingRules
-    function canStake(address, address, uint256, uint256 _amount)
+    function canStake(address _user, address, uint256, uint256 _amount)
         external
         override
         onlyRole(STAKING_RULES_ADMIN_ROLE)
     {
-        if (staked + _amount > maxStakeable) revert("MaxStakeable()");
+        uint256 stakedCache = staked;
+        if (stakedCache + _amount > maxStakeableTotal) revert("MaxStakeable()");
+        staked = stakedCache + _amount;
 
-        staked += _amount;
+        uint256 amountStakedCache = getAmountStaked[_user];
+        if (amountStakedCache + _amount > maxStakeablePerUser) revert("MaxStakeablePerUser()");
+        getAmountStaked[_user] = amountStakedCache + _amount;
     }
 
     /// @inheritdoc IStakingRules
-    function canUnstake(address, address, uint256, uint256 _amount) external override {
+    function canUnstake(address _user, address, uint256, uint256 _amount) external override {
         staked -= _amount;
+        getAmountStaked[_user] -= _amount;
     }
 
     /// @inheritdoc IStakingRules
@@ -45,8 +56,21 @@ contract PartsStakingRules is IStakingRules, AccessControlEnumerable {
 
     // ADMIN
 
-    function setMaxStakeable(uint256 _maxStakeable) external onlyRole(STAKING_RULES_ADMIN_ROLE) {
-        maxStakeable = _maxStakeable;
-        emit MaxStakeableUpdate(_maxStakeable);
+    function setMaxStakeableTotal(uint256 _maxStakeableTotal) external onlyRole(STAKING_RULES_ADMIN_ROLE) {
+        _setMaxStakeableTotal(_maxStakeableTotal);
+    }
+
+    function setMaxStakeablePerUser(uint256 _maxStakeablePerUser) external onlyRole(STAKING_RULES_ADMIN_ROLE) {
+        _setMaxStakeablePerUser(_maxStakeablePerUser);
+    }
+
+    function _setMaxStakeableTotal(uint256 _maxStakeableTotal) internal {
+        maxStakeableTotal = _maxStakeableTotal;
+        emit MaxStakeableUpdate(_maxStakeableTotal);
+    }
+
+    function _setMaxStakeablePerUser(uint256 _maxStakeablePerUser) internal {
+        maxStakeablePerUser = _maxStakeablePerUser;
+        emit MaxStakeablePerUserUpdate(_maxStakeablePerUser);
     }
 }

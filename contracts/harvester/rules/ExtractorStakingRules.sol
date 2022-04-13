@@ -7,8 +7,6 @@ import '@openzeppelin/contracts/utils/Counters.sol';
 import '../../interfaces/ILegionMetadataStore.sol';
 import '../../interfaces/IExtractorStakingRules.sol';
 
-import "../HarvesterError.sol";
-
 contract ExtractorStakingRules is IExtractorStakingRules, AccessControlEnumerable {
     using Counters for Counters.Counter;
 

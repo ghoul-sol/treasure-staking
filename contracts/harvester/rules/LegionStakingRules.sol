@@ -6,8 +6,6 @@ import '@openzeppelin/contracts/access/AccessControlEnumerable.sol';
 import '../../interfaces/ILegionMetadataStore.sol';
 import '../../interfaces/IStakingRules.sol';
 
-import "../HarvesterError.sol";
-
 contract LegionStakingRules is IStakingRules, AccessControlEnumerable {
     bytes32 public constant STAKING_RULES_ADMIN_ROLE = keccak256("STAKING_RULES_ADMIN_ROLE");
 
@@ -19,19 +17,21 @@ contract LegionStakingRules is IStakingRules, AccessControlEnumerable {
     /// @dev maps user wallet to current staked weight. For weight values, see getWeight
     mapping (address => uint256) public weightStaked;
 
-    uint256 public maxWeight;
+    uint256 public maxLegionWeight;
 
-    event MaxWeightUpdate(uint256 maxWeight);
+    event MaxWeightUpdate(uint256 maxLegionWeight);
     event LegionMetadataStoreUpdate(ILegionMetadataStore legionMetadataStore);
     event LegionBoostMatrixUpdate(uint256[][] legionBoostMatrix);
     event LegionWeightMatrixUpdate(uint256[][] legionWeightMatrix);
 
-    constructor(address _admin, ILegionMetadataStore _legionMetadataStore) {
+    constructor(address _admin, ILegionMetadataStore _legionMetadataStore, uint256 _maxLegionWeight) {
         // TODO: setup roles
         _setRoleAdmin(STAKING_RULES_ADMIN_ROLE, STAKING_RULES_ADMIN_ROLE);
         _grantRole(STAKING_RULES_ADMIN_ROLE, _admin);
 
         legionMetadataStore = _legionMetadataStore;
+
+        _setMaxWeight(_maxLegionWeight);
 
         // array follows values from ILegionMetadataStore.LegionGeneration and ILegionMetadataStore.LegionRarity
         legionBoostMatrix = [
@@ -46,17 +46,18 @@ contract LegionStakingRules is IStakingRules, AccessControlEnumerable {
             [uint256(0), uint256(0), uint256(0), uint256(0), uint256(0), uint256(0)]
         ];
 
-        // TODO: update weight matrix
+        uint256 illegalWeight = _maxLegionWeight * 1e18;
+
         legionWeightMatrix = [
             // GENESIS
             // LEGENDARY,RARE,SPECIAL,UNCOMMON,COMMON,RECRUIT
-            [uint256(600e16), uint256(200e16), uint256(75e16), uint256(100e16), uint256(50e16), uint256(0)],
+            [uint256(120e18), uint256(40e18), uint256(15e18), uint256(20e18), uint256(10e18), illegalWeight],
             // AUXILIARY
             // LEGENDARY,RARE,SPECIAL,UNCOMMON,COMMON,RECRUIT
-            [uint256(0), uint256(25e16), uint256(0), uint256(10e16), uint256(5e16), uint256(0)],
+            [illegalWeight, uint256(55e17), illegalWeight, uint256(4e18), uint256(25e17), illegalWeight],
             // RECRUIT
             // LEGENDARY,RARE,SPECIAL,UNCOMMON,COMMON,RECRUIT
-            [uint256(0), uint256(0), uint256(0), uint256(0), uint256(0), uint256(0)]
+            [illegalWeight, illegalWeight, illegalWeight, illegalWeight, illegalWeight, illegalWeight]
         ];
     }
 
@@ -68,7 +69,7 @@ contract LegionStakingRules is IStakingRules, AccessControlEnumerable {
     {
         weightStaked[_user] += getWeight(_tokenId);
 
-        if (weightStaked[_user] > maxWeight) revert("MaxWeight()");
+        if (weightStaked[_user] > maxLegionWeight) revert("MaxWeight()");
     }
 
     /// @inheritdoc IStakingRules
@@ -118,8 +119,12 @@ contract LegionStakingRules is IStakingRules, AccessControlEnumerable {
         emit LegionWeightMatrixUpdate(_legionWeightMatrix);
     }
 
-    function setMaxWeight(uint256 _maxWeight) external onlyRole(STAKING_RULES_ADMIN_ROLE) {
-        maxWeight = _maxWeight;
-        emit MaxWeightUpdate(_maxWeight);
+    function setMaxWeight(uint256 _maxLegionWeight) external onlyRole(STAKING_RULES_ADMIN_ROLE) {
+        _setMaxWeight(_maxLegionWeight);
+    }
+
+    function _setMaxWeight(uint256 _maxLegionWeight) internal {
+        maxLegionWeight = _maxLegionWeight;
+        emit MaxWeightUpdate(_maxLegionWeight);
     }
 }

@@ -12,8 +12,6 @@ import '../interfaces/IHarvester.sol';
 import '../interfaces/IStakingRules.sol';
 import '../interfaces/IExtractorStakingRules.sol';
 
-import "./HarvesterError.sol";
-
 contract NftHandler is AccessControlEnumerable, ERC1155Holder {
     enum Interfaces { Unsupported, ERC721, ERC1155 }
 
@@ -30,11 +28,11 @@ contract NftHandler is AccessControlEnumerable, ERC1155Holder {
     /// @dev maps NFT address to its config
     mapping(address => NftConfig) public allowedNfts;
 
-    /// @dev user =>  NFT address => tokenId => amount
+    /// @dev user => NFT address => tokenId => amount
     mapping (address => mapping(address => mapping(uint256 => uint256))) public stakedNfts;
 
     // user => boost
-    mapping (address => uint256) public boosts;
+    mapping (address => uint256) public getUserBoost;
 
     event Staked(address indexed nft, uint256 tokenId, uint256 amount);
     event Unstaked(address indexed nft, uint256 tokenId, uint256 amount);
@@ -83,11 +81,15 @@ contract NftHandler is AccessControlEnumerable, ERC1155Holder {
         return super.supportsInterface(interfaceId);
     }
 
-    function getNftBoost(address _nft, uint256 _tokenId, uint256 _amount) public view returns (uint256 boost) {
+    function getStakingRules(address _nft) external view returns (address) {
+        return address(allowedNfts[_nft].stakingRules);
+    }
+
+    function getNftBoost(address _user, address _nft, uint256 _tokenId, uint256 _amount) public view returns (uint256 boost) {
         IStakingRules stakingRules = allowedNfts[_nft].stakingRules;
 
         if (address(stakingRules) != address(0)) {
-            boost = stakingRules.getBoost(msg.sender, _nft, _tokenId, _amount);
+            boost = stakingRules.getBoost(_user, _nft, _tokenId, _amount);
         }
     }
 
@@ -109,8 +111,8 @@ contract NftHandler is AccessControlEnumerable, ERC1155Holder {
 
         stakedNfts[msg.sender][_nft][_tokenId] += _amount;
 
-        boosts[msg.sender] += getNftBoost(_nft, _tokenId, _amount);
-        harvester.updateNftBoost(msg.sender, boosts[msg.sender]);
+        getUserBoost[msg.sender] += getNftBoost(msg.sender, _nft, _tokenId, _amount);
+        harvester.updateNftBoost(msg.sender);
 
         emit Staked(_nft, _tokenId, _amount);
     }
@@ -135,8 +137,8 @@ contract NftHandler is AccessControlEnumerable, ERC1155Holder {
         if (_amount > staked) revert("AmountTooBig()");
         stakedNfts[msg.sender][_nft][_tokenId] = staked - _amount;
 
-        boosts[msg.sender] -= getNftBoost(_nft, _tokenId, _amount);
-        harvester.updateNftBoost(msg.sender, boosts[msg.sender]);
+        getUserBoost[msg.sender] -= getNftBoost(msg.sender, _nft, _tokenId, _amount);
+        harvester.updateNftBoost(msg.sender);
 
         emit Unstaked(_nft, _tokenId, _amount);
     }
