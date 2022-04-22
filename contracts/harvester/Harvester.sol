@@ -2,18 +2,15 @@
 pragma solidity 0.8.11;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
-import '@openzeppelin/contracts/token/ERC1155/IERC1155.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 import '@openzeppelin/contracts/utils/math/SafeCast.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import '@openzeppelin/contracts/access/AccessControlEnumerable.sol';
 import '@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol';
 
-import '../interfaces/IMasterOfCoin.sol';
 import '../interfaces/INftHandler.sol';
 import '../interfaces/IPartsStakingRules.sol';
+import '../interfaces/IHarvesterFactory.sol';
 
 contract Harvester is AccessControlEnumerable, ERC1155Holder {
     using EnumerableSet for EnumerableSet.UintSet;
@@ -56,12 +53,12 @@ contract Harvester is AccessControlEnumerable, ERC1155Holder {
     uint256 public constant TWELVE_MONTHS = 365 days;
     uint256 public constant ONE = 1e18;
 
-    // Magic token addr
-    IERC20 public magic;
-    IMasterOfCoin public masterOfCoin;
+    IHarvesterFactory public immutable factory;
+
     INftHandler public nftHandler;
 
     bool public unlockAll;
+    bool public disabled;
 
     uint256 public totalRewardsEarned;
     uint256 public accMagicPerShare;
@@ -87,11 +84,13 @@ contract Harvester is AccessControlEnumerable, ERC1155Holder {
     event UndistributedRewardsWithdraw(address indexed to, uint256 amount);
     event Harvest(address indexed user, uint256 amount);
     event LogUpdateRewards(uint256 distributedRewards, uint256 lpSupply, uint256 accMagicPerShare);
+    event Enable();
+    event Disable();
 
     modifier updateRewards() {
         uint256 lpSupply = totalLpToken;
-        if (lpSupply > 0) {
-            uint256 distributedRewards = masterOfCoin.requestRewards();
+        if (lpSupply > 0 && !disabled) {
+            uint256 distributedRewards = factory.middleman().requestRewards();
             totalRewardsEarned += distributedRewards;
             accMagicPerShare += distributedRewards * ONE / lpSupply;
             emit LogUpdateRewards(distributedRewards, lpSupply, accMagicPerShare);
@@ -110,13 +109,24 @@ contract Harvester is AccessControlEnumerable, ERC1155Holder {
         if (magicTotalDeposits > totalDepositCap) revert("MaxTotalDeposit()");
     }
 
-    constructor(IERC20 _magic, IMasterOfCoin _masterOfCoin, INftHandler _nftHandler) {
-        magic = _magic;
-        masterOfCoin = _masterOfCoin;
+    modifier whenEnabled() {
+        if (disabled) revert("Disabled()");
+
+        _;
+    }
+
+    modifier onlyFactory() {
+        if (msg.sender != address(factory)) revert("OnlyFactory()");
+
+        _;
+    }
+
+    constructor(address _admin, INftHandler _nftHandler) {
         nftHandler = _nftHandler;
+        factory = IHarvesterFactory(msg.sender);
 
         _setRoleAdmin(HARVESTER_ADMIN_ROLE, HARVESTER_ADMIN_ROLE);
-        _grantRole(HARVESTER_ADMIN_ROLE, msg.sender);
+        _grantRole(HARVESTER_ADMIN_ROLE, _admin);
     }
 
     function supportsInterface(bytes4 interfaceId)
@@ -143,6 +153,10 @@ contract Harvester is AccessControlEnumerable, ERC1155Holder {
 
     function getAllUserDepositIds(address _user) external view returns (uint256[] memory) {
         return allUserDepositIds[_user].values();
+    }
+
+    function getAllUserDepositIdsLength(address _user) external view returns (uint256) {
+        return allUserDepositIds[_user].length();
     }
 
     /// @notice Gets amount of MAGIC that a single wallet can deposit
@@ -218,16 +232,27 @@ contract Harvester is AccessControlEnumerable, ERC1155Holder {
         uint256 _accMagicPerShare = accMagicPerShare;
         uint256 lpSupply = totalLpToken;
 
-        uint256 pendingRewards = masterOfCoin.getPendingRewards(address(this));
-        _accMagicPerShare += pendingRewards * ONE / lpSupply;
+        // if harvester is disabled, only account for rewards that were already sent
+        if (!disabled) {
+            uint256 pendingRewards = factory.middleman().getPendingRewards(address(this));
+            _accMagicPerShare += pendingRewards * ONE / lpSupply;
+        }
 
         int256 accumulatedMagic = (userGlobalDeposit.globalLpAmount * _accMagicPerShare / ONE).toInt256();
         pending = (accumulatedMagic - userGlobalDeposit.globalRewardDebt).toUint256();
     }
 
-    function deposit(uint256 _amount, Lock _lock) external updateRewards checkDepositCaps {
-        require(allUserDepositIds[msg.sender].length() < 3000, "Max deposits number reached");
+    function enable() external onlyFactory {
+        disabled = false;
+        emit Enable();
+    }
 
+    function disable() external onlyFactory {
+        disabled = true;
+        emit Disable();
+    }
+
+    function deposit(uint256 _amount, Lock _lock) external updateRewards checkDepositCaps whenEnabled {
         (UserInfo storage user, uint256 depositId) = _addDeposit(msg.sender);
 
         (uint256 lockBoost, uint256 timelock) = getLockBoost(_lock);
@@ -243,7 +268,7 @@ contract Harvester is AccessControlEnumerable, ERC1155Holder {
 
         _recalculateGlobalLp(msg.sender, _amount.toInt256(), lockLpAmount.toInt256());
 
-        magic.safeTransferFrom(msg.sender, address(this), _amount);
+        factory.magic().safeTransferFrom(msg.sender, address(this), _amount);
 
         emit Deposit(msg.sender, depositId, _amount, _lock);
     }
@@ -259,7 +284,8 @@ contract Harvester is AccessControlEnumerable, ERC1155Holder {
 
         // anyone can withdraw if kill swith was used
         if (!unlockAll) {
-            require(block.timestamp >= user.lockedUntil, "Position is still locked");
+            if (block.timestamp < user.lockedUntil) revert("StillLocked()");
+
             uint256 vestedAmount = _vestedPrincipal(msg.sender, _depositId);
             if (_amount > vestedAmount) {
                 _amount = vestedAmount;
@@ -284,7 +310,7 @@ contract Harvester is AccessControlEnumerable, ERC1155Holder {
         }
 
         // Interactions
-        magic.safeTransfer(msg.sender, _amount);
+        factory.magic().safeTransfer(msg.sender, _amount);
 
         emit Withdraw(msg.sender, _depositId, _amount);
 
@@ -307,6 +333,8 @@ contract Harvester is AccessControlEnumerable, ERC1155Holder {
         // Effects
         userGlobalDeposit.globalRewardDebt = accumulatedMagic;
 
+        IERC20 magic = factory.magic();
+
         // Interactions
         if (_pendingMagic != 0) {
             magic.safeTransfer(msg.sender, _pendingMagic);
@@ -314,7 +342,7 @@ contract Harvester is AccessControlEnumerable, ERC1155Holder {
 
         emit Harvest(msg.sender, _pendingMagic);
 
-        require(magic.balanceOf(address(this)) >= magicTotalDeposits, "Run on banks");
+        if (magic.balanceOf(address(this)) < magicTotalDeposits) revert("RunOnBank()");
     }
 
     function withdrawAndHarvestPosition(uint256 _depositId, uint256 _amount) public {
@@ -363,14 +391,10 @@ contract Harvester is AccessControlEnumerable, ERC1155Holder {
     }
 
     function _removeDeposit(address _user, uint256 _depositId) internal {
-        require(allUserDepositIds[_user].remove(_depositId), 'depositId !exists');
+        if (!allUserDepositIds[_user].remove(_depositId)) revert("DepositExists()");
     }
 
     // ADMIN
-
-    function setMagicToken(IERC20 _magic) external onlyRole(HARVESTER_ADMIN_ROLE) {
-        magic = _magic;
-    }
 
     function setNftHandler(INftHandler _nftHandler) external onlyRole(HARVESTER_ADMIN_ROLE) {
         nftHandler = _nftHandler;
@@ -385,7 +409,7 @@ contract Harvester is AccessControlEnumerable, ERC1155Holder {
     }
 
     /// @notice EMERGENCY ONLY
-    function toggleUnlockAll() external onlyRole(HARVESTER_ADMIN_ROLE) updateRewards {
+    function toggleUnlockAll() external onlyRole(HARVESTER_ADMIN_ROLE) {
         unlockAll = unlockAll ? false : true;
     }
 }

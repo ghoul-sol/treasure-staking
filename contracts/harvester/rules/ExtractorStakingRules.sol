@@ -7,6 +7,8 @@ import '@openzeppelin/contracts/utils/Counters.sol';
 import '../../interfaces/ILegionMetadataStore.sol';
 import '../../interfaces/IExtractorStakingRules.sol';
 
+import '../lib/Constant.sol';
+
 contract ExtractorStakingRules is IExtractorStakingRules, AccessControlEnumerable {
     using Counters for Counters.Counter;
 
@@ -54,7 +56,7 @@ contract ExtractorStakingRules is IExtractorStakingRules, AccessControlEnumerabl
     }
 
     /// @return totalBoost boost sum of all active extractors
-    function getExtractorsTotalBoost() external view returns (uint256 totalBoost) {
+    function getExtractorsTotalBoost() public view returns (uint256 totalBoost) {
         for (uint256 i = 0; i < extractorCount.current(); i++) {
             if (isExtractorActive(i)) {
                 totalBoost += extractorBoost[stakedExtractor[i].tokenId];
@@ -105,8 +107,13 @@ contract ExtractorStakingRules is IExtractorStakingRules, AccessControlEnumerabl
     }
 
     /// @inheritdoc IStakingRules
-    function getBoost(address, address, uint256, uint256) external pure override returns (uint256) {
+    function getUserBoost(address, address, uint256, uint256) external pure override returns (uint256) {
         return 0;
+    }
+
+    /// @inheritdoc IStakingRules
+    function getHarvesterBoost() external view returns (uint256) {
+        return Constant.ONE + getExtractorsTotalBoost();
     }
 
     // ADMIN

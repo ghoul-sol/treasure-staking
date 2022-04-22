@@ -4,15 +4,19 @@ pragma solidity 0.8.11;
 import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import '@openzeppelin/contracts/token/ERC1155/IERC1155.sol';
 import '@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Burnable.sol';
-
-import '@openzeppelin/contracts/access/AccessControlEnumerable.sol';
 import '@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol';
+import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
+import '@openzeppelin/contracts/access/AccessControlEnumerable.sol';
 
 import '../interfaces/IHarvester.sol';
 import '../interfaces/IStakingRules.sol';
 import '../interfaces/IExtractorStakingRules.sol';
 
+import './lib/Constant.sol';
+
 contract NftHandler is AccessControlEnumerable, ERC1155Holder {
+    using EnumerableSet for EnumerableSet.AddressSet;
+
     enum Interfaces { Unsupported, ERC721, ERC1155 }
 
     bytes32 public constant NFT_HANDLER_ADMIN_ROLE = keccak256("NFT_HANDLER_ADMIN_ROLE");
@@ -27,6 +31,9 @@ contract NftHandler is AccessControlEnumerable, ERC1155Holder {
 
     /// @dev maps NFT address to its config
     mapping(address => NftConfig) public allowedNfts;
+
+    /// @dev Set of all allowed NFT addresses
+    EnumerableSet.AddressSet private allAllowedNfts;
 
     /// @dev user => NFT address => tokenId => amount
     mapping (address => mapping(address => mapping(uint256 => uint256))) public stakedNfts;
@@ -81,6 +88,14 @@ contract NftHandler is AccessControlEnumerable, ERC1155Holder {
         return super.supportsInterface(interfaceId);
     }
 
+    function getAllAllowedNFTs() external view returns (address[] memory) {
+        return allAllowedNfts.values();
+    }
+
+    function getAllAllowedNFTsLength() external view returns (uint256) {
+        return allAllowedNfts.length();
+    }
+
     function getStakingRules(address _nft) external view returns (address) {
         return address(allowedNfts[_nft].stakingRules);
     }
@@ -89,7 +104,21 @@ contract NftHandler is AccessControlEnumerable, ERC1155Holder {
         IStakingRules stakingRules = allowedNfts[_nft].stakingRules;
 
         if (address(stakingRules) != address(0)) {
-            boost = stakingRules.getBoost(_user, _nft, _tokenId, _amount);
+            boost = stakingRules.getUserBoost(_user, _nft, _tokenId, _amount);
+        }
+    }
+
+    function getHarvesterTotalBoost() public view returns (uint256 boost) {
+        boost = Constant.ONE;
+
+        for (uint256 i = 0; i < allAllowedNfts.length(); i++) {
+            address _nft = allAllowedNfts.at(i);
+
+            IStakingRules stakingRules = allowedNfts[_nft].stakingRules;
+
+            if (address(stakingRules) != address(0)) {
+                boost = boost * stakingRules.getHarvesterBoost() / Constant.ONE;
+            }
         }
     }
 
@@ -168,5 +197,13 @@ contract NftHandler is AccessControlEnumerable, ERC1155Holder {
     function setNftConfig(address _nft, NftConfig memory _nftConfig) external onlyRole(NFT_HANDLER_ADMIN_ROLE) {
         allowedNfts[_nft] = _nftConfig;
         emit NftConfigUpdate(_nft, _nftConfig);
+
+        if (address(_nftConfig.stakingRules) != address(0)) {
+            // it means we are adding _nft or updating its config
+            // ignore return value in case we are just updating config
+            allAllowedNfts.add(_nft);
+        } else {
+            if (!allAllowedNfts.remove(_nft)) revert("AlreadyDisallowed()");
+        }
     }
 }

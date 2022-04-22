@@ -20,4 +20,8 @@ interface INftHandler {
     /// @param _amount amount of tokens for which to calculate boost, must be 1 for ERC721
     /// @return calcualted boost for given NFT for given user as percentage, 1e18 == 100%
     function getNftBoost(address _user, address _nft, uint256 _tokenId, uint256 _amount) external view returns (uint256);
+
+    /// @notice Gets harvester boost to calcualte rewards allocation
+    /// @return boost calcualted harvester boost to calcualte rewards allocation
+    function getHarvesterTotalBoost() external view returns (uint256 boost);
 }

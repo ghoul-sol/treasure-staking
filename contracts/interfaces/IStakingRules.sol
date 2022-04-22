@@ -22,5 +22,9 @@ interface IStakingRules {
     /// @param _tokenId token Id of NFT
     /// @param _amount number of NFTs for which to calculate boost, must be 1 for ERC721
     /// @return boost amount that user gets by staking NFT(s)
-    function getBoost(address _user, address _nft, uint256 _tokenId, uint256 _amount) external view returns (uint256);
+    function getUserBoost(address _user, address _nft, uint256 _tokenId, uint256 _amount) external view returns (uint256);
+
+    /// @notice Gets amount of boost that harvester gets for all staked NFTs
+    /// @return amount of boost that harvester gets for all staked NFTs
+    function getHarvesterBoost() external view returns (uint256);
 }
