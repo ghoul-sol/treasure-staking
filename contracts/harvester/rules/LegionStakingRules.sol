@@ -1,16 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.11;
 
-import '@openzeppelin/contracts/access/AccessControlEnumerable.sol';
-
 import '../../interfaces/ILegionMetadataStore.sol';
-import '../../interfaces/IStakingRules.sol';
 
-import '../lib/Constant.sol';
+import "./StakingRulesBase.sol";
 
-contract LegionStakingRules is IStakingRules, AccessControlEnumerable {
-    bytes32 public constant STAKING_RULES_ADMIN_ROLE = keccak256("STAKING_RULES_ADMIN_ROLE");
-
+contract LegionStakingRules is StakingRulesBase {
     uint256[][] public legionBoostMatrix;
     uint256[][] public legionWeightMatrix;
     uint256[][] public legionRankMatrix;
@@ -36,15 +31,12 @@ contract LegionStakingRules is IStakingRules, AccessControlEnumerable {
 
     constructor(
         address _admin,
+        address _nftHandler,
         ILegionMetadataStore _legionMetadataStore,
         uint256 _maxLegionWeight,
         uint256 _maxStakeableTotal,
         uint256 _boostFactor
-    ) {
-        // TODO: setup roles
-        _setRoleAdmin(STAKING_RULES_ADMIN_ROLE, STAKING_RULES_ADMIN_ROLE);
-        _grantRole(STAKING_RULES_ADMIN_ROLE, _admin);
-
+    ) StakingRulesBase(_admin, _nftHandler) {
         legionMetadataStore = _legionMetadataStore;
 
         _setMaxWeight(_maxLegionWeight);
@@ -91,26 +83,6 @@ contract LegionStakingRules is IStakingRules, AccessControlEnumerable {
             // LEGENDARY,RARE,SPECIAL,UNCOMMON,COMMON,RECRUIT
             [illegalRank, illegalRank, illegalRank, illegalRank, illegalRank, illegalRank]
         ];
-    }
-
-    /// @inheritdoc IStakingRules
-    function canStake(address _user, address, uint256 _tokenId, uint256)
-        external
-        override
-        onlyRole(STAKING_RULES_ADMIN_ROLE)
-    {
-        staked++;
-        totalRank += getRank(_tokenId);
-        weightStaked[_user] += getWeight(_tokenId);
-
-        if (weightStaked[_user] > maxLegionWeight) revert("MaxWeight()");
-    }
-
-    /// @inheritdoc IStakingRules
-    function canUnstake(address _user, address, uint256 _tokenId, uint256) external override {
-        staked--;
-        totalRank -= getRank(_tokenId);
-        weightStaked[_user] -= getWeight(_tokenId);
     }
 
     /// @inheritdoc IStakingRules
@@ -169,6 +141,20 @@ contract LegionStakingRules is IStakingRules, AccessControlEnumerable {
         }
 
         return 0;
+    }
+
+    function _canStake(address _user, address, uint256 _tokenId, uint256) internal override {
+        staked++;
+        totalRank += getRank(_tokenId);
+        weightStaked[_user] += getWeight(_tokenId);
+
+        if (weightStaked[_user] > maxLegionWeight) revert("MaxWeight()");
+    }
+
+    function _canUnstake(address _user, address, uint256 _tokenId, uint256) internal override {
+        staked--;
+        totalRank -= getRank(_tokenId);
+        weightStaked[_user] -= getWeight(_tokenId);
     }
 
     // ADMIN

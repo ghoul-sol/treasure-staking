@@ -21,12 +21,12 @@ contract HarvesterFactory is AccessControlEnumerable {
 
     event HarvesterDeployed(Harvester harvester, NftHandler nftHandler);
 
-    constructor(IERC20 _magic, IMiddleman _middleman) {
+    constructor(address _admin, IERC20 _magic, IMiddleman _middleman) {
         magic = _magic;
         middleman = _middleman;
 
         _setRoleAdmin(HARVESTER_FACTORY_ADMIN_ROLE, HARVESTER_FACTORY_ADMIN_ROLE);
-        _grantRole(HARVESTER_FACTORY_ADMIN_ROLE, msg.sender);
+        _grantRole(HARVESTER_FACTORY_ADMIN_ROLE, _admin);
     }
 
     function getAllHarvesters() external view returns (address[] memory) {

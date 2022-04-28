@@ -1,17 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.11;
 
-import '@openzeppelin/contracts/access/AccessControlEnumerable.sol';
+import "./StakingRulesBase.sol";
 
-import '../../interfaces/ILegionMetadataStore.sol';
-import '../../interfaces/IStakingRules.sol';
-
-import '../lib/Constant.sol';
-
-contract PartsStakingRules is IStakingRules, AccessControlEnumerable {
-    bytes32 public constant STAKING_RULES_ADMIN_ROLE = keccak256("STAKING_RULES_ADMIN_ROLE");
-    bytes32 public constant STAKER_ROLE = keccak256("STAKER_ROLE");
-
+contract PartsStakingRules is StakingRulesBase {
     uint256 public staked;
     uint256 public maxStakeableTotal;
     uint256 public maxStakeablePerUser;
@@ -29,37 +21,10 @@ contract PartsStakingRules is IStakingRules, AccessControlEnumerable {
         uint256 _maxStakeableTotal,
         uint256 _maxStakeablePerUser,
         uint256 _boostFactor
-    ) {
-        _setRoleAdmin(STAKING_RULES_ADMIN_ROLE, STAKING_RULES_ADMIN_ROLE);
-        _setRoleAdmin(STAKER_ROLE, STAKING_RULES_ADMIN_ROLE);
-
-        _grantRole(STAKING_RULES_ADMIN_ROLE, _admin);
-        _grantRole(STAKER_ROLE, _nftHandler);
-
+    ) StakingRulesBase(_admin, _nftHandler) {
         _setMaxStakeableTotal(_maxStakeableTotal);
         _setMaxStakeablePerUser(_maxStakeablePerUser);
         _setBoostFactor(_boostFactor);
-    }
-
-    /// @inheritdoc IStakingRules
-    function canStake(address _user, address, uint256, uint256 _amount)
-        external
-        override
-        onlyRole(STAKER_ROLE)
-    {
-        uint256 stakedCache = staked;
-        if (stakedCache + _amount > maxStakeableTotal) revert("MaxStakeable()");
-        staked = stakedCache + _amount;
-
-        uint256 amountStakedCache = getAmountStaked[_user];
-        if (amountStakedCache + _amount > maxStakeablePerUser) revert("MaxStakeablePerUser()");
-        getAmountStaked[_user] = amountStakedCache + _amount;
-    }
-
-    /// @inheritdoc IStakingRules
-    function canUnstake(address _user, address, uint256, uint256 _amount) external override {
-        staked -= _amount;
-        getAmountStaked[_user] -= _amount;
     }
 
     /// @inheritdoc IStakingRules
@@ -83,6 +48,21 @@ contract PartsStakingRules is IStakingRules, AccessControlEnumerable {
         uint256 maxParts = maxStakeableTotal * Constant.ONE;
         uint256 boost = boostFactor * Constant.ONE;
         return Constant.ONE + (2 * n - n ** 2 / maxParts) * boost / maxParts;
+    }
+
+    function _canStake(address _user, address, uint256, uint256 _amount) internal override {
+        uint256 stakedCache = staked;
+        if (stakedCache + _amount > maxStakeableTotal) revert("MaxStakeable()");
+        staked = stakedCache + _amount;
+
+        uint256 amountStakedCache = getAmountStaked[_user];
+        if (amountStakedCache + _amount > maxStakeablePerUser) revert("MaxStakeablePerUser()");
+        getAmountStaked[_user] = amountStakedCache + _amount;
+    }
+
+    function _canUnstake(address _user, address, uint256, uint256 _amount) internal override {
+        staked -= _amount;
+        getAmountStaked[_user] -= _amount;
     }
 
     // ADMIN

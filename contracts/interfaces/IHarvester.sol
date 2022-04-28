@@ -6,4 +6,5 @@ import "./INftHandler.sol";
 interface IHarvester {
     function updateNftBoost(address user) external;
     function nftHandler() external view returns (INftHandler);
+    function magicTotalDeposits() external view returns (uint256);
 }

@@ -4,6 +4,7 @@ pragma solidity 0.8.11;
 import '@openzeppelin/contracts/access/AccessControlEnumerable.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
 import '../interfaces/IHarvesterFactory.sol';
 import '../interfaces/IHarvester.sol';
@@ -24,11 +25,11 @@ contract Middleman is AccessControlEnumerable {
     bytes32 public constant MIDDLEMAN_ADMIN_ROLE = keccak256("MIDDLEMAN_ADMIN_ROLE");
 
     /// @dev Magic token addr
-    IERC20 public magic;
     IERC20 public corruptionToken;
     IHarvesterFactory public harvesterFactory;
     IMasterOfCoin public masterOfCoin;
-    IAtlasMine public atlasMine;
+    address public atlasMine;
+    uint256 public atlasMineBoost;
 
     uint256 public lastRewardTimestamp;
 
@@ -36,12 +37,13 @@ contract Middleman is AccessControlEnumerable {
 
     uint256[][] public corruptionNegativeBoostMatrix;
 
+    EnumerableSet.AddressSet private excludedAddresses;
+
     event RewardsPaid(address indexed stream, uint256 rewardsPaid, uint256 rewardsPaidInTotal);
-    event MagicTokenUpdate(IERC20 magic);
     event CorruptionTokenUpdate(IERC20 corruptionToken);
-    event HarvesterFactoryUpdate(IHarvesterFactory magic);
-    event AtlasMineUpdate(IAtlasMine atlasMine);
-    event MasterOfCoinUpdate(IMasterOfCoin magic);
+    event HarvesterFactoryUpdate(IHarvesterFactory harvesterFactory);
+    event AtlasMineUpdate(address atlasMine);
+    event MasterOfCoinUpdate(IMasterOfCoin masterOfCoin);
     event CorruptionNegativeBoostMatrixUpdate(uint256[][] _corruptionNegativeBoostMatrix);
 
     modifier runIfNeeded {
@@ -53,17 +55,13 @@ contract Middleman is AccessControlEnumerable {
 
     constructor(
         address _admin,
-        IERC20 _magic,
         IMasterOfCoin _masterOfCoin,
         IHarvesterFactory _harvesterFactory,
-        IAtlasMine _atlasMine,
+        address _atlasMine,
         IERC20 _corruptionToken
     ) {
         _setRoleAdmin(MIDDLEMAN_ADMIN_ROLE, MIDDLEMAN_ADMIN_ROLE);
         _grantRole(MIDDLEMAN_ADMIN_ROLE, _admin);
-
-        magic = _magic;
-        emit MagicTokenUpdate(_magic);
 
         masterOfCoin = _masterOfCoin;
         emit MasterOfCoinUpdate(_masterOfCoin);
@@ -92,20 +90,25 @@ contract Middleman is AccessControlEnumerable {
         uint256 distributedRewards = masterOfCoin.requestRewards();
 
         address[] memory allHarvesters = harvesterFactory.getAllHarvesters();
-        uint256[] memory harvesterBoosts = new uint256[](allHarvesters.length);
-        uint256 totalBoost;
+        uint256[] memory harvesterShare = new uint256[](allHarvesters.length);
+        uint256 totalShare;
 
         for (uint256 i = 0; i < allHarvesters.length; i++) {
-            harvesterBoosts[i] = getHarvesterTotalBoost(allHarvesters[i]);
-            totalBoost += harvesterBoosts[i];
+            harvesterShare[i] = getHarvesterEmissionsShare(allHarvesters[i]);
+            totalShare += harvesterShare[i];
         }
 
-        for (uint256 i = 0; i < harvesterBoosts.length; i++) {
-            rewardsBalance[allHarvesters[i]].unpaid += distributedRewards * harvesterBoosts[i] / totalBoost;
+        if (atlasMine != address(0)) {
+            totalShare += atlasMineBoost;
+            rewardsBalance[atlasMine].unpaid += distributedRewards * atlasMineBoost / totalShare;
+        }
+
+        for (uint256 i = 0; i < harvesterShare.length; i++) {
+            rewardsBalance[allHarvesters[i]].unpaid += distributedRewards * harvesterShare[i] / totalShare;
         }
     }
 
-    function requestRewards() public virtual returns (uint256 rewardsPaid) {
+    function requestRewards() public returns (uint256 rewardsPaid) {
         distributeRewards();
 
         address harvester = msg.sender;
@@ -119,15 +122,16 @@ contract Middleman is AccessControlEnumerable {
         rewardsBalance[harvester].unpaid = 0;
         rewardsBalance[harvester].paid += rewardsPaid;
 
-        magic.safeTransfer(harvester, rewardsPaid);
+        harvesterFactory.magic().safeTransfer(harvester, rewardsPaid);
         emit RewardsPaid(harvester, rewardsPaid, rewardsBalance[harvester].paid);
     }
 
-    function getHarvesterTotalBoost(address _harvester) public view returns (uint256) {
+    function getHarvesterEmissionsShare(address _harvester) public view returns (uint256) {
         uint256 harvesterTotalBoost = IHarvester(_harvester).nftHandler().getHarvesterTotalBoost();
+        uint256 utilBoost = getUtilizationBoost(_harvester);
         uint256 corruptionNegativeBoost = getCorruptionNegativeBoost();
 
-        return harvesterTotalBoost * corruptionNegativeBoost / Constant.ONE;
+        return harvesterTotalBoost * utilBoost / Constant.ONE * corruptionNegativeBoost / Constant.ONE;
     }
 
     function getCorruptionNegativeBoost() public view returns (uint256 negBoost) {
@@ -140,17 +144,54 @@ contract Middleman is AccessControlEnumerable {
 
             if (balance > balanceThreshold) {
                 negBoost = corruptionNegativeBoostMatrix[i][1];
+                break;
             }
         }
     }
 
-    // ADMIN
+    function getUtilizationBoost(address _harvester) public view returns (uint256 utilBoost) {
+        uint256 util = getUtilization(_harvester);
 
-    function setMagicToken(IERC20 _magic) external onlyRole(MIDDLEMAN_ADMIN_ROLE) {
-        magic = _magic;
-        emit MagicTokenUpdate(_magic);
+        if (util < 3e17) {
+            // if utilization < 30%, no emissions
+            utilBoost = 0;
+        } else if (util < 40e16) {
+            // if 30% < utilization < 40%, 50% emissions
+            utilBoost = 50e16;
+        } else if (util < 50e16) {
+            // if 40% < utilization < 50%, 60% emissions
+            utilBoost = 60e16;
+        } else if (util < 60e16) {
+            // if 50% < utilization < 60%, 80% emissions
+            utilBoost = 80e16;
+        } else {
+            // 100% emissions above 60% utilization
+            utilBoost = 100e16;
+        }
     }
 
+    function getUtilization(address _harvester) public view returns (uint256 util) {
+        IERC20 magic = harvesterFactory.magic();
+        uint256 circulatingSupply = magic.totalSupply();
+        uint256 magicTotalDeposits = IHarvester(_harvester).magicTotalDeposits();
+
+        uint256 len = excludedAddresses.length();
+        for (uint256 i = 0; i < len; i++) {
+            circulatingSupply -= magic.balanceOf(excludedAddresses.at(i));
+        }
+
+        uint256 rewardsAmount = magic.balanceOf(_harvester) - magicTotalDeposits;
+        circulatingSupply -= rewardsAmount;
+        if (circulatingSupply != 0) {
+            util = magicTotalDeposits * Constant.ONE / circulatingSupply;
+        }
+    }
+
+    function getExcludedAddresses() public view virtual returns (address[] memory) {
+        return excludedAddresses.values();
+    }
+
+    // ADMIN
     function setHarvesterFactory(IHarvesterFactory _harvesterFactory) external onlyRole(MIDDLEMAN_ADMIN_ROLE) {
         harvesterFactory = _harvesterFactory;
         emit HarvesterFactoryUpdate(_harvesterFactory);
@@ -164,5 +205,13 @@ contract Middleman is AccessControlEnumerable {
     function setCorruptionNegativeBoostMatrix(uint256[][] memory _corruptionNegativeBoostMatrix) external onlyRole(MIDDLEMAN_ADMIN_ROLE) {
         corruptionNegativeBoostMatrix = _corruptionNegativeBoostMatrix;
         emit CorruptionNegativeBoostMatrixUpdate(_corruptionNegativeBoostMatrix);
+    }
+
+    function addExcludedAddress(address _exclude) external onlyRole(MIDDLEMAN_ADMIN_ROLE) {
+        require(excludedAddresses.add(_exclude), "Address already excluded");
+    }
+
+    function removeExcludedAddress(address _excluded) external onlyRole(MIDDLEMAN_ADMIN_ROLE) {
+        require(excludedAddresses.remove(_excluded), "Address is not excluded");
     }
 }

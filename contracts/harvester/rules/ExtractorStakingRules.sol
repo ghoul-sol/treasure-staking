@@ -1,23 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.11;
 
-import '@openzeppelin/contracts/access/AccessControlEnumerable.sol';
-import '@openzeppelin/contracts/utils/Counters.sol';
+import "@openzeppelin/contracts/utils/Counters.sol";
 
-import '../../interfaces/ILegionMetadataStore.sol';
-import '../../interfaces/IExtractorStakingRules.sol';
+import "../../interfaces/IExtractorStakingRules.sol";
 
-import '../lib/Constant.sol';
+import "./StakingRulesBase.sol";
 
-contract ExtractorStakingRules is IExtractorStakingRules, AccessControlEnumerable {
+contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
     using Counters for Counters.Counter;
 
     struct ExtractorData {
         uint256 tokenId;
         uint256 stakedTimestamp;
     }
-
-    bytes32 public constant STAKING_RULES_ADMIN_ROLE = keccak256("STAKING_RULES_ADMIN_ROLE");
 
     uint256 public maxStakeable;
 
@@ -36,11 +32,7 @@ contract ExtractorStakingRules is IExtractorStakingRules, AccessControlEnumerabl
     event ExtractorBoostUpdate(uint256 tokenId, uint256 boost);
     event ExtractorStaked(uint256 tokenId, uint256 amount);
 
-    constructor(address _admin) {
-        // TODO: setup roles
-        _setRoleAdmin(STAKING_RULES_ADMIN_ROLE, STAKING_RULES_ADMIN_ROLE);
-        _grantRole(STAKING_RULES_ADMIN_ROLE, _admin);
-    }
+    constructor(address _admin, address _nftHandler) StakingRulesBase(_admin, _nftHandler) {}
 
     function isExtractorActive(uint256 _spotId) public view returns (bool) {
         return block.timestamp <= stakedExtractor[_spotId].stakedTimestamp + lifetime;
@@ -65,31 +57,20 @@ contract ExtractorStakingRules is IExtractorStakingRules, AccessControlEnumerabl
     }
 
     /// @inheritdoc IStakingRules
-    function canStake(address, address, uint256 _tokenId, uint256 _amount)
-        external
-        override
-        onlyRole(STAKING_RULES_ADMIN_ROLE)
-    {
-        if (extractorCount.current() + _amount > maxStakeable) revert("MaxStakeable()");
-
-        for (uint256 i = 0; i < _amount; i++) {
-            uint256 spotId = extractorCount.current();
-
-            stakedExtractor[spotId] = ExtractorData(_tokenId, block.timestamp);
-            extractorCount.increment();
-        }
+    function getUserBoost(address, address, uint256, uint256) external pure override returns (uint256) {
+        return 0;
     }
 
     /// @inheritdoc IStakingRules
-    function canUnstake(address, address, uint256, uint256) external pure override {
-        revert("CannotUnstake()");
+    function getHarvesterBoost() external view returns (uint256) {
+        return Constant.ONE + getExtractorsTotalBoost();
     }
 
     /// @inheritdoc IExtractorStakingRules
     function canReplace(address, address, uint256 _tokenId, uint256 _amount, uint256 _replacedSpotId)
         external
         override
-        onlyRole(STAKING_RULES_ADMIN_ROLE)
+        onlyRole(STAKER_ROLE)
         returns (uint256 replacedTokenId, uint256 replacedAmount)
     {
         if (_amount != 1) revert("MustReplaceOne()");
@@ -106,14 +87,19 @@ contract ExtractorStakingRules is IExtractorStakingRules, AccessControlEnumerabl
         stakedExtractor[_replacedSpotId] = ExtractorData(_tokenId, block.timestamp);
     }
 
-    /// @inheritdoc IStakingRules
-    function getUserBoost(address, address, uint256, uint256) external pure override returns (uint256) {
-        return 0;
+    function _canStake(address, address, uint256 _tokenId, uint256 _amount) internal override {
+        if (extractorCount.current() + _amount > maxStakeable) revert("MaxStakeable()");
+
+        for (uint256 i = 0; i < _amount; i++) {
+            uint256 spotId = extractorCount.current();
+
+            stakedExtractor[spotId] = ExtractorData(_tokenId, block.timestamp);
+            extractorCount.increment();
+        }
     }
 
-    /// @inheritdoc IStakingRules
-    function getHarvesterBoost() external view returns (uint256) {
-        return Constant.ONE + getExtractorsTotalBoost();
+    function _canUnstake(address, address, uint256, uint256) internal view override {
+        revert("CannotUnstake()");
     }
 
     // ADMIN
