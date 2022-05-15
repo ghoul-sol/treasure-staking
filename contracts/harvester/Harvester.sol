@@ -102,7 +102,7 @@ contract Harvester is AccessControlEnumerable, ERC1155Holder {
     modifier checkDepositCaps() {
         _;
 
-        if (getUserGlobalDeposit[msg.sender].globalDepositAmount > getUserDepositCap(msg.sender)) {
+        if (isMaxUserGlobalDeposit(msg.sender)) {
             revert("MaxUserGlobalDeposit()");
         }
 
@@ -225,6 +225,10 @@ contract Harvester is AccessControlEnumerable, ERC1155Holder {
                 amount = amountVested - amountWithdrawn;
             }
         }
+    }
+
+    function isMaxUserGlobalDeposit(address _user) public view returns (bool) {
+        return getUserGlobalDeposit[_user].globalDepositAmount > getUserDepositCap(_user);
     }
 
     function pendingRewardsAll(address _user) external view returns (uint256 pending) {

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.11;
 
+import '../../interfaces/INftHandler.sol';
+
 import "./StakingRulesBase.sol";
 
 contract PartsStakingRules is StakingRulesBase {
@@ -63,6 +65,11 @@ contract PartsStakingRules is StakingRulesBase {
     function _canUnstake(address _user, address, uint256, uint256 _amount) internal override {
         staked -= _amount;
         getAmountStaked[_user] -= _amount;
+
+        // require that user cap is above MAGIC deposit amount after unstake
+        if (INftHandler(msg.sender).harvester().isMaxUserGlobalDeposit(_user)) {
+            revert("MinUserGlobalDeposit()");
+        }
     }
 
     // ADMIN

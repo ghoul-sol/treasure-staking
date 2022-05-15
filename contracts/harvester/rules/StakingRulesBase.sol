@@ -16,6 +16,7 @@ abstract contract StakingRulesBase is IStakingRules, AccessControlEnumerable {
         _setRoleAdmin(STAKER_ROLE, STAKING_RULES_ADMIN_ROLE);
 
         _grantRole(STAKING_RULES_ADMIN_ROLE, _admin);
+        // STAKER_ROLE must be a contract that implements harvester() getter
         _grantRole(STAKER_ROLE, _nftHandler);
     }
 

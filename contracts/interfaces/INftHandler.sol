@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.11;
 
+import "./IHarvester.sol";
+
 interface INftHandler {
+    /// @notice Gets harvester address linked to this contract
+    /// @return Harvester interface
+    function harvester() external view returns (IHarvester);
+
     /// @notice Gets staking rules contract address
     /// @param _nft NFT contract address for which to read staking rules contract address
     /// @return staking rules contract address
