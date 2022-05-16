@@ -1,48 +1,27 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity 0.8.13;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 import '@openzeppelin/contracts/utils/math/SafeCast.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
-import '@openzeppelin/contracts/access/AccessControlEnumerable.sol';
 import '@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol';
 
-import '../interfaces/INftHandler.sol';
-import '../interfaces/IPartsStakingRules.sol';
-import '../interfaces/IHarvesterFactory.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
 
-contract Harvester is AccessControlEnumerable, ERC1155Holder {
+import './interfaces/INftHandler.sol';
+import './interfaces/IPartsStakingRules.sol';
+import './interfaces/IHarvesterFactory.sol';
+
+contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradeable {
     using EnumerableSet for EnumerableSet.UintSet;
 
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
     using SafeCast for int256;
 
-    enum Lock { twoWeeks, oneMonth, threeMonths, sixMonths, twelveMonths }
-
-    struct UserInfo {
-        uint256 originalDepositAmount;
-        uint256 depositAmount;
-        uint256 lockLpAmount;
-        uint256 lockedUntil;
-        uint256 vestingLastUpdate;
-        Lock lock;
-    }
-
-    struct CapConfig {
-        address parts;
-        uint256 capPerPart;
-    }
-
-    struct GlobalUserDeposit {
-        uint256 globalDepositAmount;
-        uint256 globalLockLpAmount;
-        uint256 globalLpAmount;
-        int256 globalRewardDebt;
-    }
-
-    bytes32 public constant HARVESTER_ADMIN_ROLE = keccak256("HARVESTER_ADMIN_ROLE");
+    bytes32 public constant HARVESTER_ADMIN = keccak256("HARVESTER_ADMIN");
 
     uint256 public constant DAY = 1 days;
     uint256 public constant ONE_WEEK = 7 days;
@@ -53,7 +32,7 @@ contract Harvester is AccessControlEnumerable, ERC1155Holder {
     uint256 public constant TWELVE_MONTHS = 365 days;
     uint256 public constant ONE = 1e18;
 
-    IHarvesterFactory public immutable factory;
+    IHarvesterFactory public factory;
 
     INftHandler public nftHandler;
 
@@ -66,7 +45,7 @@ contract Harvester is AccessControlEnumerable, ERC1155Holder {
     uint256 public magicTotalDeposits;
 
     /// @notice amount of MAGIC that can be deposited
-    uint256 public totalDepositCap = 10_000_000e18;
+    uint256 public totalDepositCap;
 
     CapConfig public depositCapPerWallet;
 
@@ -121,22 +100,21 @@ contract Harvester is AccessControlEnumerable, ERC1155Holder {
         _;
     }
 
-    constructor(address _admin, INftHandler _nftHandler) {
-        nftHandler = _nftHandler;
+    function init(
+        address _admin,
+        INftHandler _nftHandler,
+        CapConfig memory _depositCapPerWallet
+    ) external initializer {
+        totalDepositCap = 10_000_000e18;
         factory = IHarvesterFactory(msg.sender);
 
-        _setRoleAdmin(HARVESTER_ADMIN_ROLE, HARVESTER_ADMIN_ROLE);
-        _grantRole(HARVESTER_ADMIN_ROLE, _admin);
-    }
+        _setRoleAdmin(HARVESTER_ADMIN, HARVESTER_ADMIN);
+        _grantRole(HARVESTER_ADMIN, _admin);
 
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
+        nftHandler = _nftHandler;
+        depositCapPerWallet = _depositCapPerWallet;
 
-        override(ERC1155Receiver, AccessControlEnumerable)
-        returns (bool)
-    {
-        return super.supportsInterface(interfaceId);
+        __AccessControlEnumerable_init();
     }
 
     function getUserBoost(address _user) external view returns (uint256) {
@@ -400,20 +378,21 @@ contract Harvester is AccessControlEnumerable, ERC1155Holder {
 
     // ADMIN
 
-    function setNftHandler(INftHandler _nftHandler) external onlyRole(HARVESTER_ADMIN_ROLE) {
+    // TODO: is it really needed?
+    function setNftHandler(INftHandler _nftHandler) external onlyRole(HARVESTER_ADMIN) {
         nftHandler = _nftHandler;
     }
 
-    function setDepositCapPerWallet(CapConfig memory _depositCapPerWallet) external onlyRole(HARVESTER_ADMIN_ROLE) {
+    function setDepositCapPerWallet(CapConfig memory _depositCapPerWallet) external onlyRole(HARVESTER_ADMIN) {
         depositCapPerWallet = _depositCapPerWallet;
     }
 
-    function setTotalDepositCap(uint256 _totalDepositCap) external onlyRole(HARVESTER_ADMIN_ROLE) {
+    function setTotalDepositCap(uint256 _totalDepositCap) external onlyRole(HARVESTER_ADMIN) {
         totalDepositCap = _totalDepositCap;
     }
 
     /// @notice EMERGENCY ONLY
-    function toggleUnlockAll() external onlyRole(HARVESTER_ADMIN_ROLE) {
+    function toggleUnlockAll() external onlyRole(HARVESTER_ADMIN) {
         unlockAll = unlockAll ? false : true;
     }
 }

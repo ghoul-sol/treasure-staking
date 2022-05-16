@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity 0.8.13;
 
 import '@openzeppelin/contracts/access/AccessControlEnumerable.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
-import '../interfaces/IHarvesterFactory.sol';
-import '../interfaces/IHarvester.sol';
+import './interfaces/IHarvesterFactory.sol';
+import './interfaces/IHarvester.sol';
 import '../interfaces/IMasterOfCoin.sol';
-import '../interfaces/IAtlasMine.sol';
 
 import './lib/Constant.sol';
 
@@ -22,7 +21,7 @@ contract Middleman is AccessControlEnumerable {
         uint256 paid;
     }
 
-    bytes32 public constant MIDDLEMAN_ADMIN_ROLE = keccak256("MIDDLEMAN_ADMIN_ROLE");
+    bytes32 public constant MIDDLEMAN_ADMIN = keccak256("MIDDLEMAN_ADMIN");
 
     /// @dev Magic token addr
     IERC20 public corruptionToken;
@@ -60,8 +59,8 @@ contract Middleman is AccessControlEnumerable {
         address _atlasMine,
         IERC20 _corruptionToken
     ) {
-        _setRoleAdmin(MIDDLEMAN_ADMIN_ROLE, MIDDLEMAN_ADMIN_ROLE);
-        _grantRole(MIDDLEMAN_ADMIN_ROLE, _admin);
+        _setRoleAdmin(MIDDLEMAN_ADMIN, MIDDLEMAN_ADMIN);
+        _grantRole(MIDDLEMAN_ADMIN, _admin);
 
         masterOfCoin = _masterOfCoin;
         emit MasterOfCoinUpdate(_masterOfCoin);
@@ -192,26 +191,26 @@ contract Middleman is AccessControlEnumerable {
     }
 
     // ADMIN
-    function setHarvesterFactory(IHarvesterFactory _harvesterFactory) external onlyRole(MIDDLEMAN_ADMIN_ROLE) {
+    function setHarvesterFactory(IHarvesterFactory _harvesterFactory) external onlyRole(MIDDLEMAN_ADMIN) {
         harvesterFactory = _harvesterFactory;
         emit HarvesterFactoryUpdate(_harvesterFactory);
     }
 
-    function setMasterOfCoin(IMasterOfCoin _masterOfCoin) external onlyRole(MIDDLEMAN_ADMIN_ROLE) {
+    function setMasterOfCoin(IMasterOfCoin _masterOfCoin) external onlyRole(MIDDLEMAN_ADMIN) {
         masterOfCoin = _masterOfCoin;
         emit MasterOfCoinUpdate(_masterOfCoin);
     }
 
-    function setCorruptionNegativeBoostMatrix(uint256[][] memory _corruptionNegativeBoostMatrix) external onlyRole(MIDDLEMAN_ADMIN_ROLE) {
+    function setCorruptionNegativeBoostMatrix(uint256[][] memory _corruptionNegativeBoostMatrix) external onlyRole(MIDDLEMAN_ADMIN) {
         corruptionNegativeBoostMatrix = _corruptionNegativeBoostMatrix;
         emit CorruptionNegativeBoostMatrixUpdate(_corruptionNegativeBoostMatrix);
     }
 
-    function addExcludedAddress(address _exclude) external onlyRole(MIDDLEMAN_ADMIN_ROLE) {
+    function addExcludedAddress(address _exclude) external onlyRole(MIDDLEMAN_ADMIN) {
         require(excludedAddresses.add(_exclude), "Address already excluded");
     }
 
-    function removeExcludedAddress(address _excluded) external onlyRole(MIDDLEMAN_ADMIN_ROLE) {
+    function removeExcludedAddress(address _excluded) external onlyRole(MIDDLEMAN_ADMIN) {
         require(excludedAddresses.remove(_excluded), "Address is not excluded");
     }
 }

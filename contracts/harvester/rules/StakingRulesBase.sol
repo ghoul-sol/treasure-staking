@@ -1,30 +1,34 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity 0.8.13;
 
 import '@openzeppelin/contracts/access/AccessControlEnumerable.sol';
 
-import '../../interfaces/IStakingRules.sol';
+import '../interfaces/IStakingRules.sol';
 
 import '../lib/Constant.sol';
 
 abstract contract StakingRulesBase is IStakingRules, AccessControlEnumerable {
-    bytes32 public constant STAKING_RULES_ADMIN_ROLE = keccak256("STAKING_RULES_ADMIN_ROLE");
-    bytes32 public constant STAKER_ROLE = keccak256("STAKER_ROLE");
+    bytes32 public constant SR_ADMIN = keccak256("SR_ADMIN");
+    bytes32 public constant SR_NFT_HANDLER = keccak256("SR_NFT_HANDLER");
+    /// @dev temporary role assigned to harvester factory to setup nftHandler after it's deployed
+    ///      (solves circular dependency)
+    bytes32 public constant SR_HARVESTER_FACTORY = keccak256("SR_HARVESTER_FACTORY");
 
-    constructor(address _admin, address _nftHandler) {
-        _setRoleAdmin(STAKING_RULES_ADMIN_ROLE, STAKING_RULES_ADMIN_ROLE);
-        _setRoleAdmin(STAKER_ROLE, STAKING_RULES_ADMIN_ROLE);
+    constructor(address _admin, address _harvesterFactory) {
+        _setRoleAdmin(SR_ADMIN, SR_ADMIN);
+        _setRoleAdmin(SR_NFT_HANDLER, SR_ADMIN);
+        _setRoleAdmin(SR_HARVESTER_FACTORY, SR_ADMIN);
 
-        _grantRole(STAKING_RULES_ADMIN_ROLE, _admin);
-        // STAKER_ROLE must be a contract that implements harvester() getter
-        _grantRole(STAKER_ROLE, _nftHandler);
+        _grantRole(SR_ADMIN, _admin);
+        // SR_NFT_HANDLER must be a contract that implements harvester() getter
+        _grantRole(SR_HARVESTER_FACTORY, _harvesterFactory);
     }
 
     /// @inheritdoc IStakingRules
     function canStake(address _user, address _nft, uint256 _tokenId, uint256 _amount)
         external
         override
-        onlyRole(STAKER_ROLE)
+        onlyRole(SR_NFT_HANDLER)
     {
         _canStake(_user, _nft, _tokenId, _amount);
     }
@@ -33,9 +37,15 @@ abstract contract StakingRulesBase is IStakingRules, AccessControlEnumerable {
     function canUnstake(address _user, address _nft, uint256 _tokenId, uint256 _amount)
         external
         override
-        onlyRole(STAKER_ROLE)
+        onlyRole(SR_NFT_HANDLER)
     {
         _canUnstake(_user, _nft, _tokenId, _amount);
+    }
+
+    /// @inheritdoc IStakingRules
+    function setNftHandler(address _nftHandler) external onlyRole(SR_HARVESTER_FACTORY) {
+        _grantRole(SR_NFT_HANDLER, _nftHandler);
+        _revokeRole(SR_HARVESTER_FACTORY, msg.sender);
     }
 
     /// @dev it's meant to be overriden by staking rules implementation

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity 0.8.13;
 
-import '../../interfaces/INftHandler.sol';
+import '../interfaces/INftHandler.sol';
 
 import "./StakingRulesBase.sol";
 
@@ -74,15 +74,15 @@ contract PartsStakingRules is StakingRulesBase {
 
     // ADMIN
 
-    function setMaxStakeableTotal(uint256 _maxStakeableTotal) external onlyRole(STAKING_RULES_ADMIN_ROLE) {
+    function setMaxStakeableTotal(uint256 _maxStakeableTotal) external onlyRole(SR_ADMIN) {
         _setMaxStakeableTotal(_maxStakeableTotal);
     }
 
-    function setMaxStakeablePerUser(uint256 _maxStakeablePerUser) external onlyRole(STAKING_RULES_ADMIN_ROLE) {
+    function setMaxStakeablePerUser(uint256 _maxStakeablePerUser) external onlyRole(SR_ADMIN) {
         _setMaxStakeablePerUser(_maxStakeablePerUser);
     }
 
-    function setBoostFactor(uint256 _boostFactor) external onlyRole(STAKING_RULES_ADMIN_ROLE) {
+    function setBoostFactor(uint256 _boostFactor) external onlyRole(SR_ADMIN) {
         _setBoostFactor(_boostFactor);
     }
 

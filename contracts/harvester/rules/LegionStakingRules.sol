@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity 0.8.13;
 
 import '../../interfaces/ILegionMetadataStore.sol';
 
@@ -159,35 +159,35 @@ contract LegionStakingRules is StakingRulesBase {
 
     // ADMIN
 
-    function setLegionMetadataStore(ILegionMetadataStore _legionMetadataStore) external onlyRole(STAKING_RULES_ADMIN_ROLE) {
+    function setLegionMetadataStore(ILegionMetadataStore _legionMetadataStore) external onlyRole(SR_ADMIN) {
         legionMetadataStore = _legionMetadataStore;
         emit LegionMetadataStoreUpdate(_legionMetadataStore);
     }
 
-    function setLegionBoostMatrix(uint256[][] memory _legionBoostMatrix) external onlyRole(STAKING_RULES_ADMIN_ROLE) {
+    function setLegionBoostMatrix(uint256[][] memory _legionBoostMatrix) external onlyRole(SR_ADMIN) {
         legionBoostMatrix = _legionBoostMatrix;
         emit LegionBoostMatrixUpdate(_legionBoostMatrix);
     }
 
-    function setLegionWeightMatrix(uint256[][] memory _legionWeightMatrix) external onlyRole(STAKING_RULES_ADMIN_ROLE) {
+    function setLegionWeightMatrix(uint256[][] memory _legionWeightMatrix) external onlyRole(SR_ADMIN) {
         legionWeightMatrix = _legionWeightMatrix;
         emit LegionWeightMatrixUpdate(_legionWeightMatrix);
     }
 
-    function setLegionRankMatrix(uint256[][] memory _legionRankMatrix) external onlyRole(STAKING_RULES_ADMIN_ROLE) {
+    function setLegionRankMatrix(uint256[][] memory _legionRankMatrix) external onlyRole(SR_ADMIN) {
         legionRankMatrix = _legionRankMatrix;
         emit LegionRankMatrixUpdate(_legionRankMatrix);
     }
 
-    function setMaxWeight(uint256 _maxLegionWeight) external onlyRole(STAKING_RULES_ADMIN_ROLE) {
+    function setMaxWeight(uint256 _maxLegionWeight) external onlyRole(SR_ADMIN) {
         _setMaxWeight(_maxLegionWeight);
     }
 
-    function setMaxStakeableTotal(uint256 _maxStakeableTotal) external onlyRole(STAKING_RULES_ADMIN_ROLE) {
+    function setMaxStakeableTotal(uint256 _maxStakeableTotal) external onlyRole(SR_ADMIN) {
         _setMaxStakeableTotal(_maxStakeableTotal);
     }
 
-    function setBoostFactor(uint256 _boostFactor) external onlyRole(STAKING_RULES_ADMIN_ROLE) {
+    function setBoostFactor(uint256 _boostFactor) external onlyRole(SR_ADMIN) {
         _setBoostFactor(_boostFactor);
     }
 

@@ -1,17 +1,28 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity 0.8.13;
 
 import '@openzeppelin/contracts/access/AccessControlEnumerable.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
+import '@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol';
+import '@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol';
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
-import '../interfaces/INftHandler.sol';
-import './Harvester.sol';
-import './NftHandler.sol';
+import './interfaces/INftHandler.sol';
+import './interfaces/IHarvester.sol';
+import './interfaces/IMiddleman.sol';
 
 contract HarvesterFactory is AccessControlEnumerable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    bytes32 public constant HARVESTER_FACTORY_ADMIN_ROLE = keccak256("HARVESTER_FACTORY_ADMIN_ROLE");
+    /// @dev master admin, manages other roles and can change core config
+    bytes32 public constant HF_ADMIN = keccak256("HF_ADMIN");
+    /// @dev can deploy and enable/disable harvesters
+    bytes32 public constant HF_DEPLOYER = keccak256("HF_DEPLOYER");
+    /// @dev can upgrade proxy implementation for harvester and nftHandler
+    bytes32 public constant HF_BEACON_ADMIN = keccak256("HF_BEACON_ADMIN");
+
+    UpgradeableBeacon public immutable harvesterBeacon;
+    UpgradeableBeacon public immutable nftHandlerBeacon;
 
     EnumerableSet.AddressSet private harvesters;
 
@@ -19,14 +30,29 @@ contract HarvesterFactory is AccessControlEnumerable {
     IERC20 public magic;
     IMiddleman public middleman;
 
-    event HarvesterDeployed(Harvester harvester, NftHandler nftHandler);
+    event HarvesterDeployed(address harvester, address nftHandler);
 
-    constructor(address _admin, IERC20 _magic, IMiddleman _middleman) {
+    constructor(
+        IERC20 _magic,
+        IMiddleman _middleman,
+        address _admin,
+        address _harvesterImpl,
+        address _nftHandlerImpl
+    ) {
         magic = _magic;
         middleman = _middleman;
 
-        _setRoleAdmin(HARVESTER_FACTORY_ADMIN_ROLE, HARVESTER_FACTORY_ADMIN_ROLE);
-        _grantRole(HARVESTER_FACTORY_ADMIN_ROLE, _admin);
+        _setRoleAdmin(HF_ADMIN, HF_ADMIN);
+        _grantRole(HF_ADMIN, _admin);
+
+        _setRoleAdmin(HF_DEPLOYER, HF_ADMIN);
+        _grantRole(HF_DEPLOYER, _admin);
+
+        _setRoleAdmin(HF_BEACON_ADMIN, HF_ADMIN);
+        _grantRole(HF_BEACON_ADMIN, _admin);
+
+        harvesterBeacon = new UpgradeableBeacon(_harvesterImpl);
+        nftHandlerBeacon = new UpgradeableBeacon(_nftHandlerImpl);
     }
 
     function getAllHarvesters() external view returns (address[] memory) {
@@ -37,31 +63,52 @@ contract HarvesterFactory is AccessControlEnumerable {
         return harvesters.length();
     }
 
-    function deployHarvester(address _admin) external onlyRole(HARVESTER_FACTORY_ADMIN_ROLE) {
-        NftHandler nftHandler = new NftHandler(_admin);
-        Harvester harvester = new Harvester(_admin, INftHandler(address(nftHandler)));
+    function deployHarvester(
+        address _admin,
+        IHarvester.CapConfig memory _depositCapPerWallet,
+        address[] memory _nfts,
+        INftHandler.NftConfig[] memory _nftConfigs
+    ) external onlyRole(HF_DEPLOYER) {
+        bytes memory nftHandlerData = abi.encodeCall(INftHandler.init, (_admin, _nfts, _nftConfigs));
+        address nftHandler = address(new BeaconProxy(address(nftHandlerBeacon), nftHandlerData));
 
-        require(harvesters.add(address(harvester)), "Harvester address already exists");
+        for (uint256 i = 0; i < _nfts.length; i++) {
+            _nftConfigs[i].stakingRules.setNftHandler(nftHandler);
+        }
+
+        bytes memory harvesterData = abi.encodeCall(IHarvester.init, (_admin, INftHandler(nftHandler), _depositCapPerWallet));
+        address harvester = address(new BeaconProxy(address(harvesterBeacon), harvesterData));
+
+        require(harvesters.add(harvester), "Harvester address already exists");
 
         emit HarvesterDeployed(harvester, nftHandler);
     }
 
-    function enableHarvester(Harvester _harvester) external onlyRole(HARVESTER_FACTORY_ADMIN_ROLE) {
+    function enableHarvester(IHarvester _harvester) external onlyRole(HF_DEPLOYER) {
         _harvester.enable();
     }
 
-    function disableHarvester(Harvester _harvester) external onlyRole(HARVESTER_FACTORY_ADMIN_ROLE) {
+    function disableHarvester(IHarvester _harvester) external onlyRole(HF_DEPLOYER) {
         _harvester.disable();
     }
 
     // ADMIN
 
-    function setMagicToken(IERC20 _magic) external onlyRole(HARVESTER_FACTORY_ADMIN_ROLE) {
+    function setMagicToken(IERC20 _magic) external onlyRole(HF_ADMIN) {
         magic = _magic;
     }
 
-    function setMiddleman(IMiddleman _middleman) external onlyRole(HARVESTER_FACTORY_ADMIN_ROLE) {
+    function setMiddleman(IMiddleman _middleman) external onlyRole(HF_ADMIN) {
         middleman = _middleman;
     }
 
+    /// @dev Upgrades the harvester beacon to a new implementation.
+    function upgradeHarvesterTo(address _newImplementation) external onlyRole(HF_BEACON_ADMIN) {
+        harvesterBeacon.upgradeTo(_newImplementation);
+    }
+
+    /// @dev Upgrades the nft handler beacon to a new implementation.
+    function upgradeNftHandlerTo(address _newImplementation) external onlyRole(HF_BEACON_ADMIN) {
+        nftHandlerBeacon.upgradeTo(_newImplementation);
+    }
 }

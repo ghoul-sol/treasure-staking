@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
 
-import "../../interfaces/IExtractorStakingRules.sol";
+import "../interfaces/IExtractorStakingRules.sol";
 
 import "./StakingRulesBase.sol";
 
@@ -70,7 +70,7 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
     function canReplace(address, address, uint256 _tokenId, uint256 _amount, uint256 _replacedSpotId)
         external
         override
-        onlyRole(STAKER_ROLE)
+        onlyRole(SR_NFT_HANDLER)
         returns (uint256 replacedTokenId, uint256 replacedAmount)
     {
         if (_amount != 1) revert("MustReplaceOne()");
@@ -98,18 +98,18 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
         }
     }
 
-    function _canUnstake(address, address, uint256, uint256) internal view override {
+    function _canUnstake(address, address, uint256, uint256) internal pure override {
         revert("CannotUnstake()");
     }
 
     // ADMIN
 
-    function setMaxStakeable(uint256 _maxStakeable) external onlyRole(STAKING_RULES_ADMIN_ROLE) {
+    function setMaxStakeable(uint256 _maxStakeable) external onlyRole(SR_ADMIN) {
         maxStakeable = _maxStakeable;
         emit MaxStakeableUpdate(_maxStakeable);
     }
 
-    function setExtractorBoost(uint256 _tokenId, uint256 _boost) external onlyRole(STAKING_RULES_ADMIN_ROLE) {
+    function setExtractorBoost(uint256 _tokenId, uint256 _boost) external onlyRole(SR_ADMIN) {
         extractorBoost[_tokenId] = _boost;
         emit ExtractorBoostUpdate(_tokenId, _boost);
     }

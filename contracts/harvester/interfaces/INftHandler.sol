@@ -1,9 +1,24 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity 0.8.13;
 
 import "./IHarvester.sol";
+import './IStakingRules.sol';
 
 interface INftHandler {
+    enum Interfaces { Unsupported, ERC721, ERC1155 }
+
+    struct NftConfig {
+        Interfaces supportedInterface;
+        /// @dev contract address which calcualtes boost for this NFT
+        IStakingRules stakingRules;
+    }
+
+    /// @notice Initialize contract
+    /// @param _admin wallet address to be set as contract's admin
+    /// @param _nfts array of NFTs allowed to be staked
+    /// @param _nftConfigs array of congigs for each NFT
+    function init(address _admin, address[] memory _nfts, INftHandler.NftConfig[] memory _nftConfigs) external;
+
     /// @notice Gets harvester address linked to this contract
     /// @return Harvester interface
     function harvester() external view returns (IHarvester);

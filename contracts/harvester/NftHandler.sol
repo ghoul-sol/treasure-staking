@@ -1,31 +1,24 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity 0.8.13;
 
 import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import '@openzeppelin/contracts/token/ERC1155/IERC1155.sol';
 import '@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Burnable.sol';
-import '@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
-import '@openzeppelin/contracts/access/AccessControlEnumerable.sol';
 
-import '../interfaces/IHarvester.sol';
-import '../interfaces/IStakingRules.sol';
-import '../interfaces/IExtractorStakingRules.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
+
+import './interfaces/INftHandler.sol';
+import './interfaces/IHarvester.sol';
+import './interfaces/IExtractorStakingRules.sol';
 
 import './lib/Constant.sol';
 
-contract NftHandler is AccessControlEnumerable, ERC1155Holder {
+contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155HolderUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    enum Interfaces { Unsupported, ERC721, ERC1155 }
-
-    bytes32 public constant NFT_HANDLER_ADMIN_ROLE = keccak256("NFT_HANDLER_ADMIN_ROLE");
-
-    struct NftConfig {
-        Interfaces supportedInterface;
-        /// @dev contract address which calcualtes boost for this NFT
-        IStakingRules stakingRules;
-    }
+    bytes32 public constant NH_ADMIN = keccak256("NH_ADMIN");
 
     IHarvester public harvester;
 
@@ -73,19 +66,34 @@ contract NftHandler is AccessControlEnumerable, ERC1155Holder {
         _;
     }
 
-    constructor(address _admin) {
-        _setRoleAdmin(NFT_HANDLER_ADMIN_ROLE, NFT_HANDLER_ADMIN_ROLE);
-        _grantRole(NFT_HANDLER_ADMIN_ROLE, _admin);
+    function init(
+        address _admin,
+        address[] memory _nfts,
+        INftHandler.NftConfig[] memory _nftConfigs
+    ) external initializer {
+        _setRoleAdmin(NH_ADMIN, NH_ADMIN);
+        _grantRole(NH_ADMIN, _admin);
+
+        if (_nfts.length != _nftConfigs.length) revert("InvalidData()");
+
+        for (uint256 i = 0; i < _nfts.length; i++) {
+            _setNftConfig(_nfts[i], _nftConfigs[i]);
+        }
+
+        __AccessControlEnumerable_init();
+        __ERC1155Holder_init();
     }
 
     function supportsInterface(bytes4 interfaceId)
         public
         view
         virtual
-        override(ERC1155Receiver, AccessControlEnumerable)
+        override(ERC1155ReceiverUpgradeable, AccessControlEnumerableUpgradeable)
         returns (bool)
     {
-        return super.supportsInterface(interfaceId);
+        return
+            ERC1155ReceiverUpgradeable.supportsInterface(interfaceId)
+            || AccessControlEnumerableUpgradeable.supportsInterface(interfaceId);
     }
 
     function getAllAllowedNFTs() external view returns (address[] memory) {
@@ -194,7 +202,11 @@ contract NftHandler is AccessControlEnumerable, ERC1155Holder {
 
     // ADMIN
 
-    function setNftConfig(address _nft, NftConfig memory _nftConfig) external onlyRole(NFT_HANDLER_ADMIN_ROLE) {
+    function setNftConfig(address _nft, NftConfig memory _nftConfig) external onlyRole(NH_ADMIN) {
+        _setNftConfig(_nft, _nftConfig);
+    }
+
+    function _setNftConfig(address _nft, NftConfig memory _nftConfig) internal {
         allowedNfts[_nft] = _nftConfig;
         emit NftConfigUpdate(_nft, _nftConfig);
 

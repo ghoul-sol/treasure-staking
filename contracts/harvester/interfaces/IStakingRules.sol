@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity 0.8.13;
 
 interface IStakingRules {
     /// @notice Checks if NFT can be staked
@@ -27,4 +27,9 @@ interface IStakingRules {
     /// @notice Gets amount of boost that harvester gets for all staked NFTs
     /// @return amount of boost that harvester gets for all staked NFTs
     function getHarvesterBoost() external view returns (uint256);
+
+    /// @notice Set nftHandler address
+    /// @param _nftHandler address
+    function setNftHandler(address _nftHandler) external;
+
 }
