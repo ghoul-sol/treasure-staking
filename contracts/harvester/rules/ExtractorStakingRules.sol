@@ -20,22 +20,49 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
     /// @dev time in seconds during which extractor is live
     uint256 public lifetime;
 
-    /// @dev array of spot Id(s)
+    /// @dev address of NFT extractor token
+    address public extractorAddress;
+
+    /// @dev lastest spot Id
     Counters.Counter public extractorCount;
     /// @dev maps spot Id to ExtractorData
     mapping(uint256 => ExtractorData) public stakedExtractor;
 
-    /// @dev maps token Id to boost value
+    /// @dev maps address => token Id => boost value
     mapping(uint256 => uint256) public extractorBoost;
 
-    event MaxStakeableUpdate(uint256 maxStakeable);
-    event ExtractorBoostUpdate(uint256 tokenId, uint256 boost);
+    event MaxStakeable(uint256 maxStakeable);
+    event ExtractorBoost(uint256 tokenId, uint256 boost);
     event ExtractorStaked(uint256 tokenId, uint256 amount);
+    event ExtractorReplaced(uint256 tokenId, uint256 replacedSpotId);
+    event Lifetime(uint256 lifetime);
+    event ExtractorAddress(address extractorAddress);
 
-    constructor(address _admin, address _nftHandler) StakingRulesBase(_admin, _nftHandler) {}
+    modifier validateInput(address _nft, uint256 _amount) {
+        require(_nft == extractorAddress, "InvalidAddress()");
+        require(_amount > 0, "ZeroAmount()");
+
+        _;
+    }
+
+    constructor(
+        address _admin,
+        address _harvesterFactory,
+        address _extractorAddress,
+        uint256 _maxStakeable,
+        uint256 _lifetime
+    ) StakingRulesBase(_admin, _harvesterFactory) {
+        _setExtractorAddress(_extractorAddress);
+        _setMaxStakeable(_maxStakeable);
+        _setExtractorLifetime(_lifetime);
+    }
 
     function isExtractorActive(uint256 _spotId) public view returns (bool) {
         return block.timestamp <= stakedExtractor[_spotId].stakedTimestamp + lifetime;
+    }
+
+    function getExtractorCount() public view returns (uint256) {
+        return extractorCount.current();
     }
 
     /// @return extractors array of all staked extractors
@@ -67,13 +94,15 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
     }
 
     /// @inheritdoc IExtractorStakingRules
-    function canReplace(address, address, uint256 _tokenId, uint256 _amount, uint256 _replacedSpotId)
+    function canReplace(address, address _nft, uint256 _tokenId, uint256 _amount, uint256 _replacedSpotId)
         external
         override
         onlyRole(SR_NFT_HANDLER)
+        validateInput(_nft, _amount)
         returns (uint256 replacedTokenId, uint256 replacedAmount)
     {
         if (_amount != 1) revert("MustReplaceOne()");
+        if (_replacedSpotId >= maxStakeable) revert("InvalidSpotId()");
 
         replacedTokenId = stakedExtractor[_replacedSpotId].tokenId;
         replacedAmount = _amount;
@@ -85,9 +114,14 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
         }
 
         stakedExtractor[_replacedSpotId] = ExtractorData(_tokenId, block.timestamp);
+        emit ExtractorReplaced(_tokenId, _replacedSpotId);
     }
 
-    function _canStake(address, address, uint256 _tokenId, uint256 _amount) internal override {
+    function _canStake(address, address _nft, uint256 _tokenId, uint256 _amount)
+        internal
+        override
+        validateInput(_nft, _amount)
+    {
         if (extractorCount.current() + _amount > maxStakeable) revert("MaxStakeable()");
 
         for (uint256 i = 0; i < _amount; i++) {
@@ -96,6 +130,8 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
             stakedExtractor[spotId] = ExtractorData(_tokenId, block.timestamp);
             extractorCount.increment();
         }
+
+        emit ExtractorStaked(_tokenId, _amount);
     }
 
     function _canUnstake(address, address, uint256, uint256) internal pure override {
@@ -105,12 +141,34 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
     // ADMIN
 
     function setMaxStakeable(uint256 _maxStakeable) external onlyRole(SR_ADMIN) {
-        maxStakeable = _maxStakeable;
-        emit MaxStakeableUpdate(_maxStakeable);
+        _setMaxStakeable(_maxStakeable);
     }
 
     function setExtractorBoost(uint256 _tokenId, uint256 _boost) external onlyRole(SR_ADMIN) {
         extractorBoost[_tokenId] = _boost;
-        emit ExtractorBoostUpdate(_tokenId, _boost);
+        emit ExtractorBoost(_tokenId, _boost);
+    }
+
+    function setExtractorAddress(address _extractorAddress) external onlyRole(SR_ADMIN) {
+        _setExtractorAddress(_extractorAddress);
+    }
+
+    function setExtractorLifetime(uint256 _lifetime) external onlyRole(SR_ADMIN) {
+        _setExtractorLifetime(_lifetime);
+    }
+
+    function _setMaxStakeable(uint256 _maxStakeable) internal {
+        maxStakeable = _maxStakeable;
+        emit MaxStakeable(_maxStakeable);
+    }
+
+    function _setExtractorAddress(address _extractorAddress) internal {
+        extractorAddress = _extractorAddress;
+        emit ExtractorAddress(_extractorAddress);
+    }
+
+    function _setExtractorLifetime(uint256 _lifetime) internal {
+        lifetime = _lifetime;
+        emit Lifetime(_lifetime);
     }
 }
