@@ -39,11 +39,11 @@ contract Middleman is AccessControlEnumerable {
     EnumerableSet.AddressSet private excludedAddresses;
 
     event RewardsPaid(address indexed stream, uint256 rewardsPaid, uint256 rewardsPaidInTotal);
-    event CorruptionTokenUpdate(IERC20 corruptionToken);
-    event HarvesterFactoryUpdate(IHarvesterFactory harvesterFactory);
-    event AtlasMineUpdate(address atlasMine);
-    event MasterOfCoinUpdate(IMasterOfCoin masterOfCoin);
-    event CorruptionNegativeBoostMatrixUpdate(uint256[][] _corruptionNegativeBoostMatrix);
+    event CorruptionToken(IERC20 corruptionToken);
+    event HarvesterFactory(IHarvesterFactory harvesterFactory);
+    event AtlasMine(address atlasMine);
+    event MasterOfCoin(IMasterOfCoin masterOfCoin);
+    event CorruptionNegativeBoostMatrix(uint256[][] _corruptionNegativeBoostMatrix);
 
     modifier runIfNeeded {
         if (block.timestamp > lastRewardTimestamp) {
@@ -63,16 +63,16 @@ contract Middleman is AccessControlEnumerable {
         _grantRole(MIDDLEMAN_ADMIN, _admin);
 
         masterOfCoin = _masterOfCoin;
-        emit MasterOfCoinUpdate(_masterOfCoin);
+        emit MasterOfCoin(_masterOfCoin);
 
         harvesterFactory = _harvesterFactory;
-        emit HarvesterFactoryUpdate(_harvesterFactory);
+        emit HarvesterFactory(_harvesterFactory);
 
         atlasMine = _atlasMine;
-        emit AtlasMineUpdate(_atlasMine);
+        emit AtlasMine(_atlasMine);
 
         corruptionToken = _corruptionToken;
-        emit CorruptionTokenUpdate(_corruptionToken);
+        emit CorruptionToken(_corruptionToken);
 
         corruptionNegativeBoostMatrix = [
             [60_000e18, 4e17],
@@ -82,7 +82,7 @@ contract Middleman is AccessControlEnumerable {
             [20_000e18, 8e17],
             [10_000e18, 9e17]
         ];
-        emit CorruptionNegativeBoostMatrixUpdate(corruptionNegativeBoostMatrix);
+        emit CorruptionNegativeBoostMatrix(corruptionNegativeBoostMatrix);
     }
 
     function distributeRewards() public runIfNeeded {
@@ -193,17 +193,17 @@ contract Middleman is AccessControlEnumerable {
     // ADMIN
     function setHarvesterFactory(IHarvesterFactory _harvesterFactory) external onlyRole(MIDDLEMAN_ADMIN) {
         harvesterFactory = _harvesterFactory;
-        emit HarvesterFactoryUpdate(_harvesterFactory);
+        emit HarvesterFactory(_harvesterFactory);
     }
 
     function setMasterOfCoin(IMasterOfCoin _masterOfCoin) external onlyRole(MIDDLEMAN_ADMIN) {
         masterOfCoin = _masterOfCoin;
-        emit MasterOfCoinUpdate(_masterOfCoin);
+        emit MasterOfCoin(_masterOfCoin);
     }
 
     function setCorruptionNegativeBoostMatrix(uint256[][] memory _corruptionNegativeBoostMatrix) external onlyRole(MIDDLEMAN_ADMIN) {
         corruptionNegativeBoostMatrix = _corruptionNegativeBoostMatrix;
-        emit CorruptionNegativeBoostMatrixUpdate(_corruptionNegativeBoostMatrix);
+        emit CorruptionNegativeBoostMatrix(_corruptionNegativeBoostMatrix);
     }
 
     function addExcludedAddress(address _exclude) external onlyRole(MIDDLEMAN_ADMIN) {

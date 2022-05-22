@@ -21,8 +21,8 @@ contract HarvesterFactory is AccessControlEnumerable {
     /// @dev can upgrade proxy implementation for harvester and nftHandler
     bytes32 public constant HF_BEACON_ADMIN = keccak256("HF_BEACON_ADMIN");
 
-    UpgradeableBeacon public immutable harvesterBeacon;
     UpgradeableBeacon public immutable nftHandlerBeacon;
+    UpgradeableBeacon public immutable harvesterBeacon;
 
     EnumerableSet.AddressSet private harvesters;
 

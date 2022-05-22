@@ -21,22 +21,22 @@ contract LegionStakingRules is StakingRulesBase {
     uint256 public totalRank;
     uint256 public boostFactor;
 
-    event MaxWeightUpdate(uint256 maxLegionWeight);
-    event LegionMetadataStoreUpdate(ILegionMetadataStore legionMetadataStore);
-    event LegionBoostMatrixUpdate(uint256[][] legionBoostMatrix);
-    event LegionWeightMatrixUpdate(uint256[][] legionWeightMatrix);
-    event LegionRankMatrixUpdate(uint256[][] legionRankMatrix);
-    event MaxStakeableTotalUpdate(uint256 maxStakeableTotal);
-    event BoostFactorUpdate(uint256 boostFactor);
+    event MaxWeight(uint256 maxLegionWeight);
+    event LegionMetadataStore(ILegionMetadataStore legionMetadataStore);
+    event LegionBoostMatrix(uint256[][] legionBoostMatrix);
+    event LegionWeightMatrix(uint256[][] legionWeightMatrix);
+    event LegionRankMatrix(uint256[][] legionRankMatrix);
+    event MaxStakeableTotal(uint256 maxStakeableTotal);
+    event BoostFactor(uint256 boostFactor);
 
     constructor(
         address _admin,
-        address _nftHandler,
+        address _harvesterFactory,
         ILegionMetadataStore _legionMetadataStore,
         uint256 _maxLegionWeight,
         uint256 _maxStakeableTotal,
         uint256 _boostFactor
-    ) StakingRulesBase(_admin, _nftHandler) {
+    ) StakingRulesBase(_admin, _harvesterFactory) {
         legionMetadataStore = _legionMetadataStore;
 
         _setMaxWeight(_maxLegionWeight);
@@ -161,22 +161,22 @@ contract LegionStakingRules is StakingRulesBase {
 
     function setLegionMetadataStore(ILegionMetadataStore _legionMetadataStore) external onlyRole(SR_ADMIN) {
         legionMetadataStore = _legionMetadataStore;
-        emit LegionMetadataStoreUpdate(_legionMetadataStore);
+        emit LegionMetadataStore(_legionMetadataStore);
     }
 
     function setLegionBoostMatrix(uint256[][] memory _legionBoostMatrix) external onlyRole(SR_ADMIN) {
         legionBoostMatrix = _legionBoostMatrix;
-        emit LegionBoostMatrixUpdate(_legionBoostMatrix);
+        emit LegionBoostMatrix(_legionBoostMatrix);
     }
 
     function setLegionWeightMatrix(uint256[][] memory _legionWeightMatrix) external onlyRole(SR_ADMIN) {
         legionWeightMatrix = _legionWeightMatrix;
-        emit LegionWeightMatrixUpdate(_legionWeightMatrix);
+        emit LegionWeightMatrix(_legionWeightMatrix);
     }
 
     function setLegionRankMatrix(uint256[][] memory _legionRankMatrix) external onlyRole(SR_ADMIN) {
         legionRankMatrix = _legionRankMatrix;
-        emit LegionRankMatrixUpdate(_legionRankMatrix);
+        emit LegionRankMatrix(_legionRankMatrix);
     }
 
     function setMaxWeight(uint256 _maxLegionWeight) external onlyRole(SR_ADMIN) {
@@ -193,16 +193,16 @@ contract LegionStakingRules is StakingRulesBase {
 
     function _setMaxWeight(uint256 _maxLegionWeight) internal {
         maxLegionWeight = _maxLegionWeight;
-        emit MaxWeightUpdate(_maxLegionWeight);
+        emit MaxWeight(_maxLegionWeight);
     }
 
     function _setMaxStakeableTotal(uint256 _maxStakeableTotal) internal {
         maxStakeableTotal = _maxStakeableTotal;
-        emit MaxStakeableTotalUpdate(_maxStakeableTotal);
+        emit MaxStakeableTotal(_maxStakeableTotal);
     }
 
     function _setBoostFactor(uint256 _boostFactor) internal {
         boostFactor = _boostFactor;
-        emit BoostFactorUpdate(_boostFactor);
+        emit BoostFactor(_boostFactor);
     }
 }

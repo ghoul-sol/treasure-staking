@@ -37,7 +37,7 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
     event Staked(address indexed nft, uint256 tokenId, uint256 amount);
     event Unstaked(address indexed nft, uint256 tokenId, uint256 amount);
     event Replaced(address indexed nft, uint256 tokenId, uint256 amount, uint256 replacedSpotId);
-    event NftConfigUpdate(address indexed _nft, NftConfig _nftConfig);
+    event NftConfigSet(address indexed _nft, NftConfig _nftConfig);
 
     modifier validateInput(address _nft, uint256 _amount) {
         if (_nft == address(0)) revert("InvalidNftAddress()");
@@ -208,7 +208,7 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
 
     function _setNftConfig(address _nft, NftConfig memory _nftConfig) internal {
         allowedNfts[_nft] = _nftConfig;
-        emit NftConfigUpdate(_nft, _nftConfig);
+        emit NftConfigSet(_nft, _nftConfig);
 
         if (address(_nftConfig.stakingRules) != address(0)) {
             // it means we are adding _nft or updating its config
