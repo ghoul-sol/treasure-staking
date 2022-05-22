@@ -1,0 +1,12 @@
+[default]
+src = 'foundry/src'
+out = 'foundry/out'
+test = 'foundry/test'
+libs = ['lib']
+
+[hardhat]
+src = "contracts"
+out = "artifacts"
+libs = ["node_modules"]
+
+# See more config options https://github.com/foundry-rs/foundry/tree/master/config
