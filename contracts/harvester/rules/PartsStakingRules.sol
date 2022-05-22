@@ -13,17 +13,24 @@ contract PartsStakingRules is StakingRulesBase {
 
     mapping(address => uint256) public getAmountStaked;
 
-    event MaxStakeableTotalUpdate(uint256 maxStakeableTotal);
-    event MaxStakeablePerUserUpdate(uint256 maxStakeablePerUser);
-    event BoostFactorUpdate(uint256 boostFactor);
+    event MaxStakeableTotal(uint256 maxStakeableTotal);
+    event MaxStakeablePerUser(uint256 maxStakeablePerUser);
+    event BoostFactor(uint256 boostFactor);
+
+    modifier validateInput(address _user, uint256 _amount) {
+        require(_user != address(0), "ZeroAddress()");
+        require(_amount > 0, "ZeroAmount()");
+
+        _;
+    }
 
     constructor(
         address _admin,
-        address _nftHandler,
+        address _harvesterFactory,
         uint256 _maxStakeableTotal,
         uint256 _maxStakeablePerUser,
         uint256 _boostFactor
-    ) StakingRulesBase(_admin, _nftHandler) {
+    ) StakingRulesBase(_admin, _harvesterFactory) {
         _setMaxStakeableTotal(_maxStakeableTotal);
         _setMaxStakeablePerUser(_maxStakeablePerUser);
         _setBoostFactor(_boostFactor);
@@ -48,11 +55,15 @@ contract PartsStakingRules is StakingRulesBase {
 
         uint256 n = staked * Constant.ONE;
         uint256 maxParts = maxStakeableTotal * Constant.ONE;
-        uint256 boost = boostFactor * Constant.ONE;
+        uint256 boost = boostFactor;
         return Constant.ONE + (2 * n - n ** 2 / maxParts) * boost / maxParts;
     }
 
-    function _canStake(address _user, address, uint256, uint256 _amount) internal override {
+    function _canStake(address _user, address, uint256, uint256 _amount)
+        internal
+        override
+        validateInput(_user, _amount)
+    {
         uint256 stakedCache = staked;
         if (stakedCache + _amount > maxStakeableTotal) revert("MaxStakeable()");
         staked = stakedCache + _amount;
@@ -62,7 +73,11 @@ contract PartsStakingRules is StakingRulesBase {
         getAmountStaked[_user] = amountStakedCache + _amount;
     }
 
-    function _canUnstake(address _user, address, uint256, uint256 _amount) internal override {
+    function _canUnstake(address _user, address, uint256, uint256 _amount)
+        internal
+        override
+        validateInput(_user, _amount)
+    {
         staked -= _amount;
         getAmountStaked[_user] -= _amount;
 
@@ -88,16 +103,16 @@ contract PartsStakingRules is StakingRulesBase {
 
     function _setMaxStakeableTotal(uint256 _maxStakeableTotal) internal {
         maxStakeableTotal = _maxStakeableTotal;
-        emit MaxStakeableTotalUpdate(_maxStakeableTotal);
+        emit MaxStakeableTotal(_maxStakeableTotal);
     }
 
     function _setMaxStakeablePerUser(uint256 _maxStakeablePerUser) internal {
         maxStakeablePerUser = _maxStakeablePerUser;
-        emit MaxStakeablePerUserUpdate(_maxStakeablePerUser);
+        emit MaxStakeablePerUser(_maxStakeablePerUser);
     }
 
     function _setBoostFactor(uint256 _boostFactor) internal {
         boostFactor = _boostFactor;
-        emit BoostFactorUpdate(_boostFactor);
+        emit BoostFactor(_boostFactor);
     }
 }
