@@ -6,6 +6,12 @@ import '../../interfaces/ILegionMetadataStore.sol';
 import "./StakingRulesBase.sol";
 
 contract LegionStakingRules is StakingRulesBase {
+    uint256 public staked;
+    uint256 public maxStakeableTotal;
+    uint256 public maxLegionWeight;
+    uint256 public totalRank;
+    uint256 public boostFactor;
+
     uint256[][] public legionBoostMatrix;
     uint256[][] public legionWeightMatrix;
     uint256[][] public legionRankMatrix;
@@ -14,12 +20,6 @@ contract LegionStakingRules is StakingRulesBase {
 
     /// @dev maps user wallet to current staked weight. For weight values, see getWeight
     mapping (address => uint256) public weightStaked;
-
-    uint256 public maxLegionWeight;
-    uint256 public staked;
-    uint256 public maxStakeableTotal;
-    uint256 public totalRank;
-    uint256 public boostFactor;
 
     event MaxWeight(uint256 maxLegionWeight);
     event LegionMetadataStore(ILegionMetadataStore legionMetadataStore);
@@ -85,6 +85,18 @@ contract LegionStakingRules is StakingRulesBase {
         ];
     }
 
+    function getLegionBoostMatrix() public view returns (uint256[][] memory) {
+        return legionBoostMatrix;
+    }
+
+    function getLegionWeightMatrix() public view returns (uint256[][] memory) {
+        return legionWeightMatrix;
+    }
+
+    function getLegionRankMatrix() public view returns (uint256[][] memory) {
+        return legionRankMatrix;
+    }
+
     /// @inheritdoc IStakingRules
     function getUserBoost(address, address, uint256 _tokenId, uint256) external view override returns (uint256) {
         ILegionMetadataStore.LegionMetadata memory metadata = legionMetadataStore.metadataForLegion(_tokenId);
@@ -105,10 +117,9 @@ contract LegionStakingRules is StakingRulesBase {
         uint256 n = (staked > maxStakeableTotal ? maxStakeableTotal : staked) * Constant.ONE;
         uint256 maxLegions = maxStakeableTotal * Constant.ONE;
         uint256 avgLegionRank = totalRank / staked;
-        uint256 legionRankModifier = 9e17 + avgLegionRank / 10;
-        uint256 boost = boostFactor * Constant.ONE;
+        uint256 legionRankModifier = 0.9e18 + avgLegionRank / 10;
 
-        return Constant.ONE + (2 * n - n ** 2 / maxLegions) * legionRankModifier / Constant.ONE * boost / maxLegions;
+        return Constant.ONE + (2 * n - n ** 2 / maxLegions) * legionRankModifier / Constant.ONE * boostFactor / maxLegions;
     }
 
     function getLegionBoost(uint256 _legionGeneration, uint256 _legionRarity) public view returns (uint256) {
