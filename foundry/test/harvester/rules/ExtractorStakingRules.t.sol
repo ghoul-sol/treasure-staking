@@ -1,16 +1,14 @@
 pragma solidity ^0.8.0;
 
-import "forge-std/Test.sol";
-import "../../../lib/TestUtils.sol";
-import "../../../lib/Mock.sol";
+import "foundry/lib/TestUtils.sol";
+import "foundry/lib/Mock.sol";
 
-import "../../../../contracts/harvester/interfaces/INftHandler.sol";
-import "../../../../contracts/harvester/interfaces/IHarvester.sol";
-import '../../../../contracts/harvester/lib/Constant.sol';
+import "contracts/harvester/interfaces/INftHandler.sol";
+import "contracts/harvester/interfaces/IHarvester.sol";
+import 'contracts/harvester/lib/Constant.sol';
+import "contracts/harvester/rules/ExtractorStakingRules.sol";
 
-import "../../../../contracts/harvester/rules/ExtractorStakingRules.sol";
-
-contract ExtractorStakingRulesTest is Test {
+contract ExtractorStakingRulesTest is TestUtils {
     ExtractorStakingRules public extractorRules;
 
     address public admin;
@@ -83,7 +81,8 @@ contract ExtractorStakingRulesTest is Test {
         ExtractorStakingRules.ExtractorData[] memory extractors = extractorRules.getExtractors();
 
         for (uint256 i = 0; i < _amount; i++) {
-            (uint256 tokenId, uint256 stakedTimestamp) = extractorRules.stakedExtractor(i);
+            (address user, uint256 tokenId, uint256 stakedTimestamp) = extractorRules.stakedExtractor(i);
+            assertEq(user, address(this));
             assertEq(tokenId, _tokenId);
             assertEq(extractors[i].tokenId, _tokenId);
             assertEq(stakedTimestamp, block.timestamp);
@@ -147,7 +146,8 @@ contract ExtractorStakingRulesTest is Test {
         vm.expectRevert("MustReplaceWithHigherBoost()");
         extractorRules.canReplace(_user, extractorAddress, _tokenId, 1, spotId);
 
-        (uint256 stakedTokenId, uint256 stakedTimestamp) = extractorRules.stakedExtractor(spotId);
+        (address user, uint256 stakedTokenId, uint256 stakedTimestamp) = extractorRules.stakedExtractor(spotId);
+        assertEq(user, address(this));
         assertEq(stakedTokenId, _tokenId);
         assertEq(stakedTimestamp, timestamp);
 
@@ -157,7 +157,8 @@ contract ExtractorStakingRulesTest is Test {
         emit ExtractorReplaced(newTokenId, spotId);
         extractorRules.canReplace(_user, extractorAddress, newTokenId, 1, spotId);
 
-        (uint256 stakedTokenId2, uint256 stakedTimestamp2) = extractorRules.stakedExtractor(spotId);
+        (address user2, uint256 stakedTokenId2, uint256 stakedTimestamp2) = extractorRules.stakedExtractor(spotId);
+        assertEq(user2, address(this));
         assertEq(stakedTokenId2, newTokenId);
         assertEq(stakedTimestamp2, timestamp + 10);
     }

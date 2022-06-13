@@ -1,16 +1,14 @@
 pragma solidity ^0.8.0;
 
-import "forge-std/Test.sol";
-import "../../../lib/TestUtils.sol";
-import "../../../lib/Mock.sol";
+import "foundry/lib/TestUtils.sol";
+import "foundry/lib/Mock.sol";
 
-import "../../../../contracts/harvester/interfaces/INftHandler.sol";
-import "../../../../contracts/harvester/interfaces/IHarvester.sol";
-import '../../../../contracts/interfaces/ILegionMetadataStore.sol';
+import "contracts/harvester/interfaces/INftHandler.sol";
+import "contracts/harvester/interfaces/IHarvester.sol";
+import 'contracts/interfaces/ILegionMetadataStore.sol';
+import "contracts/harvester/rules/LegionStakingRules.sol";
 
-import "../../../../contracts/harvester/rules/LegionStakingRules.sol";
-
-contract LegionStakingRulesTest is Test {
+contract LegionStakingRulesTest is TestUtils {
     struct TestCase {
         uint256 legionGeneration;
         uint256 legionRarity;
@@ -25,10 +23,8 @@ contract LegionStakingRulesTest is Test {
     LegionStakingRules public legionRules;
 
     address public admin;
-    address public harvester;
     address public harvesterFactory;
     address public legionMetadataStore;
-    address public nftHandler;
     uint256 public maxLegionWeight;
     uint256 public maxStakeableTotal;
     uint256 public boostFactor;
@@ -37,8 +33,6 @@ contract LegionStakingRulesTest is Test {
         admin = address(111);
         harvesterFactory = address(222);
 
-        harvester = address(new Mock("Harvester"));
-        nftHandler = address(new Mock("NftHandler"));
         legionMetadataStore = address(new Mock("LegionMetadataStore"));
 
         maxLegionWeight = 200e18;
@@ -64,8 +58,12 @@ contract LegionStakingRulesTest is Test {
         return testCases[_i];
     }
 
-    function mockMetadataCall(uint256 _tokenId, uint256 _legionGeneration, uint256 _legionRarity) public {
-        ILegionMetadataStore.LegionMetadata memory metadata = ILegionMetadataStore.LegionMetadata(
+    function getMockMetadata(uint256 _legionGeneration, uint256 _legionRarity)
+        public
+        pure
+        returns (ILegionMetadataStore.LegionMetadata memory metadata)
+    {
+        metadata = ILegionMetadataStore.LegionMetadata(
             ILegionMetadataStore.LegionGeneration(_legionGeneration),
             ILegionMetadataStore.LegionClass.RECRUIT,
             ILegionMetadataStore.LegionRarity(_legionRarity),
@@ -73,11 +71,13 @@ contract LegionStakingRulesTest is Test {
             2,
             [0, 1, 2, 3, 4, 5]
         );
+    }
 
+    function mockMetadataCall(uint256 _tokenId, uint256 _legionGeneration, uint256 _legionRarity) public {
         vm.mockCall(
             legionMetadataStore,
             abi.encodeCall(ILegionMetadataStore.metadataForLegion, (_tokenId)),
-            abi.encode(metadata)
+            abi.encode(getMockMetadata(_legionGeneration, _legionRarity))
         );
     }
 
@@ -172,14 +172,6 @@ contract LegionStakingRulesTest is Test {
         vm.prank(admin);
         legionRules.setLegionMetadataStore(newLegionMetadataStore);
         assertEq(address(legionRules.legionMetadataStore()), address(newLegionMetadataStore));
-    }
-
-    function assertMatrixEq(uint256[][] memory _matrix1, uint256[][] memory _matrix2) public {
-        for (uint256 i = 0; i < _matrix1.length; i++) {
-            for (uint256 j = 0; j < _matrix1[i].length; j++) {
-                assertEq(_matrix1[i][j], _matrix2[i][j]);
-            }
-        }
     }
 
     uint256[][] public newLegionBoostMatrix = [

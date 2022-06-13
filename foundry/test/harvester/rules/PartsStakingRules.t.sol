@@ -1,15 +1,13 @@
 pragma solidity ^0.8.0;
 
-import "forge-std/Test.sol";
-import "../../../lib/TestUtils.sol";
-import "../../../lib/Mock.sol";
+import "foundry/lib/TestUtils.sol";
+import "foundry/lib/Mock.sol";
 
-import "../../../../contracts/harvester/interfaces/INftHandler.sol";
-import "../../../../contracts/harvester/interfaces/IHarvester.sol";
+import "contracts/harvester/interfaces/INftHandler.sol";
+import "contracts/harvester/interfaces/IHarvester.sol";
+import "contracts/harvester/rules/PartsStakingRules.sol";
 
-import "../../../../contracts/harvester/rules/PartsStakingRules.sol";
-
-contract PartsStakingRulesTest is Test {
+contract PartsStakingRulesTest is TestUtils {
     PartsStakingRules public partsRules;
 
     address public admin;
@@ -70,16 +68,16 @@ contract PartsStakingRulesTest is Test {
 
         for (uint256 i = 0; i < testData.length; i++) {
             uint256 amount = testData[i][0];
-            uint256 maxStakeableTotal = testData[i][1];
-            uint256 boostFactor = testData[i][2];
+            uint256 maxStakeable = testData[i][1];
+            uint256 boost = testData[i][2];
             uint256 harvesterBoost = testData[i][3];
 
             vm.prank(nftHandler);
             partsRules.canStake(user, nft, tokenId, amount);
             vm.prank(admin);
-            partsRules.setMaxStakeableTotal(maxStakeableTotal);
+            partsRules.setMaxStakeableTotal(maxStakeable);
             vm.prank(admin);
-            partsRules.setBoostFactor(boostFactor);
+            partsRules.setBoostFactor(boost);
 
             assertEq(partsRules.getHarvesterBoost(), harvesterBoost);
 
