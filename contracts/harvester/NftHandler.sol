@@ -218,8 +218,6 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
         _setNftConfig(_nft, _nftConfig);
     }
 
-
-
     function _setNftConfig(address _nft, NftConfig memory _nftConfig) internal {
         if (address(_nftConfig.stakingRules) != address(0)) {
             // it means we are adding _nft or updating its config

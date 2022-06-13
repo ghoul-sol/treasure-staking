@@ -82,7 +82,7 @@ contract ExtractorStakingRulesTest is TestUtils {
 
         for (uint256 i = 0; i < _amount; i++) {
             (address user, uint256 tokenId, uint256 stakedTimestamp) = extractorRules.stakedExtractor(i);
-            assertEq(user, address(this));
+            assertEq(user, _user);
             assertEq(tokenId, _tokenId);
             assertEq(extractors[i].tokenId, _tokenId);
             assertEq(stakedTimestamp, block.timestamp);
@@ -111,56 +111,66 @@ contract ExtractorStakingRulesTest is TestUtils {
         extractorRules.canUnstake(_user, _nft, _tokenId, _amount);
     }
 
+    struct LocalVars {
+        uint256 boost1;
+        uint256 boost2;
+        uint256 newTokenId;
+        uint256 spotId;
+        uint256 timestamp;
+    }
+
     function test_canReplace(address _user, uint256 _tokenId, uint256 _amount) public {
         vm.assume(0 < _amount && _amount < maxStakeable);
         vm.assume(_tokenId < type(uint256).max);
 
-        uint256 boost1 = 5e17;
-        uint256 boost2 = 6e17;
-        uint256 newTokenId = _tokenId + 1;
-        uint256 spotId = 0;
-        uint256 timestamp = block.timestamp;
+        LocalVars memory localVars = LocalVars({
+            boost1: 5e17,
+            boost2: 6e17,
+            newTokenId: _tokenId + 1,
+            spotId: 0,
+            timestamp: block.timestamp
+        });
 
         bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), extractorRules.SR_NFT_HANDLER());
         vm.expectRevert(errorMsg);
-        extractorRules.canReplace(_user, extractorAddress, _tokenId, _amount, spotId);
+        extractorRules.canReplace(_user, extractorAddress, _tokenId, _amount, localVars.spotId);
 
         stakeExtractor(_user, _tokenId, _amount);
         vm.prank(admin);
-        extractorRules.setExtractorBoost(_tokenId, boost1);
+        extractorRules.setExtractorBoost(_tokenId, localVars.boost1);
         vm.prank(admin);
-        extractorRules.setExtractorBoost(newTokenId, boost2);
+        extractorRules.setExtractorBoost(localVars.newTokenId, localVars.boost2);
 
         vm.expectRevert("InvalidAddress()");
-        extractorRules.canReplace(_user, address(999), _tokenId, 1, spotId);
+        extractorRules.canReplace(_user, address(999), _tokenId, 1, localVars.spotId);
 
         vm.expectRevert("ZeroAmount()");
-        extractorRules.canReplace(_user, extractorAddress, _tokenId, 0, spotId);
+        extractorRules.canReplace(_user, extractorAddress, _tokenId, 0, localVars.spotId);
 
         vm.expectRevert("MustReplaceOne()");
-        extractorRules.canReplace(_user, extractorAddress, newTokenId, 2, spotId);
+        extractorRules.canReplace(_user, extractorAddress, localVars.newTokenId, 2, localVars.spotId);
 
         vm.expectRevert("InvalidSpotId()");
-        extractorRules.canReplace(_user, extractorAddress, newTokenId, 1, maxStakeable);
+        extractorRules.canReplace(_user, extractorAddress, localVars.newTokenId, 1, maxStakeable);
 
         vm.expectRevert("MustReplaceWithHigherBoost()");
-        extractorRules.canReplace(_user, extractorAddress, _tokenId, 1, spotId);
+        extractorRules.canReplace(_user, extractorAddress, _tokenId, 1, localVars.spotId);
 
-        (address user, uint256 stakedTokenId, uint256 stakedTimestamp) = extractorRules.stakedExtractor(spotId);
-        assertEq(user, address(this));
+        (address user, uint256 stakedTokenId, uint256 stakedTimestamp) = extractorRules.stakedExtractor(localVars.spotId);
+        assertEq(user, _user);
         assertEq(stakedTokenId, _tokenId);
-        assertEq(stakedTimestamp, timestamp);
+        assertEq(stakedTimestamp, localVars.timestamp);
 
-        vm.warp(timestamp + 10);
+        vm.warp(localVars.timestamp + 10);
 
         vm.expectEmit(true, true, true, true);
-        emit ExtractorReplaced(newTokenId, spotId);
-        extractorRules.canReplace(_user, extractorAddress, newTokenId, 1, spotId);
+        emit ExtractorReplaced(localVars.newTokenId, localVars.spotId);
+        extractorRules.canReplace(_user, extractorAddress, localVars.newTokenId, 1, localVars.spotId);
 
-        (address user2, uint256 stakedTokenId2, uint256 stakedTimestamp2) = extractorRules.stakedExtractor(spotId);
-        assertEq(user2, address(this));
-        assertEq(stakedTokenId2, newTokenId);
-        assertEq(stakedTimestamp2, timestamp + 10);
+        (address user2, uint256 stakedTokenId2, uint256 stakedTimestamp2) = extractorRules.stakedExtractor(localVars.spotId);
+        assertEq(user2, _user);
+        assertEq(stakedTokenId2, localVars.newTokenId);
+        assertEq(stakedTimestamp2, localVars.timestamp + 10);
     }
 
     function test_isExtractorActive(address _user, uint256 _tokenId, uint256 _amount) public {
