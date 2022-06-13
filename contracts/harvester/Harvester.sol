@@ -127,6 +127,8 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
 
     function updateNftBoost(address _user) external {
         _recalculateGlobalLp(_user, 0, 0);
+        
+        return true;
     }
 
     function getAllUserDepositIds(address _user) external view returns (uint256[] memory) {

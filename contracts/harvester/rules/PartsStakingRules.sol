@@ -55,6 +55,7 @@ contract PartsStakingRules is StakingRulesBase {
 
         uint256 n = staked * Constant.ONE;
         uint256 maxParts = maxStakeableTotal * Constant.ONE;
+        if (maxParts == 0) return Constant.ONE;
         uint256 boost = boostFactor;
         return Constant.ONE + (2 * n - n ** 2 / maxParts) * boost / maxParts;
     }

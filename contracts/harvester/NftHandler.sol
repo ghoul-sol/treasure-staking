@@ -66,13 +66,17 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
         _;
     }
 
+    /// @dev Initialized by factory during deployment
     function init(
         address _admin,
+        address _harvester,
         address[] memory _nfts,
         INftHandler.NftConfig[] memory _nftConfigs
     ) external initializer {
         _setRoleAdmin(NH_ADMIN, NH_ADMIN);
         _grantRole(NH_ADMIN, _admin);
+
+        harvester = IHarvester(_harvester);
 
         if (_nfts.length != _nftConfigs.length) revert("InvalidData()");
 
@@ -106,6 +110,10 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
 
     function getStakingRules(address _nft) external view returns (address) {
         return address(allowedNfts[_nft].stakingRules);
+    }
+
+    function getSupportedInterface(address _nft) external view returns (Interfaces) {
+        return allowedNfts[_nft].supportedInterface;
     }
 
     function getNftBoost(address _user, address _nft, uint256 _tokenId, uint256 _amount) public view returns (uint256 boost) {
@@ -190,12 +198,16 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
         if (allowedNfts[_nft].supportedInterface != Interfaces.ERC1155) revert("MustBeERC1155()");
 
         (
+            address user,
             uint256 replacedTokenId,
             uint256 replacedAmount
         ) = stakingRules.canReplace(msg.sender, _nft, _tokenId, _amount, _replacedSpotId);
 
         IERC1155(_nft).safeTransferFrom(msg.sender, address(this), _tokenId, _amount, bytes(""));
         ERC1155Burnable(_nft).burn(address(this), replacedTokenId, replacedAmount);
+
+        stakedNfts[user][_nft][replacedTokenId] -= replacedAmount;
+        stakedNfts[msg.sender][_nft][_tokenId] += _amount;
 
         emit Replaced(_nft, _tokenId, _amount, _replacedSpotId);
     }
@@ -206,16 +218,19 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
         _setNftConfig(_nft, _nftConfig);
     }
 
-    function _setNftConfig(address _nft, NftConfig memory _nftConfig) internal {
-        allowedNfts[_nft] = _nftConfig;
-        emit NftConfigSet(_nft, _nftConfig);
 
+
+    function _setNftConfig(address _nft, NftConfig memory _nftConfig) internal {
         if (address(_nftConfig.stakingRules) != address(0)) {
             // it means we are adding _nft or updating its config
             // ignore return value in case we are just updating config
             allAllowedNfts.add(_nft);
         } else {
             if (!allAllowedNfts.remove(_nft)) revert("AlreadyDisallowed()");
+            _nftConfig.supportedInterface = Interfaces.Unsupported;
         }
+
+        allowedNfts[_nft] = _nftConfig;
+        emit NftConfigSet(_nft, _nftConfig);
     }
 }

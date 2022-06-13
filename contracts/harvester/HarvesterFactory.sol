@@ -69,8 +69,7 @@ contract HarvesterFactory is AccessControlEnumerable {
         address[] memory _nfts,
         INftHandler.NftConfig[] memory _nftConfigs
     ) external onlyRole(HF_DEPLOYER) {
-        bytes memory nftHandlerData = abi.encodeCall(INftHandler.init, (_admin, _nfts, _nftConfigs));
-        address nftHandler = address(new BeaconProxy(address(nftHandlerBeacon), nftHandlerData));
+        address nftHandler = address(new BeaconProxy(address(nftHandlerBeacon), bytes("")));
 
         for (uint256 i = 0; i < _nfts.length; i++) {
             _nftConfigs[i].stakingRules.setNftHandler(nftHandler);
@@ -82,6 +81,8 @@ contract HarvesterFactory is AccessControlEnumerable {
         require(harvesters.add(harvester), "Harvester address already exists");
 
         emit HarvesterDeployed(harvester, nftHandler);
+
+        INftHandler(nftHandler).init(_admin, harvester, _nfts, _nftConfigs);
     }
 
     function enableHarvester(IHarvester _harvester) external onlyRole(HF_DEPLOYER) {

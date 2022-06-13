@@ -15,9 +15,15 @@ interface INftHandler {
 
     /// @notice Initialize contract
     /// @param _admin wallet address to be set as contract's admin
+    /// @param _harvester harvester address for which INftHandler is deployed
     /// @param _nfts array of NFTs allowed to be staked
     /// @param _nftConfigs array of congigs for each NFT
-    function init(address _admin, address[] memory _nfts, INftHandler.NftConfig[] memory _nftConfigs) external;
+    function init(
+        address _admin,
+        address _harvester,
+        address[] memory _nfts,
+        INftHandler.NftConfig[] memory _nftConfigs
+    ) external;
 
     /// @notice Gets harvester address linked to this contract
     /// @return Harvester interface

@@ -11,6 +11,7 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
     using Counters for Counters.Counter;
 
     struct ExtractorData {
+        address user;
         uint256 tokenId;
         uint256 stakedTimestamp;
     }
@@ -94,16 +95,17 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
     }
 
     /// @inheritdoc IExtractorStakingRules
-    function canReplace(address, address _nft, uint256 _tokenId, uint256 _amount, uint256 _replacedSpotId)
+    function canReplace(address _user, address _nft, uint256 _tokenId, uint256 _amount, uint256 _replacedSpotId)
         external
         override
         onlyRole(SR_NFT_HANDLER)
         validateInput(_nft, _amount)
-        returns (uint256 replacedTokenId, uint256 replacedAmount)
+        returns (address user, uint256 replacedTokenId, uint256 replacedAmount)
     {
         if (_amount != 1) revert("MustReplaceOne()");
         if (_replacedSpotId >= maxStakeable) revert("InvalidSpotId()");
 
+        user = stakedExtractor[_replacedSpotId].user;
         replacedTokenId = stakedExtractor[_replacedSpotId].tokenId;
         replacedAmount = _amount;
 
@@ -113,11 +115,11 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
             if (oldBoost >= newBoost) revert("MustReplaceWithHigherBoost()");
         }
 
-        stakedExtractor[_replacedSpotId] = ExtractorData(_tokenId, block.timestamp);
+        stakedExtractor[_replacedSpotId] = ExtractorData(_user, _tokenId, block.timestamp);
         emit ExtractorReplaced(_tokenId, _replacedSpotId);
     }
 
-    function _canStake(address, address _nft, uint256 _tokenId, uint256 _amount)
+    function _canStake(address _user, address _nft, uint256 _tokenId, uint256 _amount)
         internal
         override
         validateInput(_nft, _amount)
@@ -127,7 +129,7 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
         for (uint256 i = 0; i < _amount; i++) {
             uint256 spotId = extractorCount.current();
 
-            stakedExtractor[spotId] = ExtractorData(_tokenId, block.timestamp);
+            stakedExtractor[spotId] = ExtractorData(_user, _tokenId, block.timestamp);
             extractorCount.increment();
         }
 

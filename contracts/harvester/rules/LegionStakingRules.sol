@@ -116,7 +116,8 @@ contract LegionStakingRules is StakingRulesBase {
 
         uint256 n = (staked > maxStakeableTotal ? maxStakeableTotal : staked) * Constant.ONE;
         uint256 maxLegions = maxStakeableTotal * Constant.ONE;
-        uint256 avgLegionRank = totalRank / staked;
+        if (maxLegions == 0) return Constant.ONE;
+        uint256 avgLegionRank = staked == 0 ? 0 : totalRank / staked;
         uint256 legionRankModifier = 0.9e18 + avgLegionRank / 10;
 
         return Constant.ONE + (2 * n - n ** 2 / maxLegions) * legionRankModifier / Constant.ONE * boostFactor / maxLegions;
@@ -185,6 +186,7 @@ contract LegionStakingRules is StakingRulesBase {
         emit LegionWeightMatrix(_legionWeightMatrix);
     }
 
+    /// @dev changing ranks values after NFTs are already staked can break `totalRank` calculations
     function setLegionRankMatrix(uint256[][] memory _legionRankMatrix) external onlyRole(SR_ADMIN) {
         legionRankMatrix = _legionRankMatrix;
         emit LegionRankMatrix(_legionRankMatrix);
