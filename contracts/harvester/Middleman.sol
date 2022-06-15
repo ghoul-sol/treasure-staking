@@ -44,6 +44,9 @@ contract Middleman is AccessControlEnumerable {
     event AtlasMine(address atlasMine);
     event MasterOfCoin(IMasterOfCoin masterOfCoin);
     event CorruptionNegativeBoostMatrix(uint256[][] _corruptionNegativeBoostMatrix);
+    event AtlasMineBoost(uint256 atlasMineBoost);
+    event AddExcludedAddress(address addr);
+    event RemoveExcludedAddress(address addr);
 
     modifier runIfNeeded {
         if (block.timestamp > lastRewardTimestamp) {
@@ -57,6 +60,7 @@ contract Middleman is AccessControlEnumerable {
         IMasterOfCoin _masterOfCoin,
         IHarvesterFactory _harvesterFactory,
         address _atlasMine,
+        uint256 _atlasMineBoost,
         IERC20 _corruptionToken
     ) {
         _setRoleAdmin(MIDDLEMAN_ADMIN, MIDDLEMAN_ADMIN);
@@ -71,16 +75,19 @@ contract Middleman is AccessControlEnumerable {
         atlasMine = _atlasMine;
         emit AtlasMine(_atlasMine);
 
+        atlasMineBoost = _atlasMineBoost;
+        emit AtlasMineBoost(_atlasMineBoost);
+
         corruptionToken = _corruptionToken;
         emit CorruptionToken(_corruptionToken);
 
         corruptionNegativeBoostMatrix = [
-            [60_000e18, 4e17],
-            [50_000e18, 5e17],
-            [40_000e18, 6e17],
-            [30_000e18, 7e17],
-            [20_000e18, 8e17],
-            [10_000e18, 9e17]
+            [60_000e18, 0.4e18],
+            [50_000e18, 0.5e18],
+            [40_000e18, 0.6e18],
+            [30_000e18, 0.7e18],
+            [20_000e18, 0.8e18],
+            [10_000e18, 0.9e18]
         ];
         emit CorruptionNegativeBoostMatrix(corruptionNegativeBoostMatrix);
     }
@@ -97,7 +104,7 @@ contract Middleman is AccessControlEnumerable {
             totalShare += harvesterShare[i];
         }
 
-        if (atlasMine != address(0)) {
+        if (atlasMine != address(0) && atlasMineBoost != 0) {
             totalShare += atlasMineBoost;
             rewardsBalance[atlasMine].unpaid += distributedRewards * atlasMineBoost / totalShare;
         }
@@ -128,15 +135,15 @@ contract Middleman is AccessControlEnumerable {
     function getHarvesterEmissionsShare(address _harvester) public view returns (uint256) {
         uint256 harvesterTotalBoost = IHarvester(_harvester).nftHandler().getHarvesterTotalBoost();
         uint256 utilBoost = getUtilizationBoost(_harvester);
-        uint256 corruptionNegativeBoost = getCorruptionNegativeBoost();
+        uint256 corruptionNegativeBoost = getCorruptionNegativeBoost(_harvester);
 
         return harvesterTotalBoost * utilBoost / Constant.ONE * corruptionNegativeBoost / Constant.ONE;
     }
 
-    function getCorruptionNegativeBoost() public view returns (uint256 negBoost) {
+    function getCorruptionNegativeBoost(address _harvester) public view returns (uint256 negBoost) {
         negBoost = Constant.ONE;
 
-        uint256 balance = corruptionToken.balanceOf(address(this));
+        uint256 balance = corruptionToken.balanceOf(_harvester);
 
         for (uint256 i = 0; i < corruptionNegativeBoostMatrix.length; i++) {
             uint256 balanceThreshold = corruptionNegativeBoostMatrix[i][0];
@@ -151,21 +158,21 @@ contract Middleman is AccessControlEnumerable {
     function getUtilizationBoost(address _harvester) public view returns (uint256 utilBoost) {
         uint256 util = getUtilization(_harvester);
 
-        if (util < 3e17) {
+        if (util < 0.3e18) {
             // if utilization < 30%, no emissions
             utilBoost = 0;
-        } else if (util < 40e16) {
+        } else if (util < 0.4e18) {
             // if 30% < utilization < 40%, 50% emissions
-            utilBoost = 50e16;
-        } else if (util < 50e16) {
+            utilBoost = 0.5e18;
+        } else if (util < 0.5e18) {
             // if 40% < utilization < 50%, 60% emissions
-            utilBoost = 60e16;
-        } else if (util < 60e16) {
+            utilBoost = 0.6e18;
+        } else if (util < 0.6e18) {
             // if 50% < utilization < 60%, 80% emissions
-            utilBoost = 80e16;
+            utilBoost = 0.8e18;
         } else {
             // 100% emissions above 60% utilization
-            utilBoost = 100e16;
+            utilBoost = 1e18;
         }
     }
 
@@ -190,6 +197,10 @@ contract Middleman is AccessControlEnumerable {
         return excludedAddresses.values();
     }
 
+    function getCorruptionNegativeBoostMatrix() public view returns (uint256[][] memory) {
+        return corruptionNegativeBoostMatrix;
+    }
+
     // ADMIN
     function setHarvesterFactory(IHarvesterFactory _harvesterFactory) external onlyRole(MIDDLEMAN_ADMIN) {
         harvesterFactory = _harvesterFactory;
@@ -206,11 +217,18 @@ contract Middleman is AccessControlEnumerable {
         emit CorruptionNegativeBoostMatrix(_corruptionNegativeBoostMatrix);
     }
 
+    function setAtlasMineBoost(uint256 _atlasMineBoost) external onlyRole(MIDDLEMAN_ADMIN) {
+        atlasMineBoost = _atlasMineBoost;
+        emit AtlasMineBoost(_atlasMineBoost);
+    }
+
     function addExcludedAddress(address _exclude) external onlyRole(MIDDLEMAN_ADMIN) {
         require(excludedAddresses.add(_exclude), "Address already excluded");
+        emit AddExcludedAddress(_exclude);
     }
 
     function removeExcludedAddress(address _excluded) external onlyRole(MIDDLEMAN_ADMIN) {
         require(excludedAddresses.remove(_excluded), "Address is not excluded");
+        emit RemoveExcludedAddress(_excluded);
     }
 }
