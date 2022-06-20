@@ -70,7 +70,9 @@ contract PartsStakingRulesTest is TestUtils {
             // harvesterBoost = 1.0024984375
             [uint256(2), 800, 1e18, 100499375e10],
             // harvesterBoost = 1.00499375
-            [uint256(20), 800, 1e18, 1049375e12]
+            [uint256(20), 800, 1e18, 1049375e12],
+            // harvesterBoost = 1.049375
+            [uint256(40), 800, 1e18, 10975e14]
             // harvesterBoost = 1.049375
         ];
 
