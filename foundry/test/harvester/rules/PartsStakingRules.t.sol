@@ -7,6 +7,7 @@ import "contracts/harvester/interfaces/INftHandler.sol";
 import "contracts/harvester/interfaces/IHarvester.sol";
 import "contracts/harvester/rules/PartsStakingRules.sol";
 
+
 contract PartsStakingRulesTest is TestUtils {
     PartsStakingRules public partsRules;
 
@@ -29,8 +30,8 @@ contract PartsStakingRulesTest is TestUtils {
         harvester = address(new Mock("Harvester"));
         nftHandler = address(new Mock("NftHandler"));
 
-        maxStakeableTotal = 10;
-        maxStakeablePerUser = 2;
+        maxStakeableTotal = 800;
+        maxStakeablePerUser = 40;
         boostFactor = 1e18;
 
         partsRules = new PartsStakingRules(admin, harvesterFactory, maxStakeableTotal, maxStakeablePerUser, boostFactor);
@@ -60,10 +61,18 @@ contract PartsStakingRulesTest is TestUtils {
         vm.prank(harvesterFactory);
         partsRules.setNftHandler(nftHandler);
 
-        uint256[4][1] memory testData = [
+        uint256[4][6] memory testData = [
             // TODO: add more test cases
             // staked, maxStakeableTotal, boostFactor, harvesterBoost
-            [uint256(1), 10, 1e18, 119e16]
+            [uint256(1), 10, 1e18, 119e16],
+            [uint256(1), 10, 1e18, 119e16],
+            [uint256(2), 10, 1e18, 136e16],
+            [uint256(1), 800, 1e18, 10024984375e8],
+            // harvesterBoost = 1.0024984375
+            [uint256(2), 800, 1e18, 100499375e10],
+            // harvesterBoost = 1.00499375
+            [uint256(20), 800, 1e18, 1049375e12]
+            // harvesterBoost = 1.049375
         ];
 
         for (uint256 i = 0; i < testData.length; i++) {
