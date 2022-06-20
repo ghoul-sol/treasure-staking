@@ -65,6 +65,10 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
     event LogUpdateRewards(uint256 distributedRewards, uint256 lpSupply, uint256 accMagicPerShare);
     event Enable();
     event Disable();
+    event NftHandler(INftHandler nftHandler);
+    event DepositCapPerWallet(CapConfig depositCapPerWallet);
+    event TotalDepositCap(uint256 totalDepositCap);
+    event UnlockAll(bool value);
 
     modifier updateRewards() {
         uint256 lpSupply = totalLpToken;
@@ -125,12 +129,6 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         return nftHandler.getNftBoost(_user, _nft, _tokenId, _amount);
     }
 
-    function updateNftBoost(address _user) external {
-        _recalculateGlobalLp(_user, 0, 0);
-        
-        return true;
-    }
-
     function getAllUserDepositIds(address _user) external view returns (uint256[] memory) {
         return allUserDepositIds[_user].values();
     }
@@ -152,19 +150,19 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
     function getLockBoost(Lock _lock) public pure returns (uint256 boost, uint256 timelock) {
         if (_lock == Lock.twoWeeks) {
             // 10%
-            return (10e16, TWO_WEEKS);
+            return (0.1e18, TWO_WEEKS);
         } else if (_lock == Lock.oneMonth) {
             // 25%
-            return (25e16, ONE_MONTH);
+            return (0.25e18, ONE_MONTH);
         } else if (_lock == Lock.threeMonths) {
             // 80%
-            return (80e16, THREE_MONTHS);
+            return (0.8e18, THREE_MONTHS);
         } else if (_lock == Lock.sixMonths) {
             // 180%
-            return (180e16, SIX_MONTHS);
+            return (1.8e18, SIX_MONTHS);
         } else if (_lock == Lock.twelveMonths) {
             // 400%
-            return (400e16, TWELVE_MONTHS);
+            return (4e18, TWELVE_MONTHS);
         } else {
             revert("Invalid lock value");
         }
@@ -217,13 +215,19 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         uint256 lpSupply = totalLpToken;
 
         // if harvester is disabled, only account for rewards that were already sent
-        if (!disabled) {
+        if (!disabled && lpSupply > 0) {
             uint256 pendingRewards = factory.middleman().getPendingRewards(address(this));
             _accMagicPerShare += pendingRewards * ONE / lpSupply;
         }
 
         int256 accumulatedMagic = (userGlobalDeposit.globalLpAmount * _accMagicPerShare / ONE).toInt256();
         pending = (accumulatedMagic - userGlobalDeposit.globalRewardDebt).toUint256();
+    }
+
+    function updateNftBoost(address _user) external returns (bool) {
+        _recalculateGlobalLp(_user, 0, 0);
+
+        return true;
     }
 
     function enable() external onlyFactory {
@@ -258,6 +262,8 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
     }
 
     function withdrawPosition(uint256 _depositId, uint256 _amount) public updateRewards returns (bool) {
+        if (_amount == 0) revert("ZeroAmount()");
+
         UserInfo storage user = userInfo[msg.sender][_depositId];
         uint256 depositAmount = user.depositAmount;
         if (depositAmount == 0) return false;
@@ -375,26 +381,29 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
     }
 
     function _removeDeposit(address _user, uint256 _depositId) internal {
-        if (!allUserDepositIds[_user].remove(_depositId)) revert("DepositExists()");
+        if (!allUserDepositIds[_user].remove(_depositId)) revert("DepositDoesNotExists()");
     }
 
     // ADMIN
 
-    // TODO: is it really needed?
     function setNftHandler(INftHandler _nftHandler) external onlyRole(HARVESTER_ADMIN) {
         nftHandler = _nftHandler;
+        emit NftHandler(_nftHandler);
     }
 
     function setDepositCapPerWallet(CapConfig memory _depositCapPerWallet) external onlyRole(HARVESTER_ADMIN) {
         depositCapPerWallet = _depositCapPerWallet;
+        emit DepositCapPerWallet(_depositCapPerWallet);
     }
 
     function setTotalDepositCap(uint256 _totalDepositCap) external onlyRole(HARVESTER_ADMIN) {
         totalDepositCap = _totalDepositCap;
+        emit TotalDepositCap(_totalDepositCap);
     }
 
     /// @notice EMERGENCY ONLY
-    function toggleUnlockAll() external onlyRole(HARVESTER_ADMIN) {
-        unlockAll = unlockAll ? false : true;
+    function setUnlockAll(bool _value) external onlyRole(HARVESTER_ADMIN) {
+        unlockAll = _value;
+        emit UnlockAll(_value);
     }
 }

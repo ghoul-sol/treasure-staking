@@ -28,6 +28,7 @@ interface IHarvester {
     }
 
     function init(address _admin, INftHandler _nftHandler, CapConfig memory _depositCapPerWallet) external;
+    function disabled() external view returns (bool);
     function enable() external;
     function disable() external;
     function isMaxUserGlobalDeposit(address _user) external view returns (bool);

@@ -29,7 +29,6 @@ contract NftHandlerTest is TestUtils, ERC1155Holder {
     uint256 public maxStakeableTotal;
     uint256 public boostFactor;
 
-    address public extractorAddress;
     uint256 public maxStakeable;
     uint256 public lifetime;
 
@@ -48,8 +47,6 @@ contract NftHandlerTest is TestUtils, ERC1155Holder {
         vm.label(admin, "admin");
         harvesterFactory = address(222);
         vm.label(harvesterFactory, "harvesterFactory");
-        extractorAddress = address(333);
-        vm.label(extractorAddress, "extractorAddress");
         harvester = address(444);
         vm.label(harvester, "harvester");
 

@@ -31,6 +31,8 @@ contract HarvesterFactory is AccessControlEnumerable {
     IMiddleman public middleman;
 
     event HarvesterDeployed(address harvester, address nftHandler);
+    event Magic(IERC20 magic);
+    event Middleman(IMiddleman middleman);
 
     constructor(
         IERC20 _magic,
@@ -40,7 +42,10 @@ contract HarvesterFactory is AccessControlEnumerable {
         address _nftHandlerImpl
     ) {
         magic = _magic;
+        emit Magic(_magic);
+
         middleman = _middleman;
+        emit Middleman(_middleman);
 
         _setRoleAdmin(HF_ADMIN, HF_ADMIN);
         _grantRole(HF_ADMIN, _admin);
@@ -53,6 +58,14 @@ contract HarvesterFactory is AccessControlEnumerable {
 
         harvesterBeacon = new UpgradeableBeacon(_harvesterImpl);
         nftHandlerBeacon = new UpgradeableBeacon(_nftHandlerImpl);
+    }
+
+    function getHarvester(uint256 _index) external view returns (address) {
+        if (harvesters.length() == 0) {
+            return address(0);
+        } else {
+            return harvesters.at(_index);
+        }
     }
 
     function getAllHarvesters() external view returns (address[] memory) {
@@ -97,10 +110,12 @@ contract HarvesterFactory is AccessControlEnumerable {
 
     function setMagicToken(IERC20 _magic) external onlyRole(HF_ADMIN) {
         magic = _magic;
+        emit Magic(_magic);
     }
 
     function setMiddleman(IMiddleman _middleman) external onlyRole(HF_ADMIN) {
         middleman = _middleman;
+        emit Middleman(_middleman);
     }
 
     /// @dev Upgrades the harvester beacon to a new implementation.
