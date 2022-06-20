@@ -65,7 +65,6 @@ contract PartsStakingRulesTest is TestUtils {
             // TODO: add more test cases
             // staked, maxStakeableTotal, boostFactor, harvesterBoost
             [uint256(1), 10, 1e18, 119e16],
-            [uint256(1), 10, 1e18, 119e16],
             [uint256(2), 10, 1e18, 136e16],
             [uint256(1), 800, 1e18, 10024984375e8],
             // harvesterBoost = 1.0024984375
