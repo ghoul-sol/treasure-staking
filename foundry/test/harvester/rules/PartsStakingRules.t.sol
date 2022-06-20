@@ -61,19 +61,29 @@ contract PartsStakingRulesTest is TestUtils {
         vm.prank(harvesterFactory);
         partsRules.setNftHandler(nftHandler);
 
-        uint256[4][6] memory testData = [
+        uint256[4][8] memory testData = [
             // TODO: add more test cases
             // staked, maxStakeableTotal, boostFactor, harvesterBoost
             [uint256(1), 10, 1e18, 119e16],
             [uint256(2), 10, 1e18, 136e16],
+
+            // vary maxStakeableTotal and staked
             [uint256(1), 800, 1e18, 10024984375e8],
             // harvesterBoost = 1.0024984375
             [uint256(2), 800, 1e18, 100499375e10],
             // harvesterBoost = 1.00499375
             [uint256(20), 800, 1e18, 1049375e12],
             // harvesterBoost = 1.049375
-            [uint256(40), 800, 1e18, 10975e14]
-            // harvesterBoost = 1.049375
+            [uint256(40), 800, 1e18, 10975e14],
+            // harvesterBoost = 1.0975
+
+            // vary boostFactor
+            [uint256(40), 800, 2e18, 1195e15],
+            // harvesterBoost = 1.195
+
+            // vary maxStakeableTotal
+            [uint256(40), 1200, 1e18, 1065555555555555555]
+            // harvesterBoost = 1.065555555555555555
         ];
 
         for (uint256 i = 0; i < testData.length; i++) {
