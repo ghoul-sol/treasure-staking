@@ -129,30 +129,47 @@ contract LegionStakingRulesTest is TestUtils {
     }
 
     function test_getHarvesterBoost() public {
-        uint256[5][1] memory testData = [
+        uint256[5][15] memory testData = [
             // TODO: add more test cases
             // maxStakeableTotal, staked, totalRank, boostFactor, result
-            [uint256(11), 9, 10e18, 2e18, 2955371900826446280]
+            [uint256(11), 9, 10e18, 2e18, 2955371900826446280],
+            // vary maxStakeableTotal and staked
+            [uint256(2400), 0, 10e18, 2e18, 1e18],
+            [uint256(2400), 90, 10e18, 2e18, 1134104166666666666],
+            [uint256(2400), 2400, 10e18, 2e18, 2800833333333333332],
+            [uint256(1), 0, 1e18, 2e18, 1e18],
+            [uint256(1), 1, 1e18, 2e18, 3e18],
+            [uint256(99999), 0, 10e18, 2e18, 1e18],
+            [uint256(99999), 900, 10e18, 2e18, 1032294341483600237],
+            [uint256(99999), 9999, 10e18, 2e18, 1342008840122601568],
+            [uint256(99999), 99999, 10e18, 2e18, 2800020000200002000],
+            // vary boostFactor
+            [uint256(2400), 9, 10e18, 1e18, 1007569114583333333],
+            [uint256(2400), 2400, 10e18, 9e18, 9103749999999999994],
+            // vary totalRank
+            [uint256(2400), 2200, 1e18, 1e18, 1893795138888888888],
+            [uint256(2400), 2200, 50e18, 1e18, 1896006944444444443],
+            [uint256(2400), 2200, 50e19, 1e18, 1916319444444444444]
         ];
 
         for (uint256 i = 0; i < testData.length; i++) {
             // set maxStakeableTotal
-            vm.store(address(legionRules), bytes32(uint256(3)), bytes32(testData[0][0]));
-            assertEq(legionRules.maxStakeableTotal(), testData[0][0]);
+            vm.store(address(legionRules), bytes32(uint256(3)), bytes32(testData[i][0]));
+            assertEq(legionRules.maxStakeableTotal(), testData[i][0]);
 
             // set staked
-            vm.store(address(legionRules), bytes32(uint256(2)), bytes32(testData[0][1]));
-            assertEq(legionRules.staked(), testData[0][1]);
+            vm.store(address(legionRules), bytes32(uint256(2)), bytes32(testData[i][1]));
+            assertEq(legionRules.staked(), testData[i][1]);
 
             // set totalRank
-            vm.store(address(legionRules), bytes32(uint256(5)), bytes32(testData[0][2]));
-            assertEq(legionRules.totalRank(), testData[0][2]);
+            vm.store(address(legionRules), bytes32(uint256(5)), bytes32(testData[i][2]));
+            assertEq(legionRules.totalRank(), testData[i][2]);
 
             // set boostFactor
-            vm.store(address(legionRules), bytes32(uint256(6)), bytes32(testData[0][3]));
-            assertEq(legionRules.boostFactor(), testData[0][3]);
+            vm.store(address(legionRules), bytes32(uint256(6)), bytes32(testData[i][3]));
+            assertEq(legionRules.boostFactor(), testData[i][3]);
 
-            assertEq(legionRules.getHarvesterBoost(), testData[0][4]);
+            assertEq(legionRules.getHarvesterBoost(), testData[i][4]);
         }
     }
 
