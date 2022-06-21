@@ -92,44 +92,41 @@ contract Middleman is AccessControlEnumerable {
         emit CorruptionNegativeBoostMatrix(corruptionNegativeBoostMatrix);
     }
 
-    function distributeRewards() public runIfNeeded {
-        uint256 distributedRewards = masterOfCoin.requestRewards();
-
-        address[] memory allHarvesters = harvesterFactory.getAllHarvesters();
-        uint256[] memory harvesterShare = new uint256[](allHarvesters.length);
-        uint256 totalShare;
+    function getHarvesterShares(address _targetHarvester) public view returns (
+        address[] memory allHarvesters,
+        uint256[] memory harvesterShare,
+        uint256 totalShare,
+        uint256 targetIndex
+    ) {
+        allHarvesters = harvesterFactory.getAllHarvesters();
+        harvesterShare = new uint256[](allHarvesters.length);
 
         for (uint256 i = 0; i < allHarvesters.length; i++) {
             harvesterShare[i] = getHarvesterEmissionsShare(allHarvesters[i]);
             totalShare += harvesterShare[i];
+
+            if (allHarvesters[i] == _targetHarvester) {
+                targetIndex = i;
+            }
         }
 
         if (atlasMine != address(0) && atlasMineBoost != 0) {
             totalShare += atlasMineBoost;
-            rewardsBalance[atlasMine].unpaid += distributedRewards * atlasMineBoost / totalShare;
-        }
-
-        for (uint256 i = 0; i < harvesterShare.length; i++) {
-            rewardsBalance[allHarvesters[i]].unpaid += distributedRewards * harvesterShare[i] / totalShare;
         }
     }
 
-    function requestRewards() public returns (uint256 rewardsPaid) {
-        distributeRewards();
+    function getPendingRewards(address _harvester) public view returns (uint256) {
+        uint256 pendingRewards = masterOfCoin.getPendingRewards(address(this));
 
-        address harvester = msg.sender;
+        (
+            address[] memory allHarvesters,
+            uint256[] memory harvesterShare,
+            uint256 totalShare,
+            uint256 targetIndex
+        ) = getHarvesterShares(_harvester);
 
-        rewardsPaid = rewardsBalance[harvester].unpaid;
-
-        if (rewardsPaid == 0) {
-            return 0;
-        }
-
-        rewardsBalance[harvester].unpaid = 0;
-        rewardsBalance[harvester].paid += rewardsPaid;
-
-        harvesterFactory.magic().safeTransfer(harvester, rewardsPaid);
-        emit RewardsPaid(harvester, rewardsPaid, rewardsBalance[harvester].paid);
+        uint256 unpaidRewards = rewardsBalance[allHarvesters[targetIndex]].unpaid;
+        return unpaidRewards + pendingRewards * harvesterShare[targetIndex] / totalShare;
     }
 
     function getHarvesterEmissionsShare(address _harvester) public view returns (uint256) {
@@ -199,6 +196,42 @@ contract Middleman is AccessControlEnumerable {
 
     function getCorruptionNegativeBoostMatrix() public view returns (uint256[][] memory) {
         return corruptionNegativeBoostMatrix;
+    }
+
+    function distributeRewards() public runIfNeeded {
+        uint256 distributedRewards = masterOfCoin.requestRewards();
+
+        (
+            address[] memory allHarvesters,
+            uint256[] memory harvesterShare,
+            uint256 totalShare,
+        ) = getHarvesterShares(address(0));
+
+        if (atlasMine != address(0) && atlasMineBoost != 0) {
+            rewardsBalance[atlasMine].unpaid += distributedRewards * atlasMineBoost / totalShare;
+        }
+
+        for (uint256 i = 0; i < harvesterShare.length; i++) {
+            rewardsBalance[allHarvesters[i]].unpaid += distributedRewards * harvesterShare[i] / totalShare;
+        }
+    }
+
+    function requestRewards() public returns (uint256 rewardsPaid) {
+        distributeRewards();
+
+        address harvester = msg.sender;
+
+        rewardsPaid = rewardsBalance[harvester].unpaid;
+
+        if (rewardsPaid == 0) {
+            return 0;
+        }
+
+        rewardsBalance[harvester].unpaid = 0;
+        rewardsBalance[harvester].paid += rewardsPaid;
+
+        harvesterFactory.magic().safeTransfer(harvester, rewardsPaid);
+        emit RewardsPaid(harvester, rewardsPaid, rewardsBalance[harvester].paid);
     }
 
     // ADMIN
