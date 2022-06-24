@@ -92,6 +92,17 @@ contract Middleman is AccessControlEnumerable {
         emit CorruptionNegativeBoostMatrix(corruptionNegativeBoostMatrix);
     }
 
+    /// @dev Returns share in mining power for all harvesters. To get percentage of mining power
+    ///      for given harvester do:
+    ///      `harvesterShare[i] / totalShare`, where `i` is index of harvester address in `allHarvesters`
+    ///      array.
+    /// @param _targetHarvester optional parameter, you can safely use `address(0)`. If you are looking
+    ///        for specific harvester, provide its address as param and `targetIndex` will return index
+    ///        of harvester in question in `allHarvesters` array.
+    /// @return allHarvesters array of all harvesters
+    /// @return harvesterShare share in mining power for each harvester in `allHarvesters` array
+    /// @return totalShare sum of all shares (includes `atlasMineBoost` if AtlasMine is setup)
+    /// @return targetIndex index of `_targetHarvester` in `allHarvesters` array
     function getHarvesterShares(address _targetHarvester) public view returns (
         address[] memory allHarvesters,
         uint256[] memory harvesterShare,
