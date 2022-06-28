@@ -165,10 +165,16 @@ contract Middleman is AccessControlEnumerable {
             // if 40% < utilization < 50%, 60% emissions
             utilBoost = 0.6e18;
         } else if (util < 0.6e18) {
-            // if 50% < utilization < 60%, 80% emissions
+            // if 50% < utilization < 60%, 70% emissions
+            utilBoost = 0.7e18;
+        } else if (util < 0.7e18) {
+            // if 60% < utilization < 70%, 80% emissions
             utilBoost = 0.8e18;
+        } else if (util < 0.8e18) {
+            // if 70% < utilization < 80%, 90% emissions
+            utilBoost = 0.9e18;
         } else {
-            // 100% emissions above 60% utilization
+            // 100% emissions above 80% utilization
             utilBoost = 1e18;
         }
     }
