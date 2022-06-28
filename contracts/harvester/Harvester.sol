@@ -110,19 +110,33 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         CapConfig memory _depositCapPerWallet
     ) external initializer {
         totalDepositCap = 10_000_000e18;
+        emit TotalDepositCap(totalDepositCap);
+
         factory = IHarvesterFactory(msg.sender);
 
         _setRoleAdmin(HARVESTER_ADMIN, HARVESTER_ADMIN);
         _grantRole(HARVESTER_ADMIN, _admin);
 
         nftHandler = _nftHandler;
+        emit NftHandler(_nftHandler);
+
         depositCapPerWallet = _depositCapPerWallet;
+        emit DepositCapPerWallet(_depositCapPerWallet);
 
         __AccessControlEnumerable_init();
     }
 
     function getUserBoost(address _user) external view returns (uint256) {
         return nftHandler.getUserBoost(_user);
+    }
+
+    function getDepositTotalBoost(address _user, uint256 _depositId) external view returns (uint256) {
+        (uint256 lockBoost, ) = getLockBoost(userInfo[_user][_depositId].lock);
+        uint256 userNftBoost = nftHandler.getUserBoost(_user);
+        // see: `_recalculateGlobalLp`.
+        // `userNftBoost` multiplies lp amount that already has `lockBoost` added
+        // that's why we have to add `lockBoost * userNftBoost / ONE` for correct result
+        return lockBoost + userNftBoost + lockBoost * userNftBoost / ONE;
     }
 
     function getNftBoost(address _user, address _nft, uint256 _tokenId, uint256 _amount) external view returns (uint256) {
