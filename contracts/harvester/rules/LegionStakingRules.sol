@@ -75,10 +75,10 @@ contract LegionStakingRules is StakingRulesBase {
         legionRankMatrix = [
             // GENESIS
             // LEGENDARY,RARE,SPECIAL,UNCOMMON,COMMON,RECRUIT
-            [uint256(4e18), uint256(4e18), uint256(2e18), uint256(3e18), uint256(15e17), illegalRank],
+            [uint256(4e18), uint256(4e18), uint256(2e18), uint256(3e18), uint256(1.5e18), illegalRank],
             // AUXILIARY
             // LEGENDARY,RARE,SPECIAL,UNCOMMON,COMMON,RECRUIT
-            [illegalRank, uint256(12e17), illegalRank, uint256(11e17), uint256(1e18), illegalRank],
+            [illegalRank, uint256(1.2e18), illegalRank, uint256(1.1e18), uint256(1e18), illegalRank],
             // RECRUIT
             // LEGENDARY,RARE,SPECIAL,UNCOMMON,COMMON,RECRUIT
             [illegalRank, illegalRank, illegalRank, illegalRank, illegalRank, illegalRank]
