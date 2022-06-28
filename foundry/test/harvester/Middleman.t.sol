@@ -150,18 +150,18 @@ contract MiddlemanTest is TestUtils {
         address harvester = allHarvesters[0];
 
         uint256[2][13] memory testCases = [
-            [uint256(60_001e18), uint256(0.4e18)],
-            [uint256(60_000e18), uint256(0.5e18)],
-            [uint256(50_001e18), uint256(0.5e18)],
-            [uint256(50_000e18), uint256(0.6e18)],
-            [uint256(40_001e18), uint256(0.6e18)],
-            [uint256(40_000e18), uint256(0.7e18)],
-            [uint256(30_001e18), uint256(0.7e18)],
-            [uint256(30_000e18), uint256(0.8e18)],
-            [uint256(20_001e18), uint256(0.8e18)],
-            [uint256(20_000e18), uint256(0.9e18)],
-            [uint256(10_001e18), uint256(0.9e18)],
-            [uint256(10_000e18), uint256(1e18)],
+            [uint256(600_001e18), uint256(0.4e18)],
+            [uint256(600_000e18), uint256(0.5e18)],
+            [uint256(500_001e18), uint256(0.5e18)],
+            [uint256(500_000e18), uint256(0.6e18)],
+            [uint256(400_001e18), uint256(0.6e18)],
+            [uint256(400_000e18), uint256(0.7e18)],
+            [uint256(300_001e18), uint256(0.7e18)],
+            [uint256(300_000e18), uint256(0.8e18)],
+            [uint256(200_001e18), uint256(0.8e18)],
+            [uint256(200_000e18), uint256(0.9e18)],
+            [uint256(100_001e18), uint256(0.9e18)],
+            [uint256(100_000e18), uint256(1e18)],
             [uint256(0), uint256(1e18)]
         ];
 
@@ -619,12 +619,12 @@ contract MiddlemanTest is TestUtils {
     }
 
     uint256[][] public oldCorruptionNegativeBoostMatrix = [
-        [uint256(60_000e18), uint256(0.4e18)],
-        [uint256(50_000e18), uint256(0.5e18)],
-        [uint256(40_000e18), uint256(0.6e18)],
-        [uint256(30_000e18), uint256(0.7e18)],
-        [uint256(20_000e18), uint256(0.8e18)],
-        [uint256(10_000e18), uint256(0.9e18)]
+        [uint256(600_000e18), uint256(0.4e18)],
+        [uint256(500_000e18), uint256(0.5e18)],
+        [uint256(400_000e18), uint256(0.6e18)],
+        [uint256(300_000e18), uint256(0.7e18)],
+        [uint256(200_000e18), uint256(0.8e18)],
+        [uint256(100_000e18), uint256(0.9e18)]
     ];
 
     function test_getCorruptionNegativeBoostMatrix() public {

@@ -82,12 +82,12 @@ contract Middleman is AccessControlEnumerable {
         emit CorruptionToken(_corruptionToken);
 
         corruptionNegativeBoostMatrix = [
-            [60_000e18, 0.4e18],
-            [50_000e18, 0.5e18],
-            [40_000e18, 0.6e18],
-            [30_000e18, 0.7e18],
-            [20_000e18, 0.8e18],
-            [10_000e18, 0.9e18]
+            [600_000e18, 0.4e18],
+            [500_000e18, 0.5e18],
+            [400_000e18, 0.6e18],
+            [300_000e18, 0.7e18],
+            [200_000e18, 0.8e18],
+            [100_000e18, 0.9e18]
         ];
         emit CorruptionNegativeBoostMatrix(corruptionNegativeBoostMatrix);
     }
