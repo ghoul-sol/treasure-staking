@@ -109,7 +109,7 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         INftHandler _nftHandler,
         CapConfig memory _depositCapPerWallet
     ) external initializer {
-        totalDepositCap = 10_000_000e18;
+        totalDepositCap = 6_000_000e18;
         factory = IHarvesterFactory(msg.sender);
 
         _setRoleAdmin(HARVESTER_ADMIN, HARVESTER_ADMIN);

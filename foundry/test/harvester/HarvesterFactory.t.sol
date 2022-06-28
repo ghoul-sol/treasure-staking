@@ -35,7 +35,7 @@ contract HarvesterFactoryTest is TestUtils {
     LegionStakingRules public erc721StakingRules;
     ExtractorStakingRules public erc1155StakingRules;
 
-    uint256 public initTotalDepositCap = 10_000_000e18;
+    uint256 public initTotalDepositCap = 6_000_000e18;
 
     IHarvester.CapConfig public initDepositCapPerWallet = IHarvester.CapConfig({
         parts: parts,

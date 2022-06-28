@@ -57,7 +57,7 @@ contract HarvesterTest is TestUtils {
     ERC20Mintable public magic;
     MiddlemanMock public middlemanMock;
 
-    uint256 public initTotalDepositCap = 10_000_000e18;
+    uint256 public initTotalDepositCap = 6_000_000e18;
 
     IHarvester.CapConfig public initDepositCapPerWallet = IHarvester.CapConfig({
         parts: parts,
