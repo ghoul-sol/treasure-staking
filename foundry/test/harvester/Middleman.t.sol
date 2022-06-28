@@ -114,11 +114,16 @@ contract MiddlemanTest is TestUtils {
         uint256 excludedAddrBal = 0;
         uint256 harvesterBal = magicTotalDeposits;
 
-        uint256[2][9] memory testCases = [
+        uint256[2][14] memory testCases = [
             [uint256(10000), uint256(1e18)],
-            [uint256(6000), uint256(1e18)],
-            [uint256(5999), uint256(0.8e18)],
-            [uint256(5000), uint256(0.8e18)],
+            [uint256(9000), uint256(1e18)],
+            [uint256(8000), uint256(1e18)],
+            [uint256(7999), uint256(0.9e18)],
+            [uint256(7000), uint256(0.9e18)],
+            [uint256(6999), uint256(0.8e18)],
+            [uint256(6000), uint256(0.8e18)],
+            [uint256(5999), uint256(0.7e18)],
+            [uint256(5000), uint256(0.7e18)],
             [uint256(4999), uint256(0.6e18)],
             [uint256(4000), uint256(0.6e18)],
             [uint256(3999), uint256(0.5e18)],
