@@ -22,6 +22,7 @@ contract TreasureStakingRulesTest is TestUtils {
 
     address public admin;
     address public harvesterFactory;
+    address public nftHandler;
     uint256 public maxStakeablePerUser;
     mapping(address => uint256) public mockAmountStaked;
 
@@ -30,6 +31,7 @@ contract TreasureStakingRulesTest is TestUtils {
     function setUp() public {
         admin = address(111);
         harvesterFactory = address(222);
+        nftHandler = address(new Mock("NftHandler"));
 
         maxStakeablePerUser = 20;
 
@@ -97,13 +99,31 @@ contract TreasureStakingRulesTest is TestUtils {
         }
     }
 
-    function test_getHarvesterBoost() public {
-        //  TreasureStakingRules harvesterBoost is always zero
+    function test_getHarvesterBoost(
+        address _user,
+        address _nft,
+        uint256 _tokenId,
+        uint256 _amount
+    ) public {
+
+        vm.prank(harvesterFactory);
+        treasureRules.setNftHandler(address(this));
+
+        vm.assume(_amount > 0 && _amount < 10);
+
+        vm.prank(admin);
+        treasureRules.setMaxStakeablePerUser(_amount);
+
+        assertEq(treasureRules.maxStakeablePerUser(), _amount);
+        assertEq(treasureRules.getAmountTreasuresStaked(_user), 0);
+
+        treasureRules.canStake(_user, _nft, _tokenId, _amount);
+        assertEq(treasureRules.getAmountTreasuresStaked(_user), _amount);
+
+        // TreasureStakingRules harvesterBoost is always 0,
+        // no matter how many Treasures are staked, affects userBoost only
         assertEq(treasureRules.getHarvesterBoost(), 0);
     }
-
-    // function test_canStake() public {}
-    // function test_canUnstake() public {}
 
     function test_canStake(
         address _user,
@@ -131,10 +151,53 @@ contract TreasureStakingRulesTest is TestUtils {
         vm.prank(admin);
         treasureRules.setMaxStakeablePerUser(_amount);
 
+        assertEq(treasureRules.maxStakeablePerUser(), _amount);
+        assertEq(treasureRules.getAmountTreasuresStaked(_user), 0);
+
         treasureRules.canStake(_user, _nft, _tokenId, _amount);
+        assertEq(treasureRules.getAmountTreasuresStaked(_user), _amount);
 
         vm.expectRevert("MaxStakeablePerUser()");
         treasureRules.canStake(_user, _nft, _tokenId, _amount + 1);
+
+        assertEq(treasureRules.getAmountTreasuresStaked(_user), _amount);
+    }
+
+    function test_canUnstake(address _user, address _nft, uint256 _tokenId, uint256 _amount) public {
+        bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), treasureRules.SR_NFT_HANDLER());
+        vm.expectRevert(errorMsg);
+        treasureRules.canUnstake(_user, _nft, _tokenId, _amount);
+
+        vm.prank(harvesterFactory);
+        treasureRules.setNftHandler(nftHandler);
+
+        vm.prank(nftHandler);
+        vm.expectRevert("ZeroAddress()");
+        treasureRules.canUnstake(address(0), _nft, _tokenId, _amount);
+
+        vm.assume(_user != address(0));
+
+        vm.prank(nftHandler);
+        vm.expectRevert("ZeroAmount()");
+        treasureRules.canUnstake(_user, _nft, _tokenId, 0);
+
+        vm.assume(maxStakeablePerUser < _amount);
+
+        vm.prank(admin);
+        treasureRules.setMaxStakeablePerUser(_amount);
+
+        vm.prank(nftHandler);
+        treasureRules.canStake(_user, _nft, _tokenId, _amount);
+
+        vm.prank(nftHandler);
+        treasureRules.canUnstake(_user, _nft, _tokenId, _amount - 1);
+
+        assertEq(treasureRules.getAmountTreasuresStaked(_user), 1);
+
+        vm.prank(nftHandler);
+        treasureRules.canUnstake(_user, _nft, _tokenId, 1);
+
+        assertEq(treasureRules.getAmountTreasuresStaked(_user), 0);
     }
 
     function test_setMaxStakeablePerUser(uint256 _maxStakeablePerUser) public {
