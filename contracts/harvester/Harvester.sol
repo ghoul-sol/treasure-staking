@@ -57,8 +57,12 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
     mapping (address => EnumerableSet.UintSet) private allUserDepositIds;
     /// @notice user => deposit index
     mapping (address => uint256) public currentId;
+    /// @notice id => Timelock
+    mapping (uint256 => Timelock) public timelockOptions;
+    /// @notice set of timelockOptions IDs
+    EnumerableSet.UintSet private timelockIds;
 
-    event Deposit(address indexed user, uint256 indexed index, uint256 amount, Lock lock);
+    event Deposit(address indexed user, uint256 indexed index, uint256 amount, uint256 lock);
     event Withdraw(address indexed user, uint256 indexed index, uint256 amount);
     event UndistributedRewardsWithdraw(address indexed to, uint256 amount);
     event Harvest(address indexed user, uint256 amount);
@@ -69,6 +73,9 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
     event DepositCapPerWallet(CapConfig depositCapPerWallet);
     event TotalDepositCap(uint256 totalDepositCap);
     event UnlockAll(bool value);
+    event TimelockOption(Timelock timelock, uint256 id);
+    event TimelockOptionEnabled(Timelock timelock, uint256 id);
+    event TimelockOptionDisabled(Timelock timelock, uint256 id);
 
     modifier updateRewards() {
         uint256 lpSupply = totalLpToken;
@@ -123,7 +130,17 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         depositCapPerWallet = _depositCapPerWallet;
         emit DepositCapPerWallet(_depositCapPerWallet);
 
+        _addTimelockOption(Timelock(0.1e18, TWO_WEEKS, 0, true));
+        _addTimelockOption(Timelock(0.25e18, ONE_MONTH, 7 days, true));
+        _addTimelockOption(Timelock(0.8e18, THREE_MONTHS, 14 days, true));
+        _addTimelockOption(Timelock(1.8e18, SIX_MONTHS, 30 days, true));
+        _addTimelockOption(Timelock(4e18, TWELVE_MONTHS, 45 days, true));
+
         __AccessControlEnumerable_init();
+    }
+
+    function getTimelockOptionsIds() external view returns (uint256[] memory) {
+        return timelockIds.values();
     }
 
     function getUserBoost(address _user) external view returns (uint256) {
@@ -161,39 +178,13 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         }
     }
 
-    function getLockBoost(Lock _lock) public pure returns (uint256 boost, uint256 timelock) {
-        if (_lock == Lock.twoWeeks) {
-            // 10%
-            return (0.1e18, TWO_WEEKS);
-        } else if (_lock == Lock.oneMonth) {
-            // 25%
-            return (0.25e18, ONE_MONTH);
-        } else if (_lock == Lock.threeMonths) {
-            // 80%
-            return (0.8e18, THREE_MONTHS);
-        } else if (_lock == Lock.sixMonths) {
-            // 180%
-            return (1.8e18, SIX_MONTHS);
-        } else if (_lock == Lock.twelveMonths) {
-            // 400%
-            return (4e18, TWELVE_MONTHS);
-        } else {
-            revert("Invalid lock value");
-        }
+    function getLockBoost(uint256 _timelockId) public view returns (uint256 boost, uint256 timelock) {
+        boost = timelockOptions[_timelockId].boost;
+        timelock = timelockOptions[_timelockId].timelock;
     }
 
-    function getVestingTime(Lock _lock) public pure returns (uint256 vestingTime) {
-        if (_lock == Lock.twoWeeks) {
-            vestingTime = 0;
-        } else if (_lock == Lock.oneMonth) {
-            vestingTime = 7 days;
-        } else if (_lock == Lock.threeMonths) {
-            vestingTime = 14 days;
-        } else if (_lock == Lock.sixMonths) {
-            vestingTime = 30 days;
-        } else if (_lock == Lock.twelveMonths) {
-            vestingTime = 45 days;
-        }
+    function getVestingTime(uint256 _timelockId) public view returns (uint256 vestingTime) {
+        vestingTime = timelockOptions[_timelockId].vesting;
     }
 
     function calcualteVestedPrincipal(address _user, uint256 _depositId)
@@ -202,10 +193,10 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         returns (uint256 amount)
     {
         UserInfo storage user = userInfo[_user][_depositId];
-        Lock _lock = user.lock;
+        uint256 _timelockId = user.lock;
         uint256 originalDepositAmount = user.originalDepositAmount;
 
-        uint256 vestingEnd = user.lockedUntil + getVestingTime(_lock);
+        uint256 vestingEnd = user.lockedUntil + getVestingTime(_timelockId);
         uint256 vestingBegin = user.lockedUntil;
 
         if (block.timestamp >= vestingEnd || unlockAll) {
@@ -254,10 +245,19 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         emit Disable();
     }
 
-    function deposit(uint256 _amount, Lock _lock) external updateRewards checkDepositCaps whenEnabled {
+    function deposit(uint256 _amount, uint256 _timelockId)
+        external
+        updateRewards
+        checkDepositCaps
+        whenEnabled
+    {
         (UserInfo storage user, uint256 depositId) = _addDeposit(msg.sender);
 
-        (uint256 lockBoost, uint256 timelock) = getLockBoost(_lock);
+        if (!timelockOptions[_timelockId].enabled) {
+            revert("Invalid value or disabled timelock");
+        }
+
+        (uint256 lockBoost, uint256 timelock) = getLockBoost(_timelockId);
         uint256 lockLpAmount = _amount + _amount * lockBoost / ONE;
         magicTotalDeposits += _amount;
 
@@ -266,13 +266,13 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         user.lockLpAmount = lockLpAmount;
         user.lockedUntil = block.timestamp + timelock;
         user.vestingLastUpdate = user.lockedUntil;
-        user.lock = _lock;
+        user.lock = _timelockId;
 
         _recalculateGlobalLp(msg.sender, _amount.toInt256(), lockLpAmount.toInt256());
 
         factory.magic().safeTransferFrom(msg.sender, address(this), _amount);
 
-        emit Deposit(msg.sender, depositId, _amount, _lock);
+        emit Deposit(msg.sender, depositId, _amount, _timelockId);
     }
 
     function withdrawPosition(uint256 _depositId, uint256 _amount) public updateRewards returns (bool) {
@@ -413,6 +413,30 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
     function setTotalDepositCap(uint256 _totalDepositCap) external onlyRole(HARVESTER_ADMIN) {
         totalDepositCap = _totalDepositCap;
         emit TotalDepositCap(_totalDepositCap);
+    }
+
+    function addTimelockOption(Timelock memory _timelock) external onlyRole(HARVESTER_ADMIN) {
+        _addTimelockOption(_timelock);
+    }
+
+    function enableTimelockOption(uint256 _id) external onlyRole(HARVESTER_ADMIN) {
+        Timelock storage t = timelockOptions[_id];
+        t.enabled = true;
+        emit TimelockOptionEnabled(t, _id);
+    }
+
+    function disableTimelockOption(uint256 _id) external onlyRole(HARVESTER_ADMIN) {
+        Timelock storage t = timelockOptions[_id];
+        t.enabled = false;
+        emit TimelockOptionDisabled(t, _id);
+    }
+
+    function _addTimelockOption(Timelock memory _timelock) internal {
+        uint256 id = timelockIds.length();
+        timelockIds.add(id);
+
+        timelockOptions[id] = _timelock;
+        emit TimelockOption(_timelock, id);
     }
 
     /// @notice EMERGENCY ONLY

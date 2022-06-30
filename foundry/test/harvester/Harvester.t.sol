@@ -70,9 +70,12 @@ contract HarvesterTest is TestUtils {
     event UnlockAll(bool _value);
     event Enable();
     event Disable();
-    event Deposit(address indexed user, uint256 indexed index, uint256 amount, IHarvester.Lock lock);
+    event Deposit(address indexed user, uint256 indexed index, uint256 amount, uint256 lock);
     event Withdraw(address indexed user, uint256 indexed index, uint256 amount);
     event Harvest(address indexed user, uint256 amount);
+    event TimelockOption(IHarvester.Timelock timelock, uint256 id);
+    event TimelockOptionEnabled(IHarvester.Timelock timelock, uint256 id);
+    event TimelockOptionDisabled(IHarvester.Timelock timelock, uint256 id);
 
     function setUp() public {
         vm.label(admin, "admin");
@@ -97,6 +100,20 @@ contract HarvesterTest is TestUtils {
         (address initParts, uint256 initCapPerPart) = harvester.depositCapPerWallet();
         assertEq(initParts, initDepositCapPerWallet.parts);
         assertEq(initCapPerPart, initDepositCapPerWallet.capPerPart);
+    }
+
+
+
+    function test_getTimelockOptionsIds() public {
+        uint256[] memory expectedIds = new uint256[](5);
+
+        for (uint256 i = 0; i < 5; i++) {
+            expectedIds[i] = i;
+        }
+
+        uint256[] memory ids = harvester.getTimelockOptionsIds();
+
+        assertUint256ArrayEq(ids, expectedIds);
     }
 
     function test_getUserBoost(address _user, uint256 _boost) public {
@@ -218,33 +235,33 @@ contract HarvesterTest is TestUtils {
         uint256 boost;
         uint256 timelock;
 
-        (boost, timelock) = harvester.getLockBoost(IHarvester.Lock.twoWeeks);
+        (boost, timelock) = harvester.getLockBoost(0);
         assertEq(boost, 0.1e18);
         assertEq(timelock, harvester.TWO_WEEKS());
 
-        (boost, timelock) = harvester.getLockBoost(IHarvester.Lock.oneMonth);
+        (boost, timelock) = harvester.getLockBoost(1);
         assertEq(boost, 0.25e18);
         assertEq(timelock, harvester.ONE_MONTH());
 
-        (boost, timelock) = harvester.getLockBoost(IHarvester.Lock.threeMonths);
+        (boost, timelock) = harvester.getLockBoost(2);
         assertEq(boost, 0.8e18);
         assertEq(timelock, harvester.THREE_MONTHS());
 
-        (boost, timelock) = harvester.getLockBoost(IHarvester.Lock.sixMonths);
+        (boost, timelock) = harvester.getLockBoost(3);
         assertEq(boost, 1.8e18);
         assertEq(timelock, harvester.SIX_MONTHS());
 
-        (boost, timelock) = harvester.getLockBoost(IHarvester.Lock.twelveMonths);
+        (boost, timelock) = harvester.getLockBoost(4);
         assertEq(boost, 4e18);
         assertEq(timelock, harvester.TWELVE_MONTHS());
     }
 
     function test_getVestingTime() public {
-        assertEq(harvester.getVestingTime(IHarvester.Lock.twoWeeks), 0);
-        assertEq(harvester.getVestingTime(IHarvester.Lock.oneMonth), 7 days);
-        assertEq(harvester.getVestingTime(IHarvester.Lock.threeMonths), 14 days);
-        assertEq(harvester.getVestingTime(IHarvester.Lock.sixMonths), 30 days);
-        assertEq(harvester.getVestingTime(IHarvester.Lock.twelveMonths), 45 days);
+        assertEq(harvester.getVestingTime(0), 0);
+        assertEq(harvester.getVestingTime(1), 7 days);
+        assertEq(harvester.getVestingTime(2), 14 days);
+        assertEq(harvester.getVestingTime(3), 30 days);
+        assertEq(harvester.getVestingTime(4), 45 days);
     }
 
     function test_enable() public {
@@ -290,7 +307,7 @@ contract HarvesterTest is TestUtils {
         uint256 timeTravel;
         uint256 requestRewards;
         uint256 withdrawAmount;
-        IHarvester.Lock lock;
+        uint256 lock;
         uint256 originalDepositAmount;
         uint256 depositAmount;
         uint256 lockLpAmount;
@@ -321,7 +338,7 @@ contract HarvesterTest is TestUtils {
                 timeTravel: 0,
                 requestRewards: 0,
                 withdrawAmount: 0,
-                lock: IHarvester.Lock.twoWeeks,
+                lock: 0,
                 originalDepositAmount: 1e18,
                 depositAmount: 1e18,
                 lockLpAmount: 1.1e18,
@@ -345,7 +362,7 @@ contract HarvesterTest is TestUtils {
                 timeTravel: 0,
                 requestRewards: 0.1e18,
                 withdrawAmount: 0,
-                lock: IHarvester.Lock.threeMonths,
+                lock: 2,
                 originalDepositAmount: 1e18,
                 depositAmount: 1e18,
                 lockLpAmount: 1.8e18,
@@ -369,7 +386,7 @@ contract HarvesterTest is TestUtils {
                 timeTravel: 0,
                 requestRewards: 0,
                 withdrawAmount: 0,
-                lock: IHarvester.Lock.twoWeeks,
+                lock: 0,
                 originalDepositAmount: 1e18,
                 depositAmount: 1e18,
                 lockLpAmount: 1.1e18,
@@ -393,7 +410,7 @@ contract HarvesterTest is TestUtils {
                 timeTravel: 0,
                 requestRewards: 0,
                 withdrawAmount: 0,
-                lock: IHarvester.Lock.twoWeeks,
+                lock: 0,
                 originalDepositAmount: 1e18,
                 depositAmount: 1e18,
                 lockLpAmount: 1.1e18,
@@ -417,7 +434,7 @@ contract HarvesterTest is TestUtils {
                 timeTravel: 0,
                 requestRewards: 0,
                 withdrawAmount: 1e18,
-                lock: IHarvester.Lock.twoWeeks,
+                lock: 0,
                 originalDepositAmount: 1e18,
                 depositAmount: 1e18,
                 lockLpAmount: 1.1e18,
@@ -441,7 +458,7 @@ contract HarvesterTest is TestUtils {
                 timeTravel: harvester.TWO_WEEKS(),
                 requestRewards: 0,
                 withdrawAmount: 1e18,
-                lock: IHarvester.Lock.twoWeeks,
+                lock: 0,
                 originalDepositAmount: 1e18,
                 depositAmount: 0,
                 lockLpAmount: 0,
@@ -465,7 +482,7 @@ contract HarvesterTest is TestUtils {
                 timeTravel: 0,
                 requestRewards: 0.1e18,
                 withdrawAmount: 0,
-                lock: IHarvester.Lock.threeMonths,
+                lock: 2,
                 originalDepositAmount: 1e18,
                 depositAmount: 1e18,
                 lockLpAmount: 1.8e18,
@@ -489,7 +506,7 @@ contract HarvesterTest is TestUtils {
                 timeTravel: harvester.THREE_MONTHS(),
                 requestRewards: 0.1e18,
                 withdrawAmount: 1e18,
-                lock: IHarvester.Lock.threeMonths,
+                lock: 2,
                 originalDepositAmount: 1e18,
                 depositAmount: 1e18,
                 lockLpAmount: 1.8e18,
@@ -513,7 +530,7 @@ contract HarvesterTest is TestUtils {
                 timeTravel: harvester.TWO_WEEKS() + 1,
                 requestRewards: 0,
                 withdrawAmount: 1e18,
-                lock: IHarvester.Lock.threeMonths,
+                lock: 2,
                 originalDepositAmount: 1e18,
                 depositAmount: 0,
                 lockLpAmount: 0,
@@ -704,7 +721,7 @@ contract HarvesterTest is TestUtils {
             uint256 lockLpAmount,
             uint256 lockedUntil,
             uint256 vestingLastUpdate,
-            IHarvester.Lock lock
+            uint256 lock
         ) = harvester.userInfo(data.user, data.depositId);
 
         assertEq(originalDepositAmount, data.originalDepositAmount);
@@ -755,10 +772,39 @@ contract HarvesterTest is TestUtils {
         }
     }
 
+    function test_depositDisabledTimelock() public {
+        TestAction memory data = getTestAction(0);
+
+        vm.prank(admin);
+        harvester.disableTimelockOption(data.lock);
+
+        mockForAction(data);
+
+        magic.mint(data.user, data.originalDepositAmount);
+        vm.prank(data.user);
+        magic.approve(address(harvester), data.originalDepositAmount);
+
+        vm.mockCall(stakingRules, abi.encodeCall(IPartsStakingRules.getAmountStaked, (data.user)), abi.encode(500));
+
+        vm.prank(data.user);
+        vm.expectRevert("Invalid value or disabled timelock");
+        harvester.deposit(data.originalDepositAmount, data.lock);
+
+        vm.prank(data.user);
+        vm.expectRevert("Invalid value or disabled timelock");
+        harvester.deposit(data.originalDepositAmount, 9999999);
+
+        vm.prank(admin);
+        harvester.enableTimelockOption(data.lock);
+
+        doDeposit(data);
+        checkState(data);
+    }
+
     function test_calcualteVestedPrincipal() public {
         uint256 originalDepositAmount;
         uint256 lockedUntil;
-        IHarvester.Lock lock;
+        uint256 lock;
 
         TestAction memory data0 = getTestAction(0);
         mockForAction(data0);
@@ -919,7 +965,7 @@ contract HarvesterTest is TestUtils {
         assertEq(harvester.totalDepositCap(), newTotalDepositCap);
     }
 
-    function test_toggleUnlockAll() public {
+    function test_setUnlockAll() public {
         assertFalse(harvester.unlockAll());
 
         bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), harvester.HARVESTER_ADMIN());
@@ -932,5 +978,89 @@ contract HarvesterTest is TestUtils {
         harvester.setUnlockAll(true);
 
         assertTrue(harvester.unlockAll());
+    }
+
+    function test_addTimelockOption() public {
+        IHarvester.Timelock memory newTimelockOption = IHarvester.Timelock(0.99e18, harvester.TWO_WEEKS(), 0, true);
+
+        uint256[] memory ids = harvester.getTimelockOptionsIds();
+
+        bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), harvester.HARVESTER_ADMIN());
+        vm.expectRevert(errorMsg);
+        harvester.addTimelockOption(newTimelockOption);
+
+        vm.prank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit TimelockOption(newTimelockOption, ids.length);
+        harvester.addTimelockOption(newTimelockOption);
+
+        (
+            uint256 boost,
+            uint256 timelock,
+            uint256 vesting,
+            bool enabled
+        ) = harvester.timelockOptions(ids.length);
+        uint256[] memory newIds = harvester.getTimelockOptionsIds();
+
+        assertEq(newIds.length, ids.length + 1);
+        assertEq(boost, newTimelockOption.boost);
+        assertEq(timelock, newTimelockOption.timelock);
+        assertEq(vesting, newTimelockOption.vesting);
+        assertEq(enabled, newTimelockOption.enabled);
+    }
+
+    function test_enableTimelockOption() public {
+        uint256 id = 0;
+
+        vm.prank(admin);
+        harvester.disableTimelockOption(id);
+
+        (
+            uint256 boost,
+            uint256 timelock,
+            uint256 vesting,
+            bool enabled
+        ) = harvester.timelockOptions(id);
+
+        assertFalse(enabled);
+
+        bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), harvester.HARVESTER_ADMIN());
+        vm.expectRevert(errorMsg);
+        harvester.enableTimelockOption(id);
+
+        vm.prank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit TimelockOptionEnabled(IHarvester.Timelock(boost, timelock, vesting, !enabled), id);
+        harvester.enableTimelockOption(id);
+
+        (,,, enabled) = harvester.timelockOptions(id);
+
+        assertTrue(enabled);
+    }
+
+    function test_disableTimelockOption() public {
+        uint256 id = 0;
+
+        (
+            uint256 boost,
+            uint256 timelock,
+            uint256 vesting,
+            bool enabled
+        ) = harvester.timelockOptions(id);
+
+        assertTrue(enabled);
+
+        bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), harvester.HARVESTER_ADMIN());
+        vm.expectRevert(errorMsg);
+        harvester.disableTimelockOption(id);
+
+        vm.prank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit TimelockOptionDisabled(IHarvester.Timelock(boost, timelock, vesting, !enabled), id);
+        harvester.disableTimelockOption(id);
+
+        (,,, enabled) = harvester.timelockOptions(id);
+
+        assertFalse(enabled);
     }
 }

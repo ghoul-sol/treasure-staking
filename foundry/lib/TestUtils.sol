@@ -26,4 +26,10 @@ contract TestUtils is Test {
             assertEq(array1[i], array2[i]);
         }
     }
+
+    function assertUint256ArrayEq(uint256[] memory array1, uint256[] memory array2) public {
+        for (uint256 i = 0; i < array1.length; i++) {
+            assertEq(array1[i], array2[i]);
+        }
+    }
 }
