@@ -129,10 +129,27 @@ contract LegionStakingRulesTest is TestUtils {
     }
 
     function test_getHarvesterBoost() public {
-        uint256[5][1] memory testData = [
-            // TODO: add more test cases
+
+        uint256[5][15] memory testData = [
             // maxStakeableTotal, staked, totalRank, boostFactor, result
-            [uint256(11), 9, 10e18, 2e18, 2955371900826446280]
+            [uint256(11), 9, 10e18, 2e18, 2955371900826446280],
+            // vary maxStakeableTotal and staked
+            [uint256(2400), 0, 10e18, 2e18, 1e18],
+            [uint256(2400), 90, 10e18, 2e18, 1134104166666666666],
+            [uint256(2400), 2400, 10e18, 2e18, 2800833333333333332],
+            [uint256(1), 0, 1e18, 2e18, 1e18],
+            [uint256(1), 1, 1e18, 2e18, 3e18],
+            [uint256(99999), 0, 10e18, 2e18, 1e18],
+            [uint256(99999), 900, 10e18, 2e18, 1032294341483600237],
+            [uint256(99999), 9999, 10e18, 2e18, 1342008840122601568],
+            [uint256(99999), 99999, 10e18, 2e18, 2800020000200002000],
+            // vary boostFactor
+            [uint256(2400), 9, 10e18, 1e18, 1007569114583333333],
+            [uint256(2400), 2400, 10e18, 9e18, 9103749999999999994],
+            // vary totalRank
+            [uint256(2400), 2200, 1e18, 1e18, 1893795138888888888],
+            [uint256(2400), 2200, 50e18, 1e18, 1896006944444444443],
+            [uint256(2400), 2200, 50e19, 1e18, 1916319444444444444]
         ];
 
         for (uint256 i = 0; i < testData.length; i++) {
