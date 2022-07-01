@@ -150,3 +150,6 @@ deployments/hardhat
 coverage.json
 
 yarn.lock
+
+# foundry
+foundry/out

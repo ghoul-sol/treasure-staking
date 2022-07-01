@@ -23,6 +23,7 @@ const config: HardhatUserConfig = {
       tags: ["test", "local"],
       chainId : 1337,
       deploy: ["deploy/arbitrum"],
+      allowUnlimitedContractSize: true,
     },
     localhost: {
       url: "http://localhost:8545",
@@ -101,6 +102,15 @@ const config: HardhatUserConfig = {
       },
       {
         version: "0.8.11",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
+      },
+      {
+        version: "0.8.13",
         settings: {
           optimizer: {
             enabled: true,

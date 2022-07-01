@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity >=0.8.11;
 
 interface IMasterOfCoin {
     struct CoinStream {
@@ -10,7 +10,7 @@ interface IMasterOfCoin {
         uint256 ratePerSecond;
         uint256 paid;
     }
-    
+
     function requestRewards() external returns (uint256 rewardsPaid);
 
     function grantTokenToStream(address _stream, uint256 _amount) external;

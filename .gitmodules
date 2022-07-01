@@ -1,0 +1,9 @@
+[submodule "hello_foundry/lib/ds-test"]
+	path = hello_foundry/lib/ds-test
+	url = https://github.com/dapphub/ds-test
+[submodule "foundry/lib/ds-test"]
+	path = foundry/lib/ds-test
+	url = https://github.com/dapphub/ds-test
+[submodule "foundry/lib/forge-std"]
+	path = foundry/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
