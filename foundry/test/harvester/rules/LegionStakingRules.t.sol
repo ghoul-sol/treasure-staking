@@ -18,7 +18,7 @@ contract LegionStakingRulesTest is TestUtils {
     }
 
     // workaround for "UnimplementedFeatureError: Copying of type struct memory to storage not yet supported."
-    uint256 public constant testCasesLength = 1;
+    uint256 public constant testCasesLength = 18;
 
     LegionStakingRules public legionRules;
 
@@ -49,10 +49,35 @@ contract LegionStakingRulesTest is TestUtils {
         );
     }
 
-    function getTestCase(uint256 _i) public pure returns (TestCase memory) {
+    function getTestCase(uint256 _i) public view returns (TestCase memory) {
+
+        uint256 illegalWeight = maxLegionWeight * 1e18;
+        uint256 illegalRank = 1e18;
+
         TestCase[testCasesLength] memory testCases = [
             // TODO: add more test cases
-            TestCase(0, 0, 600e16, 4e18, 120e18)
+            // TestCase(legionGeneration, legionRarity, boost, rank, weight)
+            // Genesis Legions
+            TestCase(0, 0, 600e16, 4e18, 120e18), // LEGENDARY
+            TestCase(0, 1, 200e16, 4e18, 40e18), // RARE
+            TestCase(0, 2, 75e16, 2e18, 15e18), // SPECIAL
+            TestCase(0, 3, 100e16, 3e18, 20e18), // UNCOMMON
+            TestCase(0, 4, 50e16, 1.5e18, 10e18), // COMMON
+            TestCase(0, 5, 0, illegalRank, illegalWeight), // RECRUIT
+            // Aux Legions
+            TestCase(1, 0, 0, illegalRank, illegalWeight),
+            TestCase(1, 1, 25e16, 1.2e18, 5.5e18), // RARE
+            TestCase(1, 2, 0, illegalRank, illegalWeight),
+            TestCase(1, 3, 10e16, 1.1e18, 4e18), // UNCOMMON
+            TestCase(1, 4, 5e16, 1e18, 2.5e18), // COMMON
+            TestCase(1, 5, 0, illegalRank, illegalWeight),
+            // Recruits
+            TestCase(2, 0, 0, illegalRank, illegalWeight),
+            TestCase(2, 1, 0, illegalRank, illegalWeight),
+            TestCase(2, 2, 0, illegalRank, illegalWeight),
+            TestCase(2, 3, 0, illegalRank, illegalWeight),
+            TestCase(2, 4, 0, illegalRank, illegalWeight),
+            TestCase(2, 5, 0, illegalRank, illegalWeight)
         ];
 
         return testCases[_i];

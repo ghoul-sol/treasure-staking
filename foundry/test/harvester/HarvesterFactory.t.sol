@@ -8,6 +8,7 @@ import "contracts/harvester/HarvesterFactory.sol";
 import "contracts/harvester/Harvester.sol";
 import "contracts/harvester/NftHandler.sol";
 import "contracts/harvester/rules/LegionStakingRules.sol";
+import "contracts/harvester/rules/TreasureStakingRules.sol";
 import "contracts/harvester/rules/ExtractorStakingRules.sol";
 
 contract HarvesterFactoryTest is TestUtils {
@@ -27,13 +28,17 @@ contract HarvesterFactoryTest is TestUtils {
     uint256 public maxStakeableTotal = 100;
     uint256 public boostFactor = 1e18;
 
+    uint256 public maxStakeableTreasuresPerUser = 20;
     uint256 public maxStakeable = 100;
     uint256 public lifetime = 3600;
 
     ERC721Mintable public nftErc721;
     ERC1155Mintable public nftErc1155;
+    ERC1155Mintable public nftErc1155Treasures;
+
     LegionStakingRules public erc721StakingRules;
     ExtractorStakingRules public erc1155StakingRules;
+    TreasureStakingRules public erc1155TreasureStakingRules;
 
     uint256 public initTotalDepositCap = 10_000_000e18;
 
@@ -77,6 +82,7 @@ contract HarvesterFactoryTest is TestUtils {
 
         nftErc721 = new ERC721Mintable();
         nftErc1155 = new ERC1155Mintable();
+        nftErc1155Treasures = new ERC1155Mintable();
 
         erc721StakingRules = new LegionStakingRules(
             admin,
@@ -85,6 +91,12 @@ contract HarvesterFactoryTest is TestUtils {
             maxLegionWeight,
             maxStakeableTotal,
             boostFactor
+        );
+
+        erc1155TreasureStakingRules = new TreasureStakingRules(
+            admin,
+            address(harvesterFactory),
+            maxStakeableTreasuresPerUser
         );
 
         erc1155StakingRules = new ExtractorStakingRules(
@@ -116,18 +128,25 @@ contract HarvesterFactoryTest is TestUtils {
             stakingRules: IStakingRules(address(erc721StakingRules))
         });
 
+        INftHandler.NftConfig memory erc1155TreasuresConfig = INftHandler.NftConfig({
+            supportedInterface: INftHandler.Interfaces.ERC1155,
+            stakingRules: IStakingRules(address(erc1155TreasureStakingRules))
+        });
+
         INftHandler.NftConfig memory erc1155Config = INftHandler.NftConfig({
             supportedInterface: INftHandler.Interfaces.ERC1155,
             stakingRules: IStakingRules(address(erc1155StakingRules))
         });
 
-        address[] memory nfts = new address[](2);
+        address[] memory nfts = new address[](3);
         nfts[0] = address(nftErc721);
         nfts[1] = address(nftErc1155);
+        nfts[2] = address(nftErc1155Treasures);
 
-        INftHandler.NftConfig[] memory nftConfigs = new INftHandler.NftConfig[](2);
+        INftHandler.NftConfig[] memory nftConfigs = new INftHandler.NftConfig[](3);
         nftConfigs[0] = erc721Config;
         nftConfigs[1] = erc1155Config;
+        nftConfigs[2] = erc1155TreasuresConfig;
 
         return (nfts, nftConfigs);
     }
