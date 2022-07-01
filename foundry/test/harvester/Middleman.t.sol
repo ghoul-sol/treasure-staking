@@ -114,11 +114,16 @@ contract MiddlemanTest is TestUtils {
         uint256 excludedAddrBal = 0;
         uint256 harvesterBal = magicTotalDeposits;
 
-        uint256[2][9] memory testCases = [
+        uint256[2][14] memory testCases = [
             [uint256(10000), uint256(1e18)],
-            [uint256(6000), uint256(1e18)],
-            [uint256(5999), uint256(0.8e18)],
-            [uint256(5000), uint256(0.8e18)],
+            [uint256(9000), uint256(1e18)],
+            [uint256(8000), uint256(1e18)],
+            [uint256(7999), uint256(0.9e18)],
+            [uint256(7000), uint256(0.9e18)],
+            [uint256(6999), uint256(0.8e18)],
+            [uint256(6000), uint256(0.8e18)],
+            [uint256(5999), uint256(0.7e18)],
+            [uint256(5000), uint256(0.7e18)],
             [uint256(4999), uint256(0.6e18)],
             [uint256(4000), uint256(0.6e18)],
             [uint256(3999), uint256(0.5e18)],
@@ -145,18 +150,18 @@ contract MiddlemanTest is TestUtils {
         address harvester = allHarvesters[0];
 
         uint256[2][13] memory testCases = [
-            [uint256(60_001e18), uint256(0.4e18)],
-            [uint256(60_000e18), uint256(0.5e18)],
-            [uint256(50_001e18), uint256(0.5e18)],
-            [uint256(50_000e18), uint256(0.6e18)],
-            [uint256(40_001e18), uint256(0.6e18)],
-            [uint256(40_000e18), uint256(0.7e18)],
-            [uint256(30_001e18), uint256(0.7e18)],
-            [uint256(30_000e18), uint256(0.8e18)],
-            [uint256(20_001e18), uint256(0.8e18)],
-            [uint256(20_000e18), uint256(0.9e18)],
-            [uint256(10_001e18), uint256(0.9e18)],
-            [uint256(10_000e18), uint256(1e18)],
+            [uint256(600_001e18), uint256(0.4e18)],
+            [uint256(600_000e18), uint256(0.5e18)],
+            [uint256(500_001e18), uint256(0.5e18)],
+            [uint256(500_000e18), uint256(0.6e18)],
+            [uint256(400_001e18), uint256(0.6e18)],
+            [uint256(400_000e18), uint256(0.7e18)],
+            [uint256(300_001e18), uint256(0.7e18)],
+            [uint256(300_000e18), uint256(0.8e18)],
+            [uint256(200_001e18), uint256(0.8e18)],
+            [uint256(200_000e18), uint256(0.9e18)],
+            [uint256(100_001e18), uint256(0.9e18)],
+            [uint256(100_000e18), uint256(1e18)],
             [uint256(0), uint256(1e18)]
         ];
 
@@ -614,12 +619,12 @@ contract MiddlemanTest is TestUtils {
     }
 
     uint256[][] public oldCorruptionNegativeBoostMatrix = [
-        [uint256(60_000e18), uint256(0.4e18)],
-        [uint256(50_000e18), uint256(0.5e18)],
-        [uint256(40_000e18), uint256(0.6e18)],
-        [uint256(30_000e18), uint256(0.7e18)],
-        [uint256(20_000e18), uint256(0.8e18)],
-        [uint256(10_000e18), uint256(0.9e18)]
+        [uint256(600_000e18), uint256(0.4e18)],
+        [uint256(500_000e18), uint256(0.5e18)],
+        [uint256(400_000e18), uint256(0.6e18)],
+        [uint256(300_000e18), uint256(0.7e18)],
+        [uint256(200_000e18), uint256(0.8e18)],
+        [uint256(100_000e18), uint256(0.9e18)]
     ];
 
     function test_getCorruptionNegativeBoostMatrix() public {

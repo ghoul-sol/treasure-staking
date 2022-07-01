@@ -82,12 +82,12 @@ contract Middleman is AccessControlEnumerable {
         emit CorruptionToken(_corruptionToken);
 
         corruptionNegativeBoostMatrix = [
-            [60_000e18, 0.4e18],
-            [50_000e18, 0.5e18],
-            [40_000e18, 0.6e18],
-            [30_000e18, 0.7e18],
-            [20_000e18, 0.8e18],
-            [10_000e18, 0.9e18]
+            [600_000e18, 0.4e18],
+            [500_000e18, 0.5e18],
+            [400_000e18, 0.6e18],
+            [300_000e18, 0.7e18],
+            [200_000e18, 0.8e18],
+            [100_000e18, 0.9e18]
         ];
         emit CorruptionNegativeBoostMatrix(corruptionNegativeBoostMatrix);
     }
@@ -176,10 +176,16 @@ contract Middleman is AccessControlEnumerable {
             // if 40% < utilization < 50%, 60% emissions
             utilBoost = 0.6e18;
         } else if (util < 0.6e18) {
-            // if 50% < utilization < 60%, 80% emissions
+            // if 50% < utilization < 60%, 70% emissions
+            utilBoost = 0.7e18;
+        } else if (util < 0.7e18) {
+            // if 60% < utilization < 70%, 80% emissions
             utilBoost = 0.8e18;
+        } else if (util < 0.8e18) {
+            // if 70% < utilization < 80%, 90% emissions
+            utilBoost = 0.9e18;
         } else {
-            // 100% emissions above 60% utilization
+            // 100% emissions above 80% utilization
             utilBoost = 1e18;
         }
     }
