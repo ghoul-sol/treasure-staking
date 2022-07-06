@@ -14,7 +14,25 @@ import '@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpg
 import './interfaces/IMasterOfCoin.sol';
 import './interfaces/ILegionMetadataStore.sol';
 
-contract AtlasMineV1 is Initializable, AccessControlEnumerableUpgradeable, ERC1155HolderUpgradeable {
+/// @notice Contract is using an admin role to manage its configuration. Admin role is assigned to a multi-sig
+/// wallet controlled by trusted team members. Admin role aka ATLAS_MINE_ADMIN_ROLE, as initialized during init()
+/// to msg.sender can:
+/// • Add/Remove addresses to excludedAddresses, which impacts the utilization calculation, by calling
+///   addExcludedAddress() and removeExcludedAddress(), respectively.
+/// • Set/Unset an arbitrary override value for the value returned by utilization(), by calling
+///   setUtilizationOverride().
+/// • Change at any time the magic token address, which is set during init(), to an arbitrary one, by calling
+///   setMagicToken().
+/// • Set treasure to an arbitrary address (including address(0), in which case treasure staking/unstaking is
+///   disabled), by calling setTreasure().
+/// • Set legion to an arbitrary address (including address(0), in which case legion staking/unstaking is disabled),
+///   by calling setLegion().
+/// • Set legionMetadataStore to an arbitrary address (used for legion 1:1 checking and legion nft boost computation),
+///   by calling setLegionMetadataStore().
+/// • Re-set the legionBoostMatrix array to arbitrary values, by calling setLegionBoostMatrix().
+/// • Set/Unset the emergency unlockAll state, by calling toggleUnlockAll().
+/// • Withdraw all undistributed rewards to an arbitrary address, by calling withdrawUndistributedRewards().
+contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155HolderUpgradeable {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.UintSet;
 
@@ -108,6 +126,9 @@ contract AtlasMineV1 is Initializable, AccessControlEnumerableUpgradeable, ERC11
         emit UtilizationRate(util);
         _;
     }
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
 
     function init(address _magic, address _masterOfCoin) external initializer {
         magic = IERC20Upgradeable(_magic);
@@ -250,14 +271,19 @@ contract AtlasMineV1 is Initializable, AccessControlEnumerableUpgradeable, ERC11
     function calcualteVestedPrincipal(address _user, uint256 _depositId) public view virtual returns (uint256 amount) {
         UserInfo storage user = userInfo[_user][_depositId];
         Lock _lock = user.lock;
+        uint256 originalDepositAmount = user.originalDepositAmount;
 
         uint256 vestingEnd = user.lockedUntil + getVestingTime(_lock);
         uint256 vestingBegin = user.lockedUntil;
 
         if (block.timestamp >= vestingEnd || unlockAll) {
-            amount = user.originalDepositAmount;
-        } else if (block.timestamp > user.vestingLastUpdate) {
-            amount = user.originalDepositAmount * (block.timestamp - user.vestingLastUpdate) / (vestingEnd - vestingBegin);
+            amount = user.depositAmount;
+        } else if (block.timestamp > vestingBegin) {
+            uint256 amountVested = originalDepositAmount * (block.timestamp - vestingBegin) / (vestingEnd - vestingBegin);
+            uint256 amountWithdrawn = originalDepositAmount - user.depositAmount;
+            if (amountWithdrawn < amountVested) {
+                amount = amountVested - amountWithdrawn;
+            }
         }
     }
 
@@ -269,7 +295,12 @@ contract AtlasMineV1 is Initializable, AccessControlEnumerableUpgradeable, ERC11
         (uint256 distributedRewards,) = getRealMagicReward(masterOfCoin.getPendingRewards(address(this)));
         _accMagicPerShare += distributedRewards * ONE / lpSupply;
 
-        pending = ((user.lpAmount * _accMagicPerShare / ONE).toInt256() - user.rewardDebt).toUint256();
+        int256 rewardDebt = user.rewardDebt;
+        int256 accumulatedMagic = (user.lpAmount * _accMagicPerShare / ONE).toInt256();
+
+        if (accumulatedMagic >= rewardDebt) {
+            pending = (accumulatedMagic - rewardDebt).toUint256();
+        }
     }
 
     function pendingRewardsAll(address _user) external view virtual returns (uint256 pending) {
@@ -350,8 +381,13 @@ contract AtlasMineV1 is Initializable, AccessControlEnumerableUpgradeable, ERC11
     function harvestPosition(uint256 _depositId) public virtual updateRewards {
         UserInfo storage user = userInfo[msg.sender][_depositId];
 
+        uint256 _pendingMagic = 0;
+        int256 rewardDebt = user.rewardDebt;
         int256 accumulatedMagic = (user.lpAmount * accMagicPerShare / ONE).toInt256();
-        uint256 _pendingMagic = (accumulatedMagic - user.rewardDebt).toUint256();
+
+        if (accumulatedMagic >= rewardDebt) {
+            _pendingMagic = (accumulatedMagic - rewardDebt).toUint256();
+        }
 
         // Effects
         user.rewardDebt = accumulatedMagic;
