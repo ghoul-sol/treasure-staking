@@ -111,11 +111,16 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         _;
     }
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
+
     function init(
         address _admin,
         INftHandler _nftHandler,
         CapConfig memory _depositCapPerWallet
     ) external initializer {
+        __AccessControlEnumerable_init();
+
         totalDepositCap = 10_000_000e18;
         emit TotalDepositCap(totalDepositCap);
 
@@ -135,8 +140,6 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         _addTimelockOption(Timelock(0.8e18, THREE_MONTHS, 14 days, true));
         _addTimelockOption(Timelock(1.8e18, SIX_MONTHS, 30 days, true));
         _addTimelockOption(Timelock(4e18, TWELVE_MONTHS, 45 days, true));
-
-        __AccessControlEnumerable_init();
     }
 
     function getTimelockOptionsIds() external view returns (uint256[] memory) {
@@ -225,8 +228,12 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
             _accMagicPerShare += pendingRewards * ONE / lpSupply;
         }
 
+        int256 rewardDebt = userGlobalDeposit.globalRewardDebt;
         int256 accumulatedMagic = (userGlobalDeposit.globalLpAmount * _accMagicPerShare / ONE).toInt256();
-        pending = (accumulatedMagic - userGlobalDeposit.globalRewardDebt).toUint256();
+
+        if (accumulatedMagic >= rewardDebt) {
+            pending = (accumulatedMagic - rewardDebt).toUint256();
+        }
     }
 
     function updateNftBoost(address _user) external returns (bool) {
@@ -331,8 +338,13 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
     function harvestAll() public updateRewards {
         GlobalUserDeposit storage userGlobalDeposit = getUserGlobalDeposit[msg.sender];
 
+        uint256 _pendingMagic = 0;
+        int256 rewardDebt = userGlobalDeposit.globalRewardDebt;
         int256 accumulatedMagic = (userGlobalDeposit.globalLpAmount * accMagicPerShare / ONE).toInt256();
-        uint256 _pendingMagic = (accumulatedMagic - userGlobalDeposit.globalRewardDebt).toUint256();
+
+        if (accumulatedMagic >= rewardDebt) {
+            _pendingMagic = (accumulatedMagic - rewardDebt).toUint256();
+        }
 
         // Effects
         userGlobalDeposit.globalRewardDebt = accumulatedMagic;
