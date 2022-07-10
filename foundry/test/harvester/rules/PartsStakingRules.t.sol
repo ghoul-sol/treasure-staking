@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 import "foundry/lib/TestUtils.sol";
 import "foundry/lib/Mock.sol";
 
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 import "contracts/harvester/interfaces/INftHandler.sol";
 import "contracts/harvester/interfaces/IHarvester.sol";
 import "contracts/harvester/rules/PartsStakingRules.sol";
@@ -33,7 +35,10 @@ contract PartsStakingRulesTest is TestUtils {
         maxStakeablePerUser = 40;
         boostFactor = 1e18;
 
-        partsRules = new PartsStakingRules(admin, harvesterFactory, maxStakeableTotal, maxStakeablePerUser, boostFactor);
+        address impl = address(new PartsStakingRules());
+
+        partsRules = PartsStakingRules(address(new ERC1967Proxy(impl, bytes(""))));
+        partsRules.init(admin, harvesterFactory, maxStakeableTotal, maxStakeablePerUser, boostFactor);
     }
 
     function test_getUserBoost(address _user, address _nft, uint256 _tokenId, uint256 _amount) public {

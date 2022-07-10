@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 import "foundry/lib/TestUtils.sol";
 import "foundry/lib/ERC20Mintable.sol";
 
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 import "contracts/harvester/Harvester.sol";
 
 contract HarvesterMock is Harvester {
@@ -81,7 +83,9 @@ contract HarvesterTest is TestUtils {
         vm.label(admin, "admin");
         vm.label(nftHandler, "nftHandler");
 
-        harvester = new Harvester();
+        address impl = address(new Harvester());
+
+        harvester = Harvester(address(new ERC1967Proxy(impl, bytes(""))));
         harvester.init(admin, INftHandler(nftHandler), initDepositCapPerWallet);
 
         magic = new ERC20Mintable();
@@ -131,7 +135,9 @@ contract HarvesterTest is TestUtils {
     }
 
     function deployMockHarvester() public returns (HarvesterMock) {
-        HarvesterMock mockHarvester = new HarvesterMock();
+        address impl = address(new HarvesterMock());
+
+        HarvesterMock mockHarvester = HarvesterMock(address(new ERC1967Proxy(impl, bytes(""))));
         mockHarvester.init(admin, INftHandler(nftHandler), initDepositCapPerWallet);
         return mockHarvester;
     }

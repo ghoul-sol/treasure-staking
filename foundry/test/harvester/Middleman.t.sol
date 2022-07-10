@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 import "foundry/lib/TestUtils.sol";
 import "foundry/lib/ERC20Mintable.sol";
 
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 import "contracts/harvester/Middleman.sol";
 
 contract MiddlemanTest is TestUtils {
@@ -47,8 +49,6 @@ contract MiddlemanTest is TestUtils {
         corruptionToken = address(115);
         vm.label(corruptionToken, "corruptionToken");
 
-
-
         for (uint256 i = 0; i < 3; i++) {
             address harvesterAddress = address(uint160(900+i));
             allHarvesters.push(harvesterAddress);
@@ -58,7 +58,10 @@ contract MiddlemanTest is TestUtils {
 
         atlasMineBoost = 8e18;
 
-        middleman = new Middleman(
+        address impl = address(new Middleman());
+
+        middleman = Middleman(address(new ERC1967Proxy(impl, bytes(""))));
+        middleman.init(
             admin,
             IMasterOfCoin(masterOfCoin),
             IHarvesterFactory(harvesterFactory),

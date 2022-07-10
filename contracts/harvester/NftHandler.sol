@@ -22,6 +22,12 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
 
     IHarvester public harvester;
 
+    // TODO: make allowedNfts per token ID
+    // 4 - Small Extractor
+    // 5 - Medium Extractor
+    // 6 - Large Extractor
+    // 7 - Harvester Part
+
     /// @dev maps NFT address to its config
     mapping(address => NftConfig) public allowedNfts;
 
@@ -66,6 +72,9 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
         _;
     }
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
+    
     /// @dev Initialized by factory during deployment
     function init(
         address _admin,
@@ -73,6 +82,9 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
         address[] memory _nfts,
         INftHandler.NftConfig[] memory _nftConfigs
     ) external initializer {
+        __AccessControlEnumerable_init();
+        __ERC1155Holder_init();
+
         _setRoleAdmin(NH_ADMIN, NH_ADMIN);
         _grantRole(NH_ADMIN, _admin);
 
@@ -83,9 +95,6 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
         for (uint256 i = 0; i < _nfts.length; i++) {
             _setNftConfig(_nfts[i], _nftConfigs[i]);
         }
-
-        __AccessControlEnumerable_init();
-        __ERC1155Holder_init();
     }
 
     function supportsInterface(bytes4 interfaceId)
@@ -138,6 +147,7 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
         }
     }
 
+    // TODO batch stake
     function stakeNft(address _nft, uint256 _tokenId, uint256 _amount)
         public
         validateInput(_nft, _amount)
@@ -162,6 +172,7 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
         emit Staked(_nft, _tokenId, _amount);
     }
 
+    // TODO batch unstake
     function unstakeNft(address _nft, uint256 _tokenId, uint256 _amount)
         external
         validateInput(_nft, _amount)

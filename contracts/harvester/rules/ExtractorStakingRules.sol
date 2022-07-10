@@ -46,13 +46,15 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
         _;
     }
 
-    constructor(
+    function init(
         address _admin,
         address _harvesterFactory,
         address _extractorAddress,
         uint256 _maxStakeable,
         uint256 _lifetime
-    ) StakingRulesBase(_admin, _harvesterFactory) {
+    ) external initializer {
+        _initStakingRulesBase(_admin, _harvesterFactory);
+
         _setExtractorAddress(_extractorAddress);
         _setMaxStakeable(_maxStakeable);
         _setExtractorLifetime(_lifetime);
@@ -124,6 +126,8 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
         override
         validateInput(_nft, _amount)
     {
+        // TODO:
+        // require(extractorBoost[] > 0)
         if (extractorCount.current() + _amount > maxStakeable) revert("MaxStakeable()");
 
         for (uint256 i = 0; i < _amount; i++) {

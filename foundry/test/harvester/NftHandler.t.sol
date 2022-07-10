@@ -6,6 +6,8 @@ import "foundry/lib/ERC721Mintable.sol";
 import "foundry/lib/ERC1155Mintable.sol";
 
 import "forge-std/console2.sol";
+
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import '@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol';
 
 import "contracts/harvester/interfaces/INftHandler.sol";
@@ -62,7 +64,10 @@ contract NftHandlerTest is TestUtils, ERC1155Holder {
         nftErc721 = new ERC721Mintable();
         nftErc1155 = new ERC1155Mintable();
 
-        erc721StakingRules = new LegionStakingRules(
+        address impl = address(new LegionStakingRules());
+
+        erc721StakingRules = LegionStakingRules(address(new ERC1967Proxy(impl, bytes(""))));
+        erc721StakingRules.init(
             admin,
             harvesterFactory,
             ILegionMetadataStore(legionMetadataStore),
@@ -71,7 +76,10 @@ contract NftHandlerTest is TestUtils, ERC1155Holder {
             boostFactor
         );
 
-        erc1155StakingRules = new ExtractorStakingRules(
+        impl = address(new ExtractorStakingRules());
+
+        erc1155StakingRules = ExtractorStakingRules(address(new ERC1967Proxy(impl, bytes(""))));
+        erc1155StakingRules.init(
             admin,
             harvesterFactory,
             address(nftErc1155),
@@ -90,7 +98,9 @@ contract NftHandlerTest is TestUtils, ERC1155Holder {
         INftHandler.NftConfig[] memory nftConfigs = new INftHandler.NftConfig[](1);
         nftConfigs[0] = erc721Config;
 
-        nftHandler = new NftHandler();
+        impl = address(new NftHandler());
+
+        nftHandler = NftHandler(address(new ERC1967Proxy(impl, bytes(""))));
         nftHandler.init(admin, harvester, nfts, nftConfigs);
 
         vm.prank(harvesterFactory);

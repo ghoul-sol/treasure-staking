@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.13;
 
+import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
+
 import '@openzeppelin/contracts/access/AccessControlEnumerable.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
@@ -12,7 +14,7 @@ import '../interfaces/IMasterOfCoin.sol';
 
 import './lib/Constant.sol';
 
-contract Middleman is AccessControlEnumerable {
+contract Middleman is AccessControlEnumerableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
 
@@ -55,14 +57,19 @@ contract Middleman is AccessControlEnumerable {
         }
     }
 
-    constructor(
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
+    
+    function init(
         address _admin,
         IMasterOfCoin _masterOfCoin,
         IHarvesterFactory _harvesterFactory,
         address _atlasMine,
         uint256 _atlasMineBoost,
         IERC20 _corruptionToken
-    ) {
+    ) external initializer {
+        __AccessControlEnumerable_init();
+
         _setRoleAdmin(MIDDLEMAN_ADMIN, MIDDLEMAN_ADMIN);
         _grantRole(MIDDLEMAN_ADMIN, _admin);
 

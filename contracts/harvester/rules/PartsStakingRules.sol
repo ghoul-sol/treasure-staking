@@ -24,13 +24,15 @@ contract PartsStakingRules is StakingRulesBase {
         _;
     }
 
-    constructor(
+    function init(
         address _admin,
         address _harvesterFactory,
         uint256 _maxStakeableTotal,
         uint256 _maxStakeablePerUser,
         uint256 _boostFactor
-    ) StakingRulesBase(_admin, _harvesterFactory) {
+    ) external initializer {
+        _initStakingRulesBase(_admin, _harvesterFactory);
+
         _setMaxStakeableTotal(_maxStakeableTotal);
         _setMaxStakeablePerUser(_maxStakeablePerUser);
         _setBoostFactor(_boostFactor);

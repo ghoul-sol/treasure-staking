@@ -4,6 +4,8 @@ import "foundry/lib/TestUtils.sol";
 import "foundry/lib/ERC721Mintable.sol";
 import "foundry/lib/ERC1155Mintable.sol";
 
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 import "contracts/harvester/HarvesterFactory.sol";
 import "contracts/harvester/Harvester.sol";
 import "contracts/harvester/NftHandler.sol";
@@ -53,26 +55,18 @@ contract HarvesterFactoryTest is TestUtils {
 
     function setUp() public {
         vm.label(admin, "admin");
+        address impl;
 
-        Harvester harvester = new Harvester();
-        harvester.init(
-            address(2),
-            INftHandler(address(2)),
-            IHarvester.CapConfig({
-                parts: address(2),
-                capPerPart: 2
-            })
-        );
-        harvesterImpl = address(harvester);
+        harvesterImpl = address(new Harvester());
+        nftHandlerImpl = address(new NftHandler());
 
         address[] memory emptyArray = new address[](0);
         INftHandler.NftConfig[] memory emptyConfig = new INftHandler.NftConfig[](0);
 
-        NftHandler nftHandler = new NftHandler();
-        nftHandler.init(address(2), address(2), emptyArray, emptyConfig);
-        nftHandlerImpl = address(nftHandler);
+        impl = address(new HarvesterFactory());
 
-        harvesterFactory = new HarvesterFactory(
+        harvesterFactory = HarvesterFactory(address(new ERC1967Proxy(impl, bytes(""))));
+        harvesterFactory.init(
             magic,
             middleman,
             admin,
@@ -84,7 +78,10 @@ contract HarvesterFactoryTest is TestUtils {
         nftErc1155 = new ERC1155Mintable();
         nftErc1155Treasures = new ERC1155Mintable();
 
-        erc721StakingRules = new LegionStakingRules(
+        impl = address(new LegionStakingRules());
+
+        erc721StakingRules = LegionStakingRules(address(new ERC1967Proxy(impl, bytes(""))));
+        erc721StakingRules.init(
             admin,
             address(harvesterFactory),
             ILegionMetadataStore(legionMetadataStore),
@@ -93,13 +90,19 @@ contract HarvesterFactoryTest is TestUtils {
             boostFactor
         );
 
-        erc1155TreasureStakingRules = new TreasureStakingRules(
+        impl = address(new TreasureStakingRules());
+
+        erc1155TreasureStakingRules = TreasureStakingRules(address(new ERC1967Proxy(impl, bytes(""))));
+        erc1155TreasureStakingRules.init(
             admin,
             address(harvesterFactory),
             maxStakeableTreasuresPerUser
         );
 
-        erc1155StakingRules = new ExtractorStakingRules(
+        impl = address(new ExtractorStakingRules());
+
+        erc1155StakingRules = ExtractorStakingRules(address(new ERC1967Proxy(impl, bytes(""))));
+        erc1155StakingRules.init(
             admin,
             address(harvesterFactory),
             address(nftErc1155),

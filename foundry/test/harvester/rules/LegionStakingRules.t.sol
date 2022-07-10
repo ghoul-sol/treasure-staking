@@ -3,10 +3,22 @@ pragma solidity ^0.8.0;
 import "foundry/lib/TestUtils.sol";
 import "foundry/lib/Mock.sol";
 
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 import "contracts/harvester/interfaces/INftHandler.sol";
 import "contracts/harvester/interfaces/IHarvester.sol";
 import 'contracts/interfaces/ILegionMetadataStore.sol';
 import "contracts/harvester/rules/LegionStakingRules.sol";
+
+contract LegionStakingRulesMock is LegionStakingRules {
+    function setStaked(uint256 _staked) public {
+        staked = _staked;
+    }
+
+    function setTotalRank(uint256 _totalRank) public {
+        totalRank = _totalRank;
+    }
+}
 
 contract LegionStakingRulesTest is TestUtils {
     struct TestCase {
@@ -20,7 +32,7 @@ contract LegionStakingRulesTest is TestUtils {
     // workaround for "UnimplementedFeatureError: Copying of type struct memory to storage not yet supported."
     uint256 public constant testCasesLength = 18;
 
-    LegionStakingRules public legionRules;
+    LegionStakingRulesMock public legionRules;
 
     address public admin;
     address public harvesterFactory;
@@ -39,7 +51,10 @@ contract LegionStakingRulesTest is TestUtils {
         maxStakeableTotal = 100;
         boostFactor = 1e18;
 
-        legionRules = new LegionStakingRules(
+        address impl = address(new LegionStakingRulesMock());
+
+        legionRules = LegionStakingRulesMock(address(new ERC1967Proxy(impl, bytes(""))));
+        legionRules.init(
             admin,
             harvesterFactory,
             ILegionMetadataStore(legionMetadataStore),
@@ -177,21 +192,19 @@ contract LegionStakingRulesTest is TestUtils {
             [uint256(2400), 2200, 50e19, 1e18, 1916319444444444444]
         ];
 
-        for (uint256 i = 0; i < testData.length; i++) {
-            // set maxStakeableTotal
-            vm.store(address(legionRules), bytes32(uint256(3)), bytes32(testData[0][0]));
+        for (uint256 i = 0; i < 1; i++) {
+            vm.prank(admin);
+            legionRules.setMaxStakeableTotal(uint256(testData[0][0]));
             assertEq(legionRules.maxStakeableTotal(), testData[0][0]);
 
-            // set staked
-            vm.store(address(legionRules), bytes32(uint256(2)), bytes32(testData[0][1]));
+            legionRules.setStaked(uint256(testData[0][1]));
             assertEq(legionRules.staked(), testData[0][1]);
 
-            // set totalRank
-            vm.store(address(legionRules), bytes32(uint256(5)), bytes32(testData[0][2]));
+            legionRules.setTotalRank(uint256(testData[0][2]));
             assertEq(legionRules.totalRank(), testData[0][2]);
 
-            // set boostFactor
-            vm.store(address(legionRules), bytes32(uint256(6)), bytes32(testData[0][3]));
+            vm.prank(admin);
+            legionRules.setBoostFactor(uint256(testData[0][3]));
             assertEq(legionRules.boostFactor(), testData[0][3]);
 
             assertEq(legionRules.getHarvesterBoost(), testData[0][4]);

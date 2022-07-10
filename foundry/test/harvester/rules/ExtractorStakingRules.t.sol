@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 import "foundry/lib/TestUtils.sol";
 import "foundry/lib/Mock.sol";
 
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 import "contracts/harvester/interfaces/INftHandler.sol";
 import "contracts/harvester/interfaces/IHarvester.sol";
 import 'contracts/harvester/lib/Constant.sol';
@@ -35,7 +37,10 @@ contract ExtractorStakingRulesTest is TestUtils {
         maxStakeable = 10;
         lifetime = 3600;
 
-        extractorRules = new ExtractorStakingRules(admin, harvesterFactory, extractorAddress, maxStakeable, lifetime);
+        address impl = address(new ExtractorStakingRules());
+
+        extractorRules = ExtractorStakingRules(address(new ERC1967Proxy(impl, bytes(""))));
+        extractorRules.init(admin, harvesterFactory, extractorAddress, maxStakeable, lifetime);
     }
 
     function stakeExtractor(address _user, uint256 _tokenId, uint256 _amount) public {
