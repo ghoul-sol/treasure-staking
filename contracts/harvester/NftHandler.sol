@@ -74,7 +74,7 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
-    
+
     /// @dev Initialized by factory during deployment
     function init(
         address _admin,
@@ -147,7 +147,6 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
         }
     }
 
-    // TODO batch stake
     function stakeNft(address _nft, uint256 _tokenId, uint256 _amount)
         public
         validateInput(_nft, _amount)
@@ -172,9 +171,18 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
         emit Staked(_nft, _tokenId, _amount);
     }
 
-    // TODO batch unstake
+    function batchStakeNft(address[] memory _nft, uint256[] memory _tokenId, uint256[] memory _amount) external {
+        if (_nft.length != _tokenId.length || _tokenId.length != _amount.length) revert("InvalidData()");
+
+        uint256 len = _nft.length;
+
+        for (uint256 i = 0; i < len; i++) {
+            stakeNft(_nft[i], _tokenId[i], _amount[i]);
+        }
+    }
+
     function unstakeNft(address _nft, uint256 _tokenId, uint256 _amount)
-        external
+        public
         validateInput(_nft, _amount)
         canUnstake(msg.sender, _nft, _tokenId, _amount)
     {
@@ -197,6 +205,16 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
         harvester.updateNftBoost(msg.sender);
 
         emit Unstaked(_nft, _tokenId, _amount);
+    }
+
+    function batchUnstakeNft(address[] memory _nft, uint256[] memory _tokenId, uint256[] memory _amount) external {
+        if (_nft.length != _tokenId.length || _tokenId.length != _amount.length) revert("InvalidData()");
+
+        uint256 len = _nft.length;
+
+        for (uint256 i = 0; i < len; i++) {
+            unstakeNft(_nft[i], _tokenId[i], _amount[i]);
+        }
     }
 
     function replaceExtractor(address _nft, uint256 _tokenId, uint256 _amount, uint256 _replacedSpotId)

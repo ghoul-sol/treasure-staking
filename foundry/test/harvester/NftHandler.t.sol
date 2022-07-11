@@ -380,7 +380,7 @@ contract NftHandlerTest is TestUtils, ERC1155Holder {
         assertEq(nftErc1155.balanceOf(address(nftHandler), tokenId), amount + newAmount);
     }
 
-    function stakeNftHelperERC721(uint256 tokenId) public {
+    function prepareNftHelperERC721(uint256 tokenId) public {
         vm.mockCall(
             legionMetadataStore,
             abi.encodeCall(ILegionMetadataStore.metadataForLegion, (tokenId)),
@@ -397,10 +397,14 @@ contract NftHandlerTest is TestUtils, ERC1155Holder {
 
         nftErc721.mint(address(this), tokenId);
         nftErc721.approve(address(nftHandler), tokenId);
+    }
+
+    function stakeNftHelperERC721(uint256 tokenId) public {
+        prepareNftHelperERC721(tokenId);
         nftHandler.stakeNft(address(nftErc721), tokenId, 1);
     }
 
-    function stakeNftHelperERC1155(uint256 tokenId, uint256 amount) public {
+    function prepareNftHelperERC1155(uint256 tokenId, uint256 amount) public {
         INftHandler.NftConfig memory newConfig = INftHandler.NftConfig({
             supportedInterface: INftHandler.Interfaces.ERC1155,
             stakingRules: IStakingRules(erc1155StakingRules)
@@ -419,7 +423,74 @@ contract NftHandlerTest is TestUtils, ERC1155Holder {
 
         nftErc1155.mint(address(this), tokenId, amount);
         nftErc1155.setApprovalForAll(address(nftHandler), true);
+    }
+
+    function stakeNftHelperERC1155(uint256 tokenId, uint256 amount) public {
+        prepareNftHelperERC1155(tokenId, amount);
         nftHandler.stakeNft(address(nftErc1155), tokenId, amount);
+    }
+
+    function prepareBatchStake() public returns (
+        address[] memory _nft,
+        uint256[] memory _tokenId,
+        uint256[] memory _amount,
+        uint256[] memory _wrongAmount
+    ) {
+        _nft = new address[](3);
+        _tokenId = new uint256[](3);
+        _amount = new uint256[](3);
+        _wrongAmount = new uint256[](99);
+
+        _nft[0] = address(nftErc721);
+        _nft[1] = address(nftErc721);
+        _nft[2] = address(nftErc1155);
+
+        _tokenId[0] = 1;
+        _tokenId[1] = 2;
+        _tokenId[2] = 3;
+
+        _amount[0] = 1;
+        _amount[1] = 1;
+        _amount[2] = 4;
+
+        for (uint256 i = 0; i < _nft.length; i++) {
+            if (i <= 1) {
+                prepareNftHelperERC721(_tokenId[i]);
+            } else {
+                prepareNftHelperERC1155(_tokenId[i], _amount[i]);
+            }
+        }
+
+        return (_nft, _tokenId, _amount, _wrongAmount);
+    }
+
+    function validateBatchStake(uint256[] memory _tokenId, uint256[] memory _amount) public {
+        for (uint256 i = 0; i < _tokenId.length; i++) {
+            address nftAddress;
+            if (i <= 1) {
+                nftAddress = address(nftErc721);
+            } else {
+                nftAddress = address(nftErc1155);
+            }
+
+            assertEq(nftHandler.stakedNfts(address(this), nftAddress, _tokenId[i]), _amount[i]);
+        }
+    }
+
+    function test_batchStakeNft() public {
+        (
+            address[] memory _nft,
+            uint256[] memory _tokenId,
+            uint256[] memory _amount,
+            uint256[] memory _wrongAmount
+        ) = prepareBatchStake();
+
+        vm.expectRevert("InvalidData()");
+        nftHandler.batchStakeNft(_nft, _tokenId, _wrongAmount);
+
+        nftHandler.batchStakeNft(_nft, _tokenId, _amount);
+
+        validateBatchStake(_tokenId, _amount);
     }
 
     function test_unstakeNft() public {
@@ -476,6 +547,36 @@ contract NftHandlerTest is TestUtils, ERC1155Holder {
             currentUserBoost - nftHandler.getNftBoost(address(this), address(nftErc721), tokenId, 1)
         );
         assertEq(nftErc721.ownerOf(tokenId), address(this));
+    }
+
+    function test_batchUnstakeNft() public {
+        (
+            address[] memory _nft,
+            uint256[] memory _tokenId,
+            uint256[] memory _amount,
+            uint256[] memory _wrongAmount
+        ) = prepareBatchStake();
+
+        nftHandler.batchStakeNft(_nft, _tokenId, _amount);
+        validateBatchStake(_tokenId, _amount);
+
+        address[] memory _nftUnstake = new address[](2);
+        uint256[] memory _tokenIdUnstake = new uint256[](2);
+        uint256[] memory _amountUnstake = new uint256[](2);
+
+        for (uint256 i = 0; i < 2; i++) {
+            _nftUnstake[i] = _nft[i];
+            _tokenIdUnstake[i] = _tokenId[i];
+            _amountUnstake[i] = _amount[i];
+        }
+
+        vm.expectRevert("InvalidData()");
+        nftHandler.batchUnstakeNft(_nftUnstake, _tokenIdUnstake, _wrongAmount);
+
+        nftHandler.batchUnstakeNft(_nftUnstake, _tokenIdUnstake, _amountUnstake);
+
+        _amount = new uint256[](2);
+        validateBatchStake(_tokenIdUnstake, _amount);
     }
 
     function test_replaceExtractor() public {
