@@ -22,17 +22,19 @@ contract NftHandlerTest is TestUtils, ERC1155Holder {
 
     NftHandler public nftHandler;
 
-    address public admin;
-    address public harvester;
-    address public harvesterFactory;
+    address public admin = address(111);
+    address public harvester = address(444);
+    address public harvesterFactory = address(222);
 
-    address public legionMetadataStore;
-    uint256 public maxLegionWeight;
-    uint256 public maxStakeableTotal;
-    uint256 public boostFactor;
+    address public legionMetadataStore = address(new Mock("LegionMetadataStore"));
+    uint256 public maxLegionWeight = 2000e18;
+    uint256 public maxStakeableTotal = 100;
+    uint256 public boostFactor = 1e18;
 
-    uint256 public maxStakeable;
-    uint256 public lifetime;
+    uint256 public maxStakeable = 100;
+    uint256 public lifetime = 3600;
+
+    uint256 public extractorBoost = 1e18;
 
     ERC721Mintable public nftErc721;
     ERC1155Mintable public nftErc1155;
@@ -45,21 +47,9 @@ contract NftHandlerTest is TestUtils, ERC1155Holder {
     function setUp() public {
         legionTest = new LegionStakingRulesTest();
 
-        admin = address(111);
         vm.label(admin, "admin");
-        harvesterFactory = address(222);
         vm.label(harvesterFactory, "harvesterFactory");
-        harvester = address(444);
         vm.label(harvester, "harvester");
-
-        legionMetadataStore = address(new Mock("LegionMetadataStore"));
-
-        maxLegionWeight = 2000e18;
-        maxStakeableTotal = 100;
-        boostFactor = 1e18;
-
-        maxStakeable = 100;
-        lifetime = 3600;
 
         nftErc721 = new ERC721Mintable();
         nftErc1155 = new ERC1155Mintable();
@@ -359,6 +349,9 @@ contract NftHandlerTest is TestUtils, ERC1155Holder {
         nftErc1155.mint(address(this), tokenId, amount);
         nftErc1155.setApprovalForAll(address(nftHandler), true);
 
+        vm.prank(admin);
+        erc1155StakingRules.setExtractorBoost(tokenId, extractorBoost);
+
         vm.expectEmit(true, true, true, true);
         emit Staked(address(nftErc1155), tokenId, amount);
         nftHandler.stakeNft(address(nftErc1155), tokenId, amount);
@@ -420,6 +413,9 @@ contract NftHandlerTest is TestUtils, ERC1155Holder {
 
         address h = address(nftHandler.harvester());
         vm.mockCall(h, abi.encodeCall(IHarvester.updateNftBoost, (address(this))), abi.encode(true));
+
+        vm.prank(admin);
+        erc1155StakingRules.setExtractorBoost(tokenId, extractorBoost);
 
         nftErc1155.mint(address(this), tokenId, amount);
         nftErc1155.setApprovalForAll(address(nftHandler), true);
@@ -505,7 +501,7 @@ contract NftHandlerTest is TestUtils, ERC1155Holder {
         uint256 replaceAmount = 1;
         (, IStakingRules stakingRules) = nftHandler.allowedNfts(address(nftErc1155));
         vm.prank(admin);
-        ExtractorStakingRules(address(stakingRules)).setExtractorBoost(replaceTokenId, 1);
+        ExtractorStakingRules(address(stakingRules)).setExtractorBoost(replaceTokenId, extractorBoost + 1);
 
         nftErc1155.mint(address(this), replaceTokenId, replaceAmount);
         nftErc1155.setApprovalForAll(address(nftHandler), true);

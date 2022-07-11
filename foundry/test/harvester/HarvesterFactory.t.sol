@@ -60,9 +60,6 @@ contract HarvesterFactoryTest is TestUtils {
         harvesterImpl = address(new Harvester());
         nftHandlerImpl = address(new NftHandler());
 
-        address[] memory emptyArray = new address[](0);
-        INftHandler.NftConfig[] memory emptyConfig = new INftHandler.NftConfig[](0);
-
         impl = address(new HarvesterFactory());
 
         harvesterFactory = HarvesterFactory(address(new ERC1967Proxy(impl, bytes(""))));

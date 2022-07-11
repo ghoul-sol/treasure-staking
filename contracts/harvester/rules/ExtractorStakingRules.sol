@@ -29,7 +29,7 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
     /// @dev maps spot Id to ExtractorData
     mapping(uint256 => ExtractorData) public stakedExtractor;
 
-    /// @dev maps address => token Id => boost value
+    /// @dev maps token Id => boost value
     mapping(uint256 => uint256) public extractorBoost;
 
     event MaxStakeable(uint256 maxStakeable);
@@ -126,8 +126,7 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
         override
         validateInput(_nft, _amount)
     {
-        // TODO:
-        // require(extractorBoost[] > 0)
+        if (extractorBoost[_tokenId] == 0) revert("ZeroBoost()");
         if (extractorCount.current() + _amount > maxStakeable) revert("MaxStakeable()");
 
         for (uint256 i = 0; i < _amount; i++) {
