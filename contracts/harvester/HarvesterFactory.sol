@@ -37,7 +37,7 @@ contract HarvesterFactory is AccessControlEnumerableUpgradeable {
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
-    
+
     function init(
         IERC20 _magic,
         IMiddleman _middleman,
@@ -86,6 +86,7 @@ contract HarvesterFactory is AccessControlEnumerableUpgradeable {
         address _admin,
         IHarvester.CapConfig memory _depositCapPerWallet,
         address[] memory _nfts,
+        uint256[] memory _tokenIds,
         INftHandler.NftConfig[] memory _nftConfigs
     ) external onlyRole(HF_DEPLOYER) {
         address nftHandler = address(new BeaconProxy(address(nftHandlerBeacon), bytes("")));
@@ -101,7 +102,7 @@ contract HarvesterFactory is AccessControlEnumerableUpgradeable {
 
         emit HarvesterDeployed(harvester, nftHandler);
 
-        INftHandler(nftHandler).init(_admin, harvester, _nfts, _nftConfigs);
+        INftHandler(nftHandler).init(_admin, harvester, _nfts, _tokenIds, _nftConfigs);
     }
 
     function enableHarvester(IHarvester _harvester) external onlyRole(HF_DEPLOYER) {

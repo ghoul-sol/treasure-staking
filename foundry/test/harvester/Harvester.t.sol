@@ -47,6 +47,7 @@ contract HarvesterTest is TestUtils {
     address public admin = address(111);
     address public nftHandler = address(222);
     address public parts = address(333);
+    uint256 public partsTokenId = 7;
     address public harvesterFactory = address(this);
     address public randomWallet = address(444);
     address public middleman = address(555);
@@ -63,6 +64,7 @@ contract HarvesterTest is TestUtils {
 
     IHarvester.CapConfig public initDepositCapPerWallet = IHarvester.CapConfig({
         parts: parts,
+        partsTokenId: partsTokenId,
         capPerPart: 1e18
     });
 
@@ -101,8 +103,9 @@ contract HarvesterTest is TestUtils {
         assertEq(address(harvester.factory()), harvesterFactory);
         assertEq(address(harvester.nftHandler()), nftHandler);
 
-        (address initParts, uint256 initCapPerPart) = harvester.depositCapPerWallet();
+        (address initParts, uint256 tokenId, uint256 initCapPerPart) = harvester.depositCapPerWallet();
         assertEq(initParts, initDepositCapPerWallet.parts);
+        assertEq(tokenId, initDepositCapPerWallet.partsTokenId);
         assertEq(initCapPerPart, initDepositCapPerWallet.capPerPart);
     }
 
@@ -205,10 +208,10 @@ contract HarvesterTest is TestUtils {
     function test_getUserDepositCap() public {
         uint256 amountStaked = 20;
 
-        vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getStakingRules, (parts)), abi.encode(address(0)));
+        vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getStakingRules, (parts, partsTokenId)), abi.encode(address(0)));
         assertEq(harvester.getUserDepositCap(user1), 0);
 
-        vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getStakingRules, (parts)), abi.encode(stakingRules));
+        vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getStakingRules, (parts, partsTokenId)), abi.encode(stakingRules));
         vm.mockCall(stakingRules, abi.encodeCall(IPartsStakingRules.getAmountStaked, (user1)), abi.encode(amountStaked));
 
         assertEq(harvester.getUserDepositCap(user1), amountStaked * initDepositCapPerWallet.capPerPart);
@@ -219,11 +222,11 @@ contract HarvesterTest is TestUtils {
 
         uint256 amountStaked = 5;
 
-        vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getStakingRules, (parts)), abi.encode(address(0)));
+        vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getStakingRules, (parts, partsTokenId)), abi.encode(address(0)));
 
         assertFalse(mockHarvester.isMaxUserGlobalDeposit(user1));
 
-        vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getStakingRules, (parts)), abi.encode(stakingRules));
+        vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getStakingRules, (parts, partsTokenId)), abi.encode(stakingRules));
         vm.mockCall(stakingRules, abi.encodeCall(IPartsStakingRules.getAmountStaked, (user1)), abi.encode(amountStaked));
 
         assertFalse(mockHarvester.isMaxUserGlobalDeposit(user1));
@@ -582,7 +585,7 @@ contract HarvesterTest is TestUtils {
     }
 
     function mockForAction(TestAction memory data) public {
-        vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getStakingRules, (parts)), abi.encode(stakingRules));
+        vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getStakingRules, (parts, partsTokenId)), abi.encode(stakingRules));
 
         vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getUserBoost, (data.user)), abi.encode(data.nftBoost));
         vm.mockCall(address(harvesterFactory), abi.encodeCall(IHarvesterFactory.middleman, ()), abi.encode(address(middlemanMock)));
@@ -931,12 +934,14 @@ contract HarvesterTest is TestUtils {
     }
 
     function test_setDepositCapPerWallet() public {
-        (address initParts, uint256 initCapPerPart) = harvester.depositCapPerWallet();
+        (address initParts, uint256 tokenId, uint256 initCapPerPart) = harvester.depositCapPerWallet();
         assertEq(initParts, initDepositCapPerWallet.parts);
+        assertEq(tokenId, initDepositCapPerWallet.partsTokenId);
         assertEq(initCapPerPart, initDepositCapPerWallet.capPerPart);
 
         IHarvester.CapConfig memory newDepositCapPerWallet = IHarvester.CapConfig({
             parts: parts,
+            partsTokenId: partsTokenId,
             capPerPart: 1e18
         });
 
@@ -949,8 +954,9 @@ contract HarvesterTest is TestUtils {
         emit DepositCapPerWallet(newDepositCapPerWallet);
         harvester.setDepositCapPerWallet(newDepositCapPerWallet);
 
-        (address newParts, uint256 newCapPerPart) = harvester.depositCapPerWallet();
+        (address newParts, uint256 newTokenId, uint256 newCapPerPart) = harvester.depositCapPerWallet();
         assertEq(newParts, newDepositCapPerWallet.parts);
+        assertEq(newTokenId, newDepositCapPerWallet.partsTokenId);
         assertEq(newCapPerPart, newDepositCapPerWallet.capPerPart);
     }
 

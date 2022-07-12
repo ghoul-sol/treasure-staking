@@ -121,6 +121,7 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
         emit ExtractorReplaced(_tokenId, _replacedSpotId);
     }
 
+    // TODO: emit _replacedSpotId in the event
     function _canStake(address _user, address _nft, uint256 _tokenId, uint256 _amount)
         internal
         override

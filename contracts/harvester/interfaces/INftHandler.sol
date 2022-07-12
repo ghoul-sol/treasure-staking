@@ -17,11 +17,13 @@ interface INftHandler {
     /// @param _admin wallet address to be set as contract's admin
     /// @param _harvester harvester address for which INftHandler is deployed
     /// @param _nfts array of NFTs allowed to be staked
+    /// @param _tokenIds array of tokenIds allowed to be staked, it should correspond to `_nfts`
     /// @param _nftConfigs array of congigs for each NFT
     function init(
         address _admin,
         address _harvester,
         address[] memory _nfts,
+        uint256[] memory _tokenIds,
         INftHandler.NftConfig[] memory _nftConfigs
     ) external;
 
@@ -31,8 +33,9 @@ interface INftHandler {
 
     /// @notice Gets staking rules contract address
     /// @param _nft NFT contract address for which to read staking rules contract address
+    /// @param _tokenId token id for which to read staking rules contract address
     /// @return staking rules contract address
-    function getStakingRules(address _nft) external view returns (address);
+    function getStakingRules(address _nft, uint256 _tokenId) external view returns (IStakingRules);
 
     /// @notice Gets cached user boost
     /// @dev Cached boost is re-calculated on the fly on stake and unstake NFT by user

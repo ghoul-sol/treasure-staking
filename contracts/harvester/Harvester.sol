@@ -173,7 +173,7 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
 
     /// @notice Gets amount of MAGIC that a single wallet can deposit
     function getUserDepositCap(address _user) public view returns (uint256 cap) {
-        address stakingRules = nftHandler.getStakingRules(depositCapPerWallet.parts);
+        address stakingRules = address(nftHandler.getStakingRules(depositCapPerWallet.parts, depositCapPerWallet.partsTokenId));
 
         if (stakingRules != address(0)) {
             uint256 amountStaked = IPartsStakingRules(stakingRules).getAmountStaked(_user);
@@ -328,6 +328,8 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         return true;
     }
 
+    // TODO: withdraw amount from all deposits
+    // TODO: get max global withdraw amount
     function withdrawAll() public {
         uint256[] memory depositIds = allUserDepositIds[msg.sender].values();
         for (uint256 i = 0; i < depositIds.length; i++) {
