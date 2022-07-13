@@ -22,7 +22,7 @@ contract ExtractorStakingRulesTest is TestUtils {
 
     event MaxStakeable(uint256 maxStakeable);
     event ExtractorBoost(uint256 tokenId, uint256 boost);
-    event ExtractorStaked(uint256 tokenId, uint256 amount);
+    event ExtractorStaked(uint256 tokenId, uint256 spotId, uint256 amount);
     event ExtractorReplaced(uint256 tokenId, uint256 replacedSpotId);
     event Lifetime(uint256 lifetime);
     event ExtractorAddress(address extractorAddress);
@@ -81,8 +81,10 @@ contract ExtractorStakingRulesTest is TestUtils {
 
         assertEq(extractorRules.getExtractorCount(), 0);
 
+        uint256 spotId = extractorRules.getExtractorCount() + _amount - 1;
+
         vm.expectEmit(true, true, true, true);
-        emit ExtractorStaked(_tokenId, _amount);
+        emit ExtractorStaked(_tokenId, spotId, _amount);
         extractorRules.canStake(_user, extractorAddress, _tokenId, _amount);
 
         assertEq(extractorRules.getExtractorCount(), _amount);

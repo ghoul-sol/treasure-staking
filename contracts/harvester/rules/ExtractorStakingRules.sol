@@ -34,7 +34,7 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
 
     event MaxStakeable(uint256 maxStakeable);
     event ExtractorBoost(uint256 tokenId, uint256 boost);
-    event ExtractorStaked(uint256 tokenId, uint256 amount);
+    event ExtractorStaked(uint256 tokenId, uint256 spotId, uint256 amount);
     event ExtractorReplaced(uint256 tokenId, uint256 replacedSpotId);
     event Lifetime(uint256 lifetime);
     event ExtractorAddress(address extractorAddress);
@@ -121,7 +121,6 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
         emit ExtractorReplaced(_tokenId, _replacedSpotId);
     }
 
-    // TODO: emit _replacedSpotId in the event
     function _canStake(address _user, address _nft, uint256 _tokenId, uint256 _amount)
         internal
         override
@@ -130,14 +129,16 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
         if (extractorBoost[_tokenId] == 0) revert("ZeroBoost()");
         if (extractorCount.current() + _amount > maxStakeable) revert("MaxStakeable()");
 
+        uint256 spotId;
+
         for (uint256 i = 0; i < _amount; i++) {
-            uint256 spotId = extractorCount.current();
+            spotId = extractorCount.current();
 
             stakedExtractor[spotId] = ExtractorData(_user, _tokenId, block.timestamp);
             extractorCount.increment();
         }
 
-        emit ExtractorStaked(_tokenId, _amount);
+        emit ExtractorStaked(_tokenId, spotId, _amount);
     }
 
     function _canUnstake(address, address, uint256, uint256) internal pure override {
