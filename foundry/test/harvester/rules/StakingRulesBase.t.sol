@@ -3,12 +3,16 @@ pragma solidity ^0.8.0;
 import "foundry/lib/TestUtils.sol";
 import "foundry/lib/Mock.sol";
 
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 import "contracts/harvester/interfaces/INftHandler.sol";
 import "contracts/harvester/interfaces/IHarvester.sol";
 import "contracts/harvester/rules/PartsStakingRules.sol";
 
 contract StakingRulesBaseImpl is StakingRulesBase {
-    constructor(address _admin, address _harvesterFactory) StakingRulesBase(_admin, _harvesterFactory) {}
+    function init(address _admin, address _harvesterFactory) external initializer {
+        _initStakingRulesBase(_admin, _harvesterFactory);
+    }
     // implement abstract methods so it's deployable
     function _canStake(address _user, address, uint256, uint256 _amount) internal override {}
     function _canUnstake(address _user, address, uint256, uint256 _amount) internal override {}
@@ -28,7 +32,16 @@ contract StakingRulesBaseTest is TestUtils {
         harvesterFactory = address(222);
         vm.label(harvesterFactory, "harvesterFactory");
 
-        stakingRules = StakingRulesBase(new StakingRulesBaseImpl(admin, harvesterFactory));
+        address impl = address(new StakingRulesBaseImpl());
+
+        stakingRules = StakingRulesBaseImpl(address(new ERC1967Proxy(impl, bytes(""))));
+        StakingRulesBaseImpl(address(stakingRules)).init(admin, harvesterFactory);
+    }
+
+    function test_constants() public {
+        assertEq(stakingRules.SR_ADMIN(), keccak256("SR_ADMIN"));
+        assertEq(stakingRules.SR_NFT_HANDLER(), keccak256("SR_NFT_HANDLER"));
+        assertEq(stakingRules.SR_NFT_HANDLER(), keccak256("SR_NFT_HANDLER"));
     }
 
     function test_setNftHandler() public {

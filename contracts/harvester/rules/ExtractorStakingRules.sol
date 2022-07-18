@@ -29,12 +29,12 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
     /// @dev maps spot Id to ExtractorData
     mapping(uint256 => ExtractorData) public stakedExtractor;
 
-    /// @dev maps address => token Id => boost value
+    /// @dev maps token Id => boost value
     mapping(uint256 => uint256) public extractorBoost;
 
     event MaxStakeable(uint256 maxStakeable);
     event ExtractorBoost(uint256 tokenId, uint256 boost);
-    event ExtractorStaked(uint256 tokenId, uint256 amount);
+    event ExtractorStaked(uint256 tokenId, uint256 spotId, uint256 amount);
     event ExtractorReplaced(uint256 tokenId, uint256 replacedSpotId);
     event Lifetime(uint256 lifetime);
     event ExtractorAddress(address extractorAddress);
@@ -46,13 +46,15 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
         _;
     }
 
-    constructor(
+    function init(
         address _admin,
         address _harvesterFactory,
         address _extractorAddress,
         uint256 _maxStakeable,
         uint256 _lifetime
-    ) StakingRulesBase(_admin, _harvesterFactory) {
+    ) external initializer {
+        _initStakingRulesBase(_admin, _harvesterFactory);
+
         _setExtractorAddress(_extractorAddress);
         _setMaxStakeable(_maxStakeable);
         _setExtractorLifetime(_lifetime);
@@ -124,16 +126,19 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
         override
         validateInput(_nft, _amount)
     {
+        if (extractorBoost[_tokenId] == 0) revert("ZeroBoost()");
         if (extractorCount.current() + _amount > maxStakeable) revert("MaxStakeable()");
 
+        uint256 spotId;
+
         for (uint256 i = 0; i < _amount; i++) {
-            uint256 spotId = extractorCount.current();
+            spotId = extractorCount.current();
 
             stakedExtractor[spotId] = ExtractorData(_user, _tokenId, block.timestamp);
             extractorCount.increment();
         }
 
-        emit ExtractorStaked(_tokenId, _amount);
+        emit ExtractorStaked(_tokenId, spotId, _amount);
     }
 
     function _canUnstake(address, address, uint256, uint256) internal pure override {

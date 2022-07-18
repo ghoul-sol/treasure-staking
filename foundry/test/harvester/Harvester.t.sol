@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 import "foundry/lib/TestUtils.sol";
 import "foundry/lib/ERC20Mintable.sol";
 
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 import "contracts/harvester/Harvester.sol";
 
 contract HarvesterMock is Harvester {
@@ -45,6 +47,7 @@ contract HarvesterTest is TestUtils {
     address public admin = address(111);
     address public nftHandler = address(222);
     address public parts = address(333);
+    uint256 public partsTokenId = 7;
     address public harvesterFactory = address(this);
     address public randomWallet = address(444);
     address public middleman = address(555);
@@ -61,6 +64,7 @@ contract HarvesterTest is TestUtils {
 
     IHarvester.CapConfig public initDepositCapPerWallet = IHarvester.CapConfig({
         parts: parts,
+        partsTokenId: partsTokenId,
         capPerPart: 1e18
     });
 
@@ -81,7 +85,9 @@ contract HarvesterTest is TestUtils {
         vm.label(admin, "admin");
         vm.label(nftHandler, "nftHandler");
 
-        harvester = new Harvester();
+        address impl = address(new Harvester());
+
+        harvester = Harvester(address(new ERC1967Proxy(impl, bytes(""))));
         harvester.init(admin, INftHandler(nftHandler), initDepositCapPerWallet);
 
         magic = new ERC20Mintable();
@@ -97,8 +103,9 @@ contract HarvesterTest is TestUtils {
         assertEq(address(harvester.factory()), harvesterFactory);
         assertEq(address(harvester.nftHandler()), nftHandler);
 
-        (address initParts, uint256 initCapPerPart) = harvester.depositCapPerWallet();
+        (address initParts, uint256 tokenId, uint256 initCapPerPart) = harvester.depositCapPerWallet();
         assertEq(initParts, initDepositCapPerWallet.parts);
+        assertEq(tokenId, initDepositCapPerWallet.partsTokenId);
         assertEq(initCapPerPart, initDepositCapPerWallet.capPerPart);
     }
 
@@ -131,7 +138,9 @@ contract HarvesterTest is TestUtils {
     }
 
     function deployMockHarvester() public returns (HarvesterMock) {
-        HarvesterMock mockHarvester = new HarvesterMock();
+        address impl = address(new HarvesterMock());
+
+        HarvesterMock mockHarvester = HarvesterMock(address(new ERC1967Proxy(impl, bytes(""))));
         mockHarvester.init(admin, INftHandler(nftHandler), initDepositCapPerWallet);
         return mockHarvester;
     }
@@ -199,10 +208,10 @@ contract HarvesterTest is TestUtils {
     function test_getUserDepositCap() public {
         uint256 amountStaked = 20;
 
-        vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getStakingRules, (parts)), abi.encode(address(0)));
+        vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getStakingRules, (parts, partsTokenId)), abi.encode(address(0)));
         assertEq(harvester.getUserDepositCap(user1), 0);
 
-        vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getStakingRules, (parts)), abi.encode(stakingRules));
+        vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getStakingRules, (parts, partsTokenId)), abi.encode(stakingRules));
         vm.mockCall(stakingRules, abi.encodeCall(IPartsStakingRules.getAmountStaked, (user1)), abi.encode(amountStaked));
 
         assertEq(harvester.getUserDepositCap(user1), amountStaked * initDepositCapPerWallet.capPerPart);
@@ -213,11 +222,11 @@ contract HarvesterTest is TestUtils {
 
         uint256 amountStaked = 5;
 
-        vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getStakingRules, (parts)), abi.encode(address(0)));
+        vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getStakingRules, (parts, partsTokenId)), abi.encode(address(0)));
 
         assertFalse(mockHarvester.isMaxUserGlobalDeposit(user1));
 
-        vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getStakingRules, (parts)), abi.encode(stakingRules));
+        vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getStakingRules, (parts, partsTokenId)), abi.encode(stakingRules));
         vm.mockCall(stakingRules, abi.encodeCall(IPartsStakingRules.getAmountStaked, (user1)), abi.encode(amountStaked));
 
         assertFalse(mockHarvester.isMaxUserGlobalDeposit(user1));
@@ -297,7 +306,15 @@ contract HarvesterTest is TestUtils {
         assertTrue(harvester.disabled());
     }
 
-    enum Actions { Deposit, Withdraw, WithdrawAll, Harvest, WithdrawAndHarvest, WithdrawAndHarvestAll }
+    enum Actions {
+        Deposit,
+        Withdraw,
+        WithdrawAll,
+        Harvest,
+        WithdrawAndHarvest,
+        WithdrawAndHarvestAll,
+        WithdrawAmountFromAll
+    }
 
     struct TestAction {
         Actions action;
@@ -321,11 +338,12 @@ contract HarvesterTest is TestUtils {
         uint256 accMagicPerShare;
         uint256 pendingRewardsBefore;
         uint256 pendingRewards;
+        uint256 maxWithdrawableAmount;
         bytes revertString;
     }
 
     // workaround for "UnimplementedFeatureError: Copying of type struct memory to storage not yet supported."
-    uint256 public constant depositTestCasesLength = 9;
+    uint256 public constant depositTestCasesLength = 19;
 
     function getTestAction(uint256 _index) public view returns (TestAction memory) {
         TestAction[depositTestCasesLength] memory testDepositCases = [
@@ -352,6 +370,7 @@ contract HarvesterTest is TestUtils {
                 accMagicPerShare: 0,
                 pendingRewardsBefore: 0,
                 pendingRewards: 0,
+                maxWithdrawableAmount: 0,
                 revertString: ""
             }),
             TestAction({
@@ -376,6 +395,7 @@ contract HarvesterTest is TestUtils {
                 accMagicPerShare: 0.060606060606060606e18,
                 pendingRewardsBefore: 0,
                 pendingRewards: 0,
+                maxWithdrawableAmount: 0,
                 revertString: ""
             }),
             TestAction({
@@ -400,6 +420,7 @@ contract HarvesterTest is TestUtils {
                 accMagicPerShare: 0.060606060606060606e18,
                 pendingRewardsBefore: 0.099999999999999999e18,
                 pendingRewards: 0,
+                maxWithdrawableAmount: 0,
                 revertString: ""
             }),
             TestAction({
@@ -424,6 +445,7 @@ contract HarvesterTest is TestUtils {
                 accMagicPerShare: 0.060606060606060606e18,
                 pendingRewardsBefore: 0,
                 pendingRewards: 0,
+                maxWithdrawableAmount: 0,
                 revertString: "ZeroAmount()"
             }),
             TestAction({
@@ -448,6 +470,7 @@ contract HarvesterTest is TestUtils {
                 accMagicPerShare: 0.060606060606060606e18,
                 pendingRewardsBefore: 0,
                 pendingRewards: 0,
+                maxWithdrawableAmount: 0,
                 revertString: "StillLocked()"
             }),
             TestAction({
@@ -472,6 +495,7 @@ contract HarvesterTest is TestUtils {
                 accMagicPerShare: 0.060606060606060606e18,
                 pendingRewardsBefore: 0,
                 pendingRewards: 0,
+                maxWithdrawableAmount: 1e18,
                 revertString: ""
             }),
             TestAction({
@@ -496,6 +520,7 @@ contract HarvesterTest is TestUtils {
                 accMagicPerShare: 0.091470258136924803e18,
                 pendingRewardsBefore: 0,
                 pendingRewards: 0.099999999999999999e18,
+                maxWithdrawableAmount: 0,
                 revertString: ""
             }),
             TestAction({
@@ -520,6 +545,7 @@ contract HarvesterTest is TestUtils {
                 accMagicPerShare: 0.106902356902356901e18,
                 pendingRewardsBefore: 0.099999999999999999e18,
                 pendingRewards: 0.199999999999999994e18,
+                maxWithdrawableAmount: 1e18,
                 revertString: ""
             }),
             TestAction({
@@ -544,7 +570,258 @@ contract HarvesterTest is TestUtils {
                 accMagicPerShare: 0.106902356902356901e18,
                 pendingRewardsBefore: 0.199999999999999994e18,
                 pendingRewards: 0,
+                maxWithdrawableAmount: 1e18,
                 revertString: ""
+            }),
+            TestAction({
+                action: Actions.Deposit,
+                user: user2,
+                depositId: 3,
+                nftBoost: 1e18,
+                timeTravel: 0,
+                requestRewards: 0,
+                withdrawAmount: 0,
+                lock: 0,
+                originalDepositAmount: 1e18,
+                depositAmount: 1e18,
+                lockLpAmount: 1.1e18,
+                lockedUntil: 0,
+                globalDepositAmount: 1e18,
+                globalLockLpAmount: 1.1e18,
+                globalLpAmount: 2.2e18,
+                globalRewardDebt: 0.235185185185185182e18,
+                magicTotalDeposits: 1e18,
+                totalLpToken: 2.2e18,
+                accMagicPerShare: 0.106902356902356901e18,
+                pendingRewardsBefore: 0,
+                pendingRewards: 0,
+                maxWithdrawableAmount: 0,
+                revertString: ""
+            }),
+            TestAction({
+                action: Actions.Deposit,
+                user: user2,
+                depositId: 4,
+                nftBoost: 1e18,
+                timeTravel: harvester.ONE_WEEK(),
+                requestRewards: 0,
+                withdrawAmount: 0,
+                lock: 0,
+                originalDepositAmount: 1e18,
+                depositAmount: 1e18,
+                lockLpAmount: 1.1e18,
+                lockedUntil: 0,
+                globalDepositAmount: 2e18,
+                globalLockLpAmount: 2.2e18,
+                globalLpAmount: 4.4e18,
+                globalRewardDebt: 0.470370370370370364e18,
+                magicTotalDeposits: 2e18,
+                totalLpToken: 4.4e18,
+                accMagicPerShare: 0.106902356902356901e18,
+                pendingRewardsBefore: 0,
+                pendingRewards: 0,
+                maxWithdrawableAmount: 0,
+                revertString: ""
+            }),
+            TestAction({
+                action: Actions.Deposit,
+                user: user2,
+                depositId: 5,
+                nftBoost: 1e18,
+                timeTravel: harvester.ONE_WEEK(),
+                requestRewards: 0,
+                withdrawAmount: 0,
+                lock: 0,
+                originalDepositAmount: 1e18,
+                depositAmount: 1e18,
+                lockLpAmount: 1.1e18,
+                lockedUntil: 0,
+                globalDepositAmount: 3e18,
+                globalLockLpAmount: 3.3e18,
+                globalLpAmount: 6.6e18,
+                globalRewardDebt: 0.705555555555555546e18,
+                magicTotalDeposits: 3e18,
+                totalLpToken: 6.6e18,
+                accMagicPerShare: 0.106902356902356901e18,
+                pendingRewardsBefore: 0,
+                pendingRewards: 0,
+                maxWithdrawableAmount: 1e18,
+                revertString: ""
+            }),
+            TestAction({
+                action: Actions.WithdrawAmountFromAll,
+                user: user2,
+                depositId: 3,
+                nftBoost: 1e18,
+                timeTravel: 0,
+                requestRewards: 0,
+                withdrawAmount: 2e18,
+                lock: 0,
+                originalDepositAmount: 1e18,
+                depositAmount: 1e18,
+                lockLpAmount: 1.1e18,
+                lockedUntil: 0,
+                globalDepositAmount: 3e18,
+                globalLockLpAmount: 3.3e18,
+                globalLpAmount: 6.6e18,
+                globalRewardDebt: 0.705555555555555546e18,
+                magicTotalDeposits: 3e18,
+                totalLpToken: 6.6e18,
+                accMagicPerShare: 0.106902356902356901e18,
+                pendingRewardsBefore: 0,
+                pendingRewards: 0,
+                maxWithdrawableAmount: 1e18,
+                revertString: "StillLocked()"
+            }),
+            TestAction({
+                action: Actions.WithdrawAmountFromAll,
+                user: user2,
+                depositId: 3,
+                nftBoost: 1e18,
+                timeTravel: harvester.ONE_WEEK(),
+                requestRewards: 0,
+                withdrawAmount: 1.5e18,
+                lock: 0,
+                originalDepositAmount: 1e18,
+                depositAmount: 0,
+                lockLpAmount: 0,
+                lockedUntil: 0,
+                globalDepositAmount: 1.5e18,
+                globalLockLpAmount: 1.65e18,
+                globalLpAmount: 3.3e18,
+                globalRewardDebt: 0.352777777777777773e18,
+                magicTotalDeposits: 1.5e18,
+                totalLpToken: 3.3e18,
+                accMagicPerShare: 0.106902356902356901e18,
+                pendingRewardsBefore: 0,
+                pendingRewards: 0,
+                maxWithdrawableAmount: 2e18,
+                revertString: ""
+            }),
+            TestAction({
+                action: Actions.WithdrawAmountFromAll,
+                user: user2,
+                depositId: 3,
+                nftBoost: 1e18,
+                timeTravel: 0,
+                requestRewards: 0,
+                withdrawAmount: 0.5000001e18,
+                lock: 0,
+                originalDepositAmount: 1e18,
+                depositAmount: 0,
+                lockLpAmount: 0,
+                lockedUntil: 0,
+                globalDepositAmount: 1.5e18,
+                globalLockLpAmount: 1.65e18,
+                globalLpAmount: 3.3e18,
+                globalRewardDebt: 0.352777777777777773e18,
+                magicTotalDeposits: 1.5e18,
+                totalLpToken: 3.3e18,
+                accMagicPerShare: 0.106902356902356901e18,
+                pendingRewardsBefore: 0,
+                pendingRewards: 0,
+                maxWithdrawableAmount: 0.5e18,
+                revertString: "StillLocked()"
+            }),
+            TestAction({
+                action: Actions.WithdrawAmountFromAll,
+                user: user2,
+                depositId: 4,
+                nftBoost: 1e18,
+                timeTravel: harvester.ONE_WEEK(),
+                requestRewards: 0,
+                withdrawAmount: 1e18,
+                lock: 0,
+                originalDepositAmount: 1e18,
+                depositAmount: 0.5e18,
+                lockLpAmount: 0.55e18,
+                lockedUntil: 0,
+                globalDepositAmount: 0.5e18,
+                globalLockLpAmount: 0.55e18,
+                globalLpAmount: 1.1e18,
+                globalRewardDebt: 0.117592592592592591e18,
+                magicTotalDeposits: 0.5e18,
+                totalLpToken: 1.1e18,
+                accMagicPerShare: 0.106902356902356901e18,
+                pendingRewardsBefore: 0,
+                pendingRewards: 0,
+                maxWithdrawableAmount: 1.5e18,
+                revertString: ""
+            }),
+            TestAction({
+                action: Actions.WithdrawAmountFromAll,
+                user: user2,
+                depositId: 5,
+                nftBoost: 1e18,
+                timeTravel: 0,
+                requestRewards: 0,
+                withdrawAmount: 0.500001e18,
+                lock: 0,
+                originalDepositAmount: 1e18,
+                depositAmount: 0,
+                lockLpAmount: 0,
+                lockedUntil: 0,
+                globalDepositAmount: 0.5e18,
+                globalLockLpAmount: 0.55e18,
+                globalLpAmount: 1.1e18,
+                globalRewardDebt: 0.117592592592592591e18,
+                magicTotalDeposits: 0.5e18,
+                totalLpToken: 1.1e18,
+                accMagicPerShare: 0.106902356902356901e18,
+                pendingRewardsBefore: 0,
+                pendingRewards: 0,
+                maxWithdrawableAmount: 0.5e18,
+                revertString: "AmountTooBig()"
+            }),
+            TestAction({
+                action: Actions.WithdrawAmountFromAll,
+                user: user2,
+                depositId: 4,
+                nftBoost: 1e18,
+                timeTravel: 0,
+                requestRewards: 0,
+                withdrawAmount: 0.5e18,
+                lock: 0,
+                originalDepositAmount: 1e18,
+                depositAmount: 0,
+                lockLpAmount: 0,
+                lockedUntil: 0,
+                globalDepositAmount: 0,
+                globalLockLpAmount: 0,
+                globalLpAmount: 0,
+                globalRewardDebt: 0,
+                magicTotalDeposits: 0,
+                totalLpToken: 0,
+                accMagicPerShare: 0.106902356902356901e18,
+                pendingRewardsBefore: 0,
+                pendingRewards: 0,
+                maxWithdrawableAmount: 0.5e18,
+                revertString: ""
+            }),
+            TestAction({
+                action: Actions.WithdrawAmountFromAll,
+                user: user2,
+                depositId: 4,
+                nftBoost: 1e18,
+                timeTravel: 0,
+                requestRewards: 0,
+                withdrawAmount: 1,
+                lock: 0,
+                originalDepositAmount: 1e18,
+                depositAmount: 0,
+                lockLpAmount: 0,
+                lockedUntil: 0,
+                globalDepositAmount: 0,
+                globalLockLpAmount: 0,
+                globalLpAmount: 0,
+                globalRewardDebt: 0,
+                magicTotalDeposits: 0,
+                totalLpToken: 0,
+                accMagicPerShare: 0.106902356902356901e18,
+                pendingRewardsBefore: 0,
+                pendingRewards: 0,
+                maxWithdrawableAmount: 0,
+                revertString: "AmountTooBig()"
             })
         ];
 
@@ -552,7 +829,7 @@ contract HarvesterTest is TestUtils {
         console2.log("block.timestamp", block.timestamp);
         console2.log("timelock", timelock);
         if (testDepositCases[_index].action == Actions.Deposit) {
-            testDepositCases[_index].lockedUntil = block.timestamp + timelock;
+            testDepositCases[_index].lockedUntil = block.timestamp + timelock + testDepositCases[_index].timeTravel;
         } else {
             uint256 len = depositTestCasesLength;
             uint256 timeTravelAdjustment;
@@ -576,7 +853,7 @@ contract HarvesterTest is TestUtils {
     }
 
     function mockForAction(TestAction memory data) public {
-        vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getStakingRules, (parts)), abi.encode(stakingRules));
+        vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getStakingRules, (parts, partsTokenId)), abi.encode(stakingRules));
 
         vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getUserBoost, (data.user)), abi.encode(data.nftBoost));
         vm.mockCall(address(harvesterFactory), abi.encodeCall(IHarvesterFactory.middleman, ()), abi.encode(address(middlemanMock)));
@@ -588,6 +865,8 @@ contract HarvesterTest is TestUtils {
         if (data.timeTravel != 0) {
             vm.warp(block.timestamp + data.timeTravel);
         }
+
+        assertEq(harvester.getMaxWithdrawableAmount(data.user), data.maxWithdrawableAmount);
     }
 
     function doDeposit(TestAction memory data) public {
@@ -651,6 +930,25 @@ contract HarvesterTest is TestUtils {
             vm.prank(data.user);
             vm.expectRevert(data.revertString);
             harvester.withdrawAll();
+
+            uint256 balanceAfter = magic.balanceOf(data.user);
+            assertEq(balanceAfter, balanceBefore);
+        }
+    }
+
+    function doWithdrawAmountFromAll(TestAction memory data) public {
+        uint256 balanceBefore = magic.balanceOf(data.user);
+
+        if (data.revertString.length == 0) {
+            vm.prank(data.user);
+            harvester.withdrawAmountFromAll(data.withdrawAmount);
+
+            uint256 balanceAfter = magic.balanceOf(data.user);
+            assertEq(balanceAfter - data.withdrawAmount, balanceBefore);
+        } else {
+            vm.prank(data.user);
+            vm.expectRevert(data.revertString);
+            harvester.withdrawAmountFromAll(data.withdrawAmount);
 
             uint256 balanceAfter = magic.balanceOf(data.user);
             assertEq(balanceAfter, balanceBefore);
@@ -744,6 +1042,11 @@ contract HarvesterTest is TestUtils {
         assertEq(globalLockLpAmount, data.globalLockLpAmount);
         assertEq(globalLpAmount, data.globalLpAmount);
         assertEq(globalRewardDebt, data.globalRewardDebt);
+
+        uint256[] memory ids = harvester.getAllUserDepositIds(data.user);
+        for (uint256 i = 0; i < ids.length; i++) {
+            console2.log("allUserDepositIds[i]", ids[i]);
+        }
     }
 
     function test_depositWithdrawHarvestScenarios() public {
@@ -766,6 +1069,8 @@ contract HarvesterTest is TestUtils {
                 doWithdrawAndHarvest(data);
             } else if (data.action == Actions.WithdrawAndHarvestAll) {
                 doWithdrawAndHarvestAll(data);
+            } else if (data.action == Actions.WithdrawAmountFromAll) {
+                doWithdrawAmountFromAll(data);
             }
 
             checkState(data);
@@ -925,12 +1230,14 @@ contract HarvesterTest is TestUtils {
     }
 
     function test_setDepositCapPerWallet() public {
-        (address initParts, uint256 initCapPerPart) = harvester.depositCapPerWallet();
+        (address initParts, uint256 tokenId, uint256 initCapPerPart) = harvester.depositCapPerWallet();
         assertEq(initParts, initDepositCapPerWallet.parts);
+        assertEq(tokenId, initDepositCapPerWallet.partsTokenId);
         assertEq(initCapPerPart, initDepositCapPerWallet.capPerPart);
 
         IHarvester.CapConfig memory newDepositCapPerWallet = IHarvester.CapConfig({
             parts: parts,
+            partsTokenId: partsTokenId,
             capPerPart: 1e18
         });
 
@@ -943,8 +1250,9 @@ contract HarvesterTest is TestUtils {
         emit DepositCapPerWallet(newDepositCapPerWallet);
         harvester.setDepositCapPerWallet(newDepositCapPerWallet);
 
-        (address newParts, uint256 newCapPerPart) = harvester.depositCapPerWallet();
+        (address newParts, uint256 newTokenId, uint256 newCapPerPart) = harvester.depositCapPerWallet();
         assertEq(newParts, newDepositCapPerWallet.parts);
+        assertEq(newTokenId, newDepositCapPerWallet.partsTokenId);
         assertEq(newCapPerPart, newDepositCapPerWallet.capPerPart);
     }
 

@@ -29,14 +29,16 @@ contract LegionStakingRules is StakingRulesBase {
     event MaxStakeableTotal(uint256 maxStakeableTotal);
     event BoostFactor(uint256 boostFactor);
 
-    constructor(
+    function init(
         address _admin,
         address _harvesterFactory,
         ILegionMetadataStore _legionMetadataStore,
         uint256 _maxLegionWeight,
         uint256 _maxStakeableTotal,
         uint256 _boostFactor
-    ) StakingRulesBase(_admin, _harvesterFactory) {
+    ) external initializer {
+        _initStakingRulesBase(_admin, _harvesterFactory);
+
         legionMetadataStore = _legionMetadataStore;
 
         _setMaxWeight(_maxLegionWeight);

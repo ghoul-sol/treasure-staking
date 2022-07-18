@@ -4,6 +4,8 @@ import "foundry/lib/TestUtils.sol";
 import "foundry/lib/ERC721Mintable.sol";
 import "foundry/lib/ERC1155Mintable.sol";
 
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 import "contracts/harvester/HarvesterFactory.sol";
 import "contracts/harvester/Harvester.sol";
 import "contracts/harvester/NftHandler.sol";
@@ -16,6 +18,7 @@ contract HarvesterFactoryTest is TestUtils {
 
     address public admin = address(111);
     address public parts = address(222);
+    uint256 public partsTokenId = 7;
 
     address public harvesterImpl;
     address public nftHandlerImpl;
@@ -44,6 +47,7 @@ contract HarvesterFactoryTest is TestUtils {
 
     IHarvester.CapConfig public initDepositCapPerWallet = IHarvester.CapConfig({
         parts: parts,
+        partsTokenId: partsTokenId,
         capPerPart: 1e18
     });
 
@@ -53,26 +57,15 @@ contract HarvesterFactoryTest is TestUtils {
 
     function setUp() public {
         vm.label(admin, "admin");
+        address impl;
 
-        Harvester harvester = new Harvester();
-        harvester.init(
-            address(2),
-            INftHandler(address(2)),
-            IHarvester.CapConfig({
-                parts: address(2),
-                capPerPart: 2
-            })
-        );
-        harvesterImpl = address(harvester);
+        harvesterImpl = address(new Harvester());
+        nftHandlerImpl = address(new NftHandler());
 
-        address[] memory emptyArray = new address[](0);
-        INftHandler.NftConfig[] memory emptyConfig = new INftHandler.NftConfig[](0);
+        impl = address(new HarvesterFactory());
 
-        NftHandler nftHandler = new NftHandler();
-        nftHandler.init(address(2), address(2), emptyArray, emptyConfig);
-        nftHandlerImpl = address(nftHandler);
-
-        harvesterFactory = new HarvesterFactory(
+        harvesterFactory = HarvesterFactory(address(new ERC1967Proxy(impl, bytes(""))));
+        harvesterFactory.init(
             magic,
             middleman,
             admin,
@@ -84,7 +77,10 @@ contract HarvesterFactoryTest is TestUtils {
         nftErc1155 = new ERC1155Mintable();
         nftErc1155Treasures = new ERC1155Mintable();
 
-        erc721StakingRules = new LegionStakingRules(
+        impl = address(new LegionStakingRules());
+
+        erc721StakingRules = LegionStakingRules(address(new ERC1967Proxy(impl, bytes(""))));
+        erc721StakingRules.init(
             admin,
             address(harvesterFactory),
             ILegionMetadataStore(legionMetadataStore),
@@ -93,13 +89,19 @@ contract HarvesterFactoryTest is TestUtils {
             boostFactor
         );
 
-        erc1155TreasureStakingRules = new TreasureStakingRules(
+        impl = address(new TreasureStakingRules());
+
+        erc1155TreasureStakingRules = TreasureStakingRules(address(new ERC1967Proxy(impl, bytes(""))));
+        erc1155TreasureStakingRules.init(
             admin,
             address(harvesterFactory),
             maxStakeableTreasuresPerUser
         );
 
-        erc1155StakingRules = new ExtractorStakingRules(
+        impl = address(new ExtractorStakingRules());
+
+        erc1155StakingRules = ExtractorStakingRules(address(new ERC1967Proxy(impl, bytes(""))));
+        erc1155StakingRules.init(
             admin,
             address(harvesterFactory),
             address(nftErc1155),
@@ -122,7 +124,7 @@ contract HarvesterFactoryTest is TestUtils {
         assertTrue(address(harvesterFactory.nftHandlerBeacon()) != address(0));
     }
 
-    function getNftAndNftConfig() public view returns (address[] memory, INftHandler.NftConfig[] memory) {
+    function getNftAndNftConfig() public view returns (address[] memory, uint256[] memory, INftHandler.NftConfig[] memory) {
         INftHandler.NftConfig memory erc721Config = INftHandler.NftConfig({
             supportedInterface: INftHandler.Interfaces.ERC721,
             stakingRules: IStakingRules(address(erc721StakingRules))
@@ -143,12 +145,17 @@ contract HarvesterFactoryTest is TestUtils {
         nfts[1] = address(nftErc1155);
         nfts[2] = address(nftErc1155Treasures);
 
+        uint256[] memory tokenIds = new uint256[](3);
+        tokenIds[0] = NftHandler(nftHandlerImpl).DEFAULT_ID();
+        tokenIds[1] = NftHandler(nftHandlerImpl).DEFAULT_ID();
+        tokenIds[2] = NftHandler(nftHandlerImpl).DEFAULT_ID();
+
         INftHandler.NftConfig[] memory nftConfigs = new INftHandler.NftConfig[](3);
         nftConfigs[0] = erc721Config;
         nftConfigs[1] = erc1155Config;
         nftConfigs[2] = erc1155TreasuresConfig;
 
-        return (nfts, nftConfigs);
+        return (nfts, tokenIds, nftConfigs);
     }
 
     function checkHarvesterInit(IHarvester _harvester, INftHandler _nftHandler) public {
@@ -159,8 +166,9 @@ contract HarvesterFactoryTest is TestUtils {
         assertEq(address(harvester.factory()), address(harvesterFactory));
         assertEq(address(harvester.nftHandler()), address(_nftHandler));
 
-        (address initParts, uint256 initCapPerPart) = harvester.depositCapPerWallet();
+        (address initParts, uint256 tokenId, uint256 initCapPerPart) = harvester.depositCapPerWallet();
         assertEq(initParts, initDepositCapPerWallet.parts);
+        assertEq(tokenId, initDepositCapPerWallet.partsTokenId);
         assertEq(initCapPerPart, initDepositCapPerWallet.capPerPart);
     }
 
@@ -174,17 +182,18 @@ contract HarvesterFactoryTest is TestUtils {
     function test_deployHarvester() public {
         assertEq(harvesterFactory.getHarvester(0), address(0));
         address[] memory emptyArray = new address[](0);
+        uint256[] memory emptyUnit = new uint256[](0);
         assertAddressArrayEq(harvesterFactory.getAllHarvesters(), emptyArray);
         assertEq(harvesterFactory.getAllHarvestersLength(), 0);
 
-        (address[] memory nfts, INftHandler.NftConfig[] memory nftConfigs) = getNftAndNftConfig();
+        (address[] memory nfts, uint256[] memory tokenIds, INftHandler.NftConfig[] memory nftConfigs) = getNftAndNftConfig();
 
         bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), harvesterFactory.HF_DEPLOYER());
         vm.expectRevert(errorMsg);
-        harvesterFactory.deployHarvester(admin, initDepositCapPerWallet, nfts, nftConfigs);
+        harvesterFactory.deployHarvester(admin, initDepositCapPerWallet, nfts, tokenIds, nftConfigs);
 
         vm.prank(admin);
-        harvesterFactory.deployHarvester(admin, initDepositCapPerWallet, nfts, nftConfigs);
+        harvesterFactory.deployHarvester(admin, initDepositCapPerWallet, nfts, tokenIds, nftConfigs);
 
         IHarvester harvester = IHarvester(harvesterFactory.getHarvester(0));
 
@@ -194,6 +203,7 @@ contract HarvesterFactoryTest is TestUtils {
             INftHandler(address(2)),
             IHarvester.CapConfig({
                 parts: address(2),
+                partsTokenId: 1,
                 capPerPart: 2
             })
         );
@@ -208,17 +218,17 @@ contract HarvesterFactoryTest is TestUtils {
         INftHandler nftHandler = harvester.nftHandler();
 
         vm.expectRevert("Initializable: contract is already initialized");
-        nftHandler.init(address(2), address(2), emptyArray, emptyConfig);
+        nftHandler.init(address(2), address(2), emptyArray, emptyUnit, emptyConfig);
 
         checkHarvesterInit(harvester, nftHandler);
         checkNftHandlerInit(nftHandler, harvester);
     }
 
     function deployHarvester() public returns (IHarvester) {
-        (address[] memory nfts, INftHandler.NftConfig[] memory nftConfigs) = getNftAndNftConfig();
+        (address[] memory nfts, uint256[] memory tokenIds, INftHandler.NftConfig[] memory nftConfigs) = getNftAndNftConfig();
 
         vm.prank(admin);
-        harvesterFactory.deployHarvester(admin, initDepositCapPerWallet, nfts, nftConfigs);
+        harvesterFactory.deployHarvester(admin, initDepositCapPerWallet, nfts, tokenIds, nftConfigs);
 
         return IHarvester(harvesterFactory.getHarvester(0));
     }

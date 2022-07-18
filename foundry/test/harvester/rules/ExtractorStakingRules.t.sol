@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 import "foundry/lib/TestUtils.sol";
 import "foundry/lib/Mock.sol";
 
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 import "contracts/harvester/interfaces/INftHandler.sol";
 import "contracts/harvester/interfaces/IHarvester.sol";
 import 'contracts/harvester/lib/Constant.sol';
@@ -11,31 +13,29 @@ import "contracts/harvester/rules/ExtractorStakingRules.sol";
 contract ExtractorStakingRulesTest is TestUtils {
     ExtractorStakingRules public extractorRules;
 
-    address public admin;
-    address public harvesterFactory;
-    address public extractorAddress;
-    uint256 public maxStakeable;
-    uint256 public lifetime;
+    address public admin = address(111);
+    address public harvesterFactory = address(222);
+    address public extractorAddress = address(333);
+    uint256 public maxStakeable = 10;
+    uint256 public lifetime = 3600;
+    uint256 public extractorBoost = 1e18;
 
     event MaxStakeable(uint256 maxStakeable);
     event ExtractorBoost(uint256 tokenId, uint256 boost);
-    event ExtractorStaked(uint256 tokenId, uint256 amount);
+    event ExtractorStaked(uint256 tokenId, uint256 spotId, uint256 amount);
     event ExtractorReplaced(uint256 tokenId, uint256 replacedSpotId);
     event Lifetime(uint256 lifetime);
     event ExtractorAddress(address extractorAddress);
 
     function setUp() public {
-        admin = address(111);
         vm.label(admin, "admin");
-        harvesterFactory = address(222);
         vm.label(harvesterFactory, "harvesterFactory");
-        extractorAddress = address(333);
         vm.label(extractorAddress, "extractorAddress");
 
-        maxStakeable = 10;
-        lifetime = 3600;
+        address impl = address(new ExtractorStakingRules());
 
-        extractorRules = new ExtractorStakingRules(admin, harvesterFactory, extractorAddress, maxStakeable, lifetime);
+        extractorRules = ExtractorStakingRules(address(new ERC1967Proxy(impl, bytes(""))));
+        extractorRules.init(admin, harvesterFactory, extractorAddress, maxStakeable, lifetime);
     }
 
     function stakeExtractor(address _user, uint256 _tokenId, uint256 _amount) public {
@@ -43,6 +43,9 @@ contract ExtractorStakingRulesTest is TestUtils {
             vm.prank(harvesterFactory);
             extractorRules.setNftHandler(address(this));
         }
+
+        vm.prank(admin);
+        extractorRules.setExtractorBoost(_tokenId, extractorBoost);
 
         extractorRules.canStake(_user, extractorAddress, _tokenId, _amount);
     }
@@ -67,13 +70,21 @@ contract ExtractorStakingRulesTest is TestUtils {
         vm.expectRevert("ZeroAmount()");
         extractorRules.canStake(_user, extractorAddress, _tokenId, 0);
 
+        vm.expectRevert(bytes("ZeroBoost()"));
+        extractorRules.canStake(_user, extractorAddress, _tokenId, _amount);
+
+        vm.prank(admin);
+        extractorRules.setExtractorBoost(_tokenId, extractorBoost);
+
         vm.expectRevert(bytes("MaxStakeable()"));
         extractorRules.canStake(_user, extractorAddress, _tokenId, maxStakeable + 1);
 
         assertEq(extractorRules.getExtractorCount(), 0);
 
+        uint256 spotId = extractorRules.getExtractorCount() + _amount - 1;
+
         vm.expectEmit(true, true, true, true);
-        emit ExtractorStaked(_tokenId, _amount);
+        emit ExtractorStaked(_tokenId, spotId, _amount);
         extractorRules.canStake(_user, extractorAddress, _tokenId, _amount);
 
         assertEq(extractorRules.getExtractorCount(), _amount);
@@ -89,12 +100,8 @@ contract ExtractorStakingRulesTest is TestUtils {
             assertEq(extractors[i].stakedTimestamp, block.timestamp);
         }
 
-        assertEq(extractorRules.getExtractorsTotalBoost(), 0);
-        assertEq(extractorRules.getHarvesterBoost(), 1e18);
-        vm.prank(admin);
-        extractorRules.setExtractorBoost(_tokenId, 1e18);
-        assertEq(extractorRules.getExtractorsTotalBoost(), _amount * 1e18);
-        assertEq(extractorRules.getHarvesterBoost(), _amount * 1e18 + 1e18);
+        assertEq(extractorRules.getExtractorsTotalBoost(), _amount * extractorBoost);
+        assertEq(extractorRules.getHarvesterBoost(), 1e18 + _amount * extractorBoost);
 
         assertEq(extractorRules.getUserBoost(_user, extractorAddress, _tokenId, _amount), 0);
     }
@@ -255,16 +262,18 @@ contract ExtractorStakingRulesTest is TestUtils {
         uint256 boost = 5e17;
 
         assertEq(extractorRules.getExtractorsTotalBoost(), 0);
-        vm.prank(admin);
-        extractorRules.setExtractorBoost(tokenId, boost);
 
         stakeExtractor(user, tokenId, _amount);
+        vm.prank(admin);
+        extractorRules.setExtractorBoost(tokenId, boost);
 
         assertEq(extractorRules.getExtractorsTotalBoost(), _amount * boost);
 
         vm.warp(block.timestamp + lifetime);
 
         stakeExtractor(user, tokenId, maxStakeable - _amount);
+        vm.prank(admin);
+        extractorRules.setExtractorBoost(tokenId, boost);
 
         assertEq(extractorRules.getExtractorsTotalBoost(), maxStakeable * boost);
 

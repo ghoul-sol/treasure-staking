@@ -1,20 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.13;
 
-import '@openzeppelin/contracts/access/AccessControlEnumerable.sol';
+import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
 
 import '../interfaces/IStakingRules.sol';
 
 import '../lib/Constant.sol';
 
-abstract contract StakingRulesBase is IStakingRules, AccessControlEnumerable {
+abstract contract StakingRulesBase is IStakingRules, AccessControlEnumerableUpgradeable {
     bytes32 public constant SR_ADMIN = keccak256("SR_ADMIN");
     bytes32 public constant SR_NFT_HANDLER = keccak256("SR_NFT_HANDLER");
     /// @dev temporary role assigned to harvester factory to setup nftHandler after it's deployed
     ///      (solves circular dependency)
     bytes32 public constant SR_HARVESTER_FACTORY = keccak256("SR_HARVESTER_FACTORY");
 
-    constructor(address _admin, address _harvesterFactory) {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
+    
+    function _initStakingRulesBase(address _admin, address _harvesterFactory) internal onlyInitializing {
+        __AccessControlEnumerable_init();
+
         _setRoleAdmin(SR_ADMIN, SR_ADMIN);
         _setRoleAdmin(SR_NFT_HANDLER, SR_ADMIN);
         _setRoleAdmin(SR_HARVESTER_FACTORY, SR_ADMIN);

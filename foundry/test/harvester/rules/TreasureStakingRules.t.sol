@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 import "foundry/lib/TestUtils.sol";
 import "foundry/lib/Mock.sol";
 
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 import "contracts/harvester/interfaces/INftHandler.sol";
 import "contracts/harvester/interfaces/IHarvester.sol";
 import "contracts/harvester/rules/TreasureStakingRules.sol";
@@ -35,7 +37,10 @@ contract TreasureStakingRulesTest is TestUtils {
 
         maxStakeablePerUser = 20;
 
-        treasureRules = new TreasureStakingRules(
+        address impl = address(new TreasureStakingRules());
+
+        treasureRules = TreasureStakingRules(address(new ERC1967Proxy(impl, bytes(""))));
+        treasureRules.init(
             admin,
             harvesterFactory,
             maxStakeablePerUser
@@ -105,7 +110,6 @@ contract TreasureStakingRulesTest is TestUtils {
         uint256 _tokenId,
         uint256 _amount
     ) public {
-
         vm.prank(harvesterFactory);
         treasureRules.setNftHandler(address(this));
 
@@ -116,6 +120,8 @@ contract TreasureStakingRulesTest is TestUtils {
 
         assertEq(treasureRules.maxStakeablePerUser(), _amount);
         assertEq(treasureRules.getAmountTreasuresStaked(_user), 0);
+
+        vm.assume(_user != address(0));
 
         treasureRules.canStake(_user, _nft, _tokenId, _amount);
         assertEq(treasureRules.getAmountTreasuresStaked(_user), _amount);

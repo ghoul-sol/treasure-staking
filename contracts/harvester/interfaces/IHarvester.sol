@@ -15,6 +15,7 @@ interface IHarvester {
 
     struct CapConfig {
         address parts;
+        uint256 partsTokenId;
         uint256 capPerPart;
     }
 

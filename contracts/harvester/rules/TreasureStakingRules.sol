@@ -4,7 +4,6 @@ pragma solidity 0.8.13;
 import "./StakingRulesBase.sol";
 
 contract TreasureStakingRules is StakingRulesBase {
-
     uint256 public maxStakeablePerUser;
 
     mapping(address => uint256) public getAmountTreasuresStaked;
@@ -18,11 +17,8 @@ contract TreasureStakingRules is StakingRulesBase {
         _;
     }
 
-    constructor(
-        address _admin,
-        address _harvesterFactory,
-        uint256 _maxStakeablePerUser
-    ) StakingRulesBase(_admin, _harvesterFactory) {
+    function init(address _admin, address _harvesterFactory, uint256 _maxStakeablePerUser) external initializer {
+        _initStakingRulesBase(_admin, _harvesterFactory);
 
         _setMaxStakeablePerUser(_maxStakeablePerUser);
     }
