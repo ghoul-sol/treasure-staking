@@ -236,6 +236,16 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         }
     }
 
+    function getMaxWithdrawableAmount(address _user) public view returns (uint256 withdrawable) {
+        uint256[] memory depositIds = allUserDepositIds[_user].values();
+
+        for (uint256 i = 0; i < depositIds.length; i++) {
+            uint256 depositId = depositIds[i];
+
+            withdrawable += calcualteVestedPrincipal(_user, depositId);
+        }
+    }
+
     function updateNftBoost(address _user) external returns (bool) {
         _recalculateGlobalLp(_user, 0, 0);
 
@@ -328,8 +338,26 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         return true;
     }
 
-    // TODO: withdraw amount from all deposits
-    // TODO: get max global withdraw amount
+    function withdrawAmountFromAll(uint256 _amount) public {
+        uint256[] memory depositIds = allUserDepositIds[msg.sender].values();
+
+        for (uint256 i = 0; i < depositIds.length; i++) {
+            UserInfo storage user = userInfo[msg.sender][depositIds[i]];
+            uint256 depositAmount = user.depositAmount;
+            if (depositAmount == 0) continue;
+
+            uint256 amountToWithdrawFromDeposit = _amount >= depositAmount ? depositAmount : _amount;
+
+            _amount -= amountToWithdrawFromDeposit;
+
+            withdrawPosition(depositIds[i], amountToWithdrawFromDeposit);
+
+            if (_amount == 0) return;
+        }
+
+        if (_amount > 0) revert("AmountTooBig()");
+    }
+
     function withdrawAll() public {
         uint256[] memory depositIds = allUserDepositIds[msg.sender].values();
         for (uint256 i = 0; i < depositIds.length; i++) {
