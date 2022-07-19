@@ -12,6 +12,8 @@ import './interfaces/INftHandler.sol';
 import './interfaces/IHarvester.sol';
 import './interfaces/IMiddleman.sol';
 
+import './rules/StakingRulesBase.sol';
+
 contract HarvesterFactory is AccessControlEnumerableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -92,7 +94,12 @@ contract HarvesterFactory is AccessControlEnumerableUpgradeable {
         address nftHandler = address(new BeaconProxy(address(nftHandlerBeacon), bytes("")));
 
         for (uint256 i = 0; i < _nfts.length; i++) {
-            _nftConfigs[i].stakingRules.setNftHandler(nftHandler);
+            address rules = address(_nftConfigs[i].stakingRules);
+            bytes32 SR_NFT_HANDLER = StakingRulesBase(rules).SR_NFT_HANDLER();
+
+            if (!IAccessControlUpgradeable(rules).hasRole(SR_NFT_HANDLER, nftHandler)) {
+                _nftConfigs[i].stakingRules.setNftHandler(nftHandler);
+            }
         }
 
         bytes memory harvesterData = abi.encodeCall(IHarvester.init, (_admin, INftHandler(nftHandler), _depositCapPerWallet));
