@@ -113,7 +113,7 @@ contract TreasureStakingRulesTest is TestUtils {
         vm.prank(harvesterFactory);
         treasureRules.setNftHandler(address(this));
 
-        vm.assume(_amount > 0 && _amount < 10);
+        vm.assume(_amount > 0 && _amount < 1e6);
 
         vm.prank(admin);
         treasureRules.setMaxStakeablePerUser(_amount);
@@ -126,9 +126,9 @@ contract TreasureStakingRulesTest is TestUtils {
         treasureRules.canStake(_user, _nft, _tokenId, _amount);
         assertEq(treasureRules.getAmountTreasuresStaked(_user), _amount);
 
-        // TreasureStakingRules harvesterBoost is always 0,
+        // TreasureStakingRules harvesterBoost multiplier is always 1 (no effect),
         // no matter how many Treasures are staked, affects userBoost only
-        assertEq(treasureRules.getHarvesterBoost(), 0);
+        assertEq(treasureRules.getHarvesterBoost(), Constant.ONE);
     }
 
     function test_canStake(

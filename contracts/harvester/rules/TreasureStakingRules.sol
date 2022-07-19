@@ -31,7 +31,7 @@ contract TreasureStakingRules is StakingRulesBase {
     /// @inheritdoc IStakingRules
     function getHarvesterBoost() external pure returns (uint256) {
         // Treasure staking only boosts userBoost, not harvesterBoost
-        return 0;
+        return Constant.ONE;
     }
 
     function getTreasureBoost(uint256 _tokenId, uint256 _amount) public pure returns (uint256 boost) {
