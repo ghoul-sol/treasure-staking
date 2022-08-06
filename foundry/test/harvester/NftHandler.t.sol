@@ -877,4 +877,111 @@ contract NftHandlerTest is TestUtils, ERC1155Holder {
         assertEq(nftErc1155.balanceOf(address(nftHandler), tokenId), amount - 1);
         assertEq(nftErc1155.balanceOf(address(nftHandler), replaceTokenId), 1);
     }
+
+    function prepareBatchStakeExtractor() public returns (
+        address[] memory _nft,
+        uint256[] memory _tokenId,
+        uint256[] memory _amount,
+        uint256[] memory _wrongAmount
+    ) {
+        _nft = new address[](3);
+        _tokenId = new uint256[](3);
+        _amount = new uint256[](3);
+        _wrongAmount = new uint256[](99);
+
+        _nft[0] = address(nftErc1155);
+        _nft[1] = address(nftErc1155);
+        _nft[2] = address(nftErc1155);
+
+        _tokenId[0] = 1;
+        _tokenId[1] = 2;
+        _tokenId[2] = 3;
+
+        _amount[0] = 4;
+        _amount[1] = 2;
+        _amount[2] = 4;
+
+        for (uint256 i = 0; i < _nft.length; i++) {
+            prepareNftHelperERC1155(_tokenId[i], _amount[i]);
+        }
+
+        return (_nft, _tokenId, _amount, _wrongAmount);
+    }
+
+    function validateBatchStakeExtractor(uint256[] memory _tokenId, uint256[] memory _amount) public {
+        for (uint256 i = 0; i < _tokenId.length; i++) {
+            assertEq(nftHandler.stakedNfts(address(this), address(nftErc1155), _tokenId[i]), _amount[i]);
+        }
+    }
+
+    function prepareBatchReplace() public returns (
+        address[] memory _nftReplace,
+        uint256[] memory _tokenIdReplace,
+        uint256[] memory _amountReplace,
+        uint256[] memory _replacedSpotIdReplaced
+    ) {
+        uint256 extractorCount = erc1155StakingRules.getExtractorCount();
+
+        _nftReplace = new address[](extractorCount);
+        _tokenIdReplace = new uint256[](extractorCount);
+        _amountReplace = new uint256[](extractorCount);
+        _replacedSpotIdReplaced = new uint256[](extractorCount);
+
+        for (uint256 i = 0; i < extractorCount; i++) {
+            _nftReplace[i] = address(nftErc1155);
+            _tokenIdReplace[i] = i + 10;
+            _amountReplace[i] = 1;
+            _replacedSpotIdReplaced[i] = i;
+
+            (, uint256 tokenId,) = erc1155StakingRules.stakedExtractor(i);
+            uint256 currentBoost = erc1155StakingRules.extractorBoost(tokenId);
+
+            vm.prank(admin);
+            erc1155StakingRules.setExtractorBoost(_tokenIdReplace[i], currentBoost + 1);
+
+            nftErc1155.mint(address(this), _tokenIdReplace[i], _amountReplace[i]);
+            nftErc1155.setApprovalForAll(address(nftHandler), true);
+        }
+    }
+
+    function validateBatchReplace(
+        uint256[] memory _tokenId,
+        uint256[] memory _amount,
+        uint256[] memory _replacedSpotId
+    ) public {
+        for (uint256 i = 0; i < _tokenId.length; i++) {
+            assertEq(nftHandler.stakedNfts(address(this), address(nftErc1155), _tokenId[i]), _amount[i]);
+
+            (, uint256 tokenId,) = erc1155StakingRules.stakedExtractor(_replacedSpotId[i]);
+
+            assertEq(tokenId, _tokenId[i]);
+        }
+    }
+
+    function test_batchReplaceExtractor() public {
+        (
+            address[] memory _nft,
+            uint256[] memory _tokenId,
+            uint256[] memory _amount,
+            uint256[] memory _wrongAmount
+        ) = prepareBatchStakeExtractor();
+
+        nftHandler.batchStakeNft(_nft, _tokenId, _amount);
+        validateBatchStakeExtractor(_tokenId, _amount);
+
+        uint256[] memory replacedSpotId = new uint256[](3);
+
+        vm.expectRevert("InvalidData()");
+        nftHandler.batchReplaceExtractor(_nft, _tokenId, _wrongAmount, replacedSpotId);
+
+        (
+            address[] memory _nftReplace,
+            uint256[] memory _tokenIdReplace,
+            uint256[] memory _amountReplace,
+            uint256[] memory _replacedSpotIdReplace
+        ) = prepareBatchReplace();
+
+        nftHandler.batchReplaceExtractor(_nftReplace, _tokenIdReplace, _amountReplace, _replacedSpotIdReplace);
+        validateBatchReplace(_tokenIdReplace, _amountReplace, _replacedSpotIdReplace);
+    }
 }
