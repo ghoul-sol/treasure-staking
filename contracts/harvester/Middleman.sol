@@ -99,29 +99,29 @@ contract Middleman is AccessControlEnumerableUpgradeable {
 
     /// @dev Returns share in mining power for all harvesters. To get percentage of mining power
     ///      for given harvester do:
-    ///      `harvesterShare[i] / totalShare`, where `i` is index of harvester address in `allHarvesters`
+    ///      `harvesterShare[i] / totalShare`, where `i` is index of harvester address in `allActiveHarvesters`
     ///      array.
     /// @param _targetHarvester optional parameter, you can safely use `address(0)`. If you are looking
     ///        for specific harvester, provide its address as param and `targetIndex` will return index
-    ///        of harvester in question in `allHarvesters` array.
-    /// @return allHarvesters array of all harvesters
-    /// @return harvesterShare share in mining power for each harvester in `allHarvesters` array
+    ///        of harvester in question in `allActiveHarvesters` array.
+    /// @return allActiveHarvesters array of all harvesters
+    /// @return harvesterShare share in mining power for each harvester in `allActiveHarvesters` array
     /// @return totalShare sum of all shares (includes `atlasMineBoost` if AtlasMine is setup)
-    /// @return targetIndex index of `_targetHarvester` in `allHarvesters` array
+    /// @return targetIndex index of `_targetHarvester` in `allActiveHarvesters` array
     function getHarvesterShares(address _targetHarvester) public view returns (
-        address[] memory allHarvesters,
+        address[] memory allActiveHarvesters,
         uint256[] memory harvesterShare,
         uint256 totalShare,
         uint256 targetIndex
     ) {
-        allHarvesters = harvesterFactory.getAllActiveHarvesters();
-        harvesterShare = new uint256[](allHarvesters.length);
+        allActiveHarvesters = harvesterFactory.getAllActiveHarvesters();
+        harvesterShare = new uint256[](allActiveHarvesters.length);
 
-        for (uint256 i = 0; i < allHarvesters.length; i++) {
-            harvesterShare[i] = getHarvesterEmissionsShare(allHarvesters[i]);
+        for (uint256 i = 0; i < allActiveHarvesters.length; i++) {
+            harvesterShare[i] = getHarvesterEmissionsShare(allActiveHarvesters[i]);
             totalShare += harvesterShare[i];
 
-            if (allHarvesters[i] == _targetHarvester) {
+            if (allActiveHarvesters[i] == _targetHarvester) {
                 targetIndex = i;
             }
         }
@@ -135,13 +135,13 @@ contract Middleman is AccessControlEnumerableUpgradeable {
         uint256 pendingRewards = masterOfCoin.getPendingRewards(address(this));
 
         (
-            address[] memory allHarvesters,
+            address[] memory allActiveHarvesters,
             uint256[] memory harvesterShare,
             uint256 totalShare,
             uint256 targetIndex
         ) = getHarvesterShares(_harvester);
 
-        uint256 unpaidRewards = rewardsBalance[allHarvesters[targetIndex]].unpaid;
+        uint256 unpaidRewards = rewardsBalance[allActiveHarvesters[targetIndex]].unpaid;
         return unpaidRewards + pendingRewards * harvesterShare[targetIndex] / totalShare;
     }
 
@@ -212,7 +212,7 @@ contract Middleman is AccessControlEnumerableUpgradeable {
         uint256 distributedRewards = masterOfCoin.requestRewards();
 
         (
-            address[] memory allHarvesters,
+            address[] memory allActiveHarvesters,
             uint256[] memory harvesterShare,
             uint256 totalShare,
         ) = getHarvesterShares(address(0));
@@ -222,7 +222,7 @@ contract Middleman is AccessControlEnumerableUpgradeable {
         }
 
         for (uint256 i = 0; i < harvesterShare.length; i++) {
-            rewardsBalance[allHarvesters[i]].unpaid += distributedRewards * harvesterShare[i] / totalShare;
+            rewardsBalance[allActiveHarvesters[i]].unpaid += distributedRewards * harvesterShare[i] / totalShare;
         }
     }
 
