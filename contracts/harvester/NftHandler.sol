@@ -240,7 +240,7 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
     }
 
     function replaceExtractor(address _nft, uint256 _tokenId, uint256 _amount, uint256 _replacedSpotId)
-        external
+        public
         validateInput(_nft, _amount)
     {
         IExtractorStakingRules stakingRules = IExtractorStakingRules(address(getStakingRules(_nft, _tokenId)));
@@ -262,6 +262,22 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
 
         emit Replaced(_nft, _tokenId, _amount, _replacedSpotId);
     }
+
+    function batchReplaceExtractor(
+        address[] memory _nft,
+        uint256[] memory _tokenId,
+        uint256[] memory _amount,
+        uint256[] memory _replacedSpotId
+    ) external {
+        if (_nft.length != _tokenId.length || _tokenId.length != _amount.length) revert("InvalidData()");
+
+        uint256 len = _nft.length;
+
+        for (uint256 i = 0; i < len; i++) {
+            replaceExtractor(_nft[i], _tokenId[i], _amount[i], _replacedSpotId[i]);
+        }
+    }
+
 
     // ADMIN
 
