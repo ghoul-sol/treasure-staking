@@ -156,10 +156,6 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
         emit ExtractorBoost(_tokenId, _boost);
     }
 
-    function setExtractorAddress(address _extractorAddress) external onlyRole(SR_ADMIN) {
-        _setExtractorAddress(_extractorAddress);
-    }
-
     function setExtractorLifetime(uint256 _lifetime) external onlyRole(SR_ADMIN) {
         _setExtractorLifetime(_lifetime);
     }
