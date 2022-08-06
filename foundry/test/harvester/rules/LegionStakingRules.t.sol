@@ -75,9 +75,9 @@ contract LegionStakingRulesTest is TestUtils {
             // Genesis Legions
             TestCase(0, 0, 600e16, 4e18, 120e18), // LEGENDARY
             TestCase(0, 1, 200e16, 4e18, 40e18), // RARE
-            TestCase(0, 2, 75e16, 2e18, 15e18), // SPECIAL
-            TestCase(0, 3, 100e16, 3e18, 20e18), // UNCOMMON
-            TestCase(0, 4, 50e16, 1.5e18, 10e18), // COMMON
+            TestCase(0, 2, 75e16, 2e18, 16e18), // SPECIAL
+            TestCase(0, 3, 100e16, 3e18, 21e18), // UNCOMMON
+            TestCase(0, 4, 50e16, 1.5e18, 11e18), // COMMON
             TestCase(0, 5, 0, illegalRank, illegalWeight), // RECRUIT
             // Aux Legions
             TestCase(1, 0, 0, illegalRank, illegalWeight),

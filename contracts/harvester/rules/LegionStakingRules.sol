@@ -63,10 +63,10 @@ contract LegionStakingRules is StakingRulesBase {
         legionWeightMatrix = [
             // GENESIS
             // LEGENDARY,RARE,SPECIAL,UNCOMMON,COMMON,RECRUIT
-            [uint256(120e18), uint256(40e18), uint256(15e18), uint256(20e18), uint256(10e18), illegalWeight],
+            [uint256(120e18), uint256(40e18), uint256(16e18), uint256(21e18), uint256(11e18), illegalWeight],
             // AUXILIARY
             // LEGENDARY,RARE,SPECIAL,UNCOMMON,COMMON,RECRUIT
-            [illegalWeight, uint256(55e17), illegalWeight, uint256(4e18), uint256(25e17), illegalWeight],
+            [illegalWeight, uint256(5.5e18), illegalWeight, uint256(4e18), uint256(2.5e18), illegalWeight],
             // RECRUIT
             // LEGENDARY,RARE,SPECIAL,UNCOMMON,COMMON,RECRUIT
             [illegalWeight, illegalWeight, illegalWeight, illegalWeight, illegalWeight, illegalWeight]
