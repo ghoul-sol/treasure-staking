@@ -346,23 +346,6 @@ contract ExtractorStakingRulesTest is TestUtils {
         assertEq(extractorRules.extractorBoost(tokenId), _boost);
     }
 
-    function test_setExtractorAddress(address _extractorAddress) public {
-        vm.assume(_extractorAddress != extractorAddress);
-
-        assertEq(extractorRules.extractorAddress(), extractorAddress);
-
-        bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), extractorRules.SR_ADMIN());
-        vm.expectRevert(errorMsg);
-        extractorRules.setExtractorAddress(_extractorAddress);
-
-        vm.prank(admin);
-        vm.expectEmit(true, true, true, true);
-        emit ExtractorAddress(_extractorAddress);
-        extractorRules.setExtractorAddress(_extractorAddress);
-
-        assertEq(extractorRules.extractorAddress(), _extractorAddress);
-    }
-
     function test_setExtractorLifetime(uint256 _lifetime) public {
         vm.assume(_lifetime != lifetime);
 
