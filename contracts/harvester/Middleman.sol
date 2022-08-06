@@ -38,8 +38,6 @@ contract Middleman is AccessControlEnumerableUpgradeable {
 
     uint256[][] public corruptionNegativeBoostMatrix;
 
-    EnumerableSet.AddressSet private excludedAddresses;
-
     event RewardsPaid(address indexed stream, uint256 rewardsPaid, uint256 rewardsPaidInTotal);
     event CorruptionToken(IERC20 corruptionToken);
     event HarvesterFactory(IHarvesterFactory harvesterFactory);
@@ -59,7 +57,7 @@ contract Middleman is AccessControlEnumerableUpgradeable {
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
-    
+
     function init(
         address _admin,
         IMasterOfCoin _masterOfCoin,
@@ -198,24 +196,12 @@ contract Middleman is AccessControlEnumerableUpgradeable {
     }
 
     function getUtilization(address _harvester) public view returns (uint256 util) {
-        IERC20 magic = harvesterFactory.magic();
-        uint256 circulatingSupply = magic.totalSupply();
-        uint256 magicTotalDeposits = IHarvester(_harvester).magicTotalDeposits();
+        uint256 totalDepositCap = IHarvester(_harvester).totalDepositCap();
 
-        uint256 len = excludedAddresses.length();
-        for (uint256 i = 0; i < len; i++) {
-            circulatingSupply -= magic.balanceOf(excludedAddresses.at(i));
+        if (totalDepositCap != 0) {
+            uint256 magicTotalDeposits = IHarvester(_harvester).magicTotalDeposits();
+            util = magicTotalDeposits * Constant.ONE / totalDepositCap;
         }
-
-        uint256 rewardsAmount = magic.balanceOf(_harvester) - magicTotalDeposits;
-        circulatingSupply -= rewardsAmount;
-        if (circulatingSupply != 0) {
-            util = magicTotalDeposits * Constant.ONE / circulatingSupply;
-        }
-    }
-
-    function getExcludedAddresses() public view virtual returns (address[] memory) {
-        return excludedAddresses.values();
     }
 
     function getCorruptionNegativeBoostMatrix() public view returns (uint256[][] memory) {
@@ -277,15 +263,5 @@ contract Middleman is AccessControlEnumerableUpgradeable {
     function setAtlasMineBoost(uint256 _atlasMineBoost) external onlyRole(MIDDLEMAN_ADMIN) {
         atlasMineBoost = _atlasMineBoost;
         emit AtlasMineBoost(_atlasMineBoost);
-    }
-
-    function addExcludedAddress(address _exclude) external onlyRole(MIDDLEMAN_ADMIN) {
-        require(excludedAddresses.add(_exclude), "Address already excluded");
-        emit AddExcludedAddress(_exclude);
-    }
-
-    function removeExcludedAddress(address _excluded) external onlyRole(MIDDLEMAN_ADMIN) {
-        require(excludedAddresses.remove(_excluded), "Address is not excluded");
-        emit RemoveExcludedAddress(_excluded);
     }
 }

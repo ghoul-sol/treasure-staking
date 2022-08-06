@@ -73,49 +73,34 @@ contract MiddlemanTest is TestUtils {
 
     function mockGetUtilization(
         address _harvester,
-        uint256 _totalSupply,
         uint256 _magicTotalDeposits,
-        uint256 _excludedAddrBal,
-        uint256 _harvesterBal
+        uint256 _totalDepositCap
     ) public {
-        vm.mockCall(address(harvesterFactory), abi.encodeCall(IHarvesterFactory.magic, ()), abi.encode(magic));
-        vm.mockCall(magic, abi.encodeCall(IERC20.totalSupply, ()), abi.encode(_totalSupply));
         vm.mockCall(_harvester, abi.encodeCall(IHarvester.magicTotalDeposits, ()), abi.encode(_magicTotalDeposits));
+        vm.mockCall(_harvester, abi.encodeCall(IHarvester.totalDepositCap, ()), abi.encode(_totalDepositCap));
 
-        address[] memory excluded = middleman.getExcludedAddresses();
-
-        for (uint256 i = 0; i < excluded.length; i++) {
-            vm.mockCall(magic, abi.encodeCall(IERC20.balanceOf, (excluded[i])), abi.encode(_excludedAddrBal));
-        }
-
-        vm.mockCall(magic, abi.encodeCall(IERC20.balanceOf, (_harvester)), abi.encode(_harvesterBal));
+        vm.mockCall(address(harvesterFactory), abi.encodeCall(IHarvesterFactory.magic, ()), abi.encode(magic));
     }
 
     function test_getUtilization() public {
         address harvester = allHarvesters[0];
-        uint256 totalSupply = 10000;
         uint256 magicTotalDeposits = 5000;
-        uint256 excludedAddrBal = 100;
-        uint256 harvesterBal = magicTotalDeposits + 2000;
+        uint256 totalDepositCap = 10000;
 
-        mockGetUtilization(harvester, totalSupply, magicTotalDeposits, excludedAddrBal, harvesterBal);
+        mockGetUtilization(harvester, magicTotalDeposits, totalDepositCap);
+        assertEq(middleman.getUtilization(harvester), 0.5e18);
 
-        assertEq(middleman.getUtilization(harvester), 0.625e18);
+        mockGetUtilization(harvester, magicTotalDeposits * 2, totalDepositCap);
+        assertEq(middleman.getUtilization(harvester), 1e18);
 
-        vm.prank(admin);
-        middleman.addExcludedAddress(address(10));
-
-        mockGetUtilization(harvester, totalSupply, magicTotalDeposits, excludedAddrBal, harvesterBal);
-
-        assertEq(middleman.getUtilization(harvester), 0.632911392405063291e18);
+        mockGetUtilization(harvester, magicTotalDeposits / 2, totalDepositCap);
+        assertEq(middleman.getUtilization(harvester), 0.25e18);
     }
 
     function test_getUtilizationBoost() public {
         address harvester = allHarvesters[0];
-        uint256 totalSupply = 10000;
+        uint256 totalDepositCap = 10000;
         uint256 magicTotalDeposits;
-        uint256 excludedAddrBal = 0;
-        uint256 harvesterBal = magicTotalDeposits;
 
         uint256[2][14] memory testCases = [
             [uint256(10000), uint256(1e18)],
@@ -136,11 +121,9 @@ contract MiddlemanTest is TestUtils {
 
         for (uint256 i = 0; i < testCases.length; i++) {
             magicTotalDeposits = testCases[i][0];
-            harvesterBal = magicTotalDeposits;
             uint256 boost = testCases[i][1];
 
-            mockGetUtilization(harvester, totalSupply, magicTotalDeposits, excludedAddrBal, harvesterBal);
-
+            mockGetUtilization(harvester, magicTotalDeposits, totalDepositCap);
             assertEq(middleman.getUtilizationBoost(harvester), boost);
         }
     }
@@ -181,10 +164,8 @@ contract MiddlemanTest is TestUtils {
     function mockGetHarvesterEmissionsShare(
         address _harvester,
         uint256 _harvesterTotalBoost,
-        uint256 _totalSupply,
         uint256 _magicTotalDeposits,
-        uint256 _excludedAddrBal,
-        uint256 _harvesterBal,
+        uint256 _totalDepositCap,
         uint256 _corruptionBalance
     ) public {
         address nftHandler = address(uint160(_harvester) + 99);
@@ -195,17 +176,15 @@ contract MiddlemanTest is TestUtils {
             abi.encode(_harvesterTotalBoost)
         );
 
-        mockGetUtilization(_harvester, _totalSupply, _magicTotalDeposits, _excludedAddrBal, _harvesterBal);
+        mockGetUtilization(_harvester, _magicTotalDeposits, _totalDepositCap);
 
         mockGetCorruptionNegativeBoost(corruptionToken, _harvester, _corruptionBalance);
     }
 
     struct EmissionsShareTest {
         uint256 harvesterTotalBoost;
-        uint256 totalSupply;
         uint256 magicTotalDeposits;
-        uint256 excludedAddrBal;
-        uint256 harvesterBal;
+        uint256 totalDepositCap;
         uint256 expectedUtilizationBoost;
         uint256 corruptionBalance;
         uint256 expectedCorruptionNegativeBoost;
@@ -220,10 +199,8 @@ contract MiddlemanTest is TestUtils {
             // TODO: add more test cases
             EmissionsShareTest({
                 harvesterTotalBoost: 2e18,
-                totalSupply: 10000,
                 magicTotalDeposits: 10000,
-                excludedAddrBal: 0,
-                harvesterBal: 10000,
+                totalDepositCap: 10000,
                 expectedUtilizationBoost: 1e18,
                 corruptionBalance: 0,
                 expectedCorruptionNegativeBoost: 1e18,
@@ -231,10 +208,8 @@ contract MiddlemanTest is TestUtils {
             }),
             EmissionsShareTest({
                 harvesterTotalBoost: 4e18,
-                totalSupply: 10000,
                 magicTotalDeposits: 3500,
-                excludedAddrBal: 0,
-                harvesterBal: 3500,
+                totalDepositCap: 10000,
                 expectedUtilizationBoost: 0.5e18,
                 corruptionBalance: 0,
                 expectedCorruptionNegativeBoost: 1e18,
@@ -242,10 +217,8 @@ contract MiddlemanTest is TestUtils {
             }),
             EmissionsShareTest({
                 harvesterTotalBoost: 4e18,
-                totalSupply: 10000,
                 magicTotalDeposits: 10000,
-                excludedAddrBal: 0,
-                harvesterBal: 10000,
+                totalDepositCap: 10000,
                 expectedUtilizationBoost: 1e18,
                 corruptionBalance: 0,
                 expectedCorruptionNegativeBoost: 1e18,
@@ -265,10 +238,8 @@ contract MiddlemanTest is TestUtils {
             mockGetHarvesterEmissionsShare(
                 harvester,
                 data.harvesterTotalBoost,
-                data.totalSupply,
                 data.magicTotalDeposits,
-                data.excludedAddrBal,
-                data.harvesterBal,
+                data.totalDepositCap,
                 data.corruptionBalance
             );
 
@@ -293,10 +264,8 @@ contract MiddlemanTest is TestUtils {
             mockGetHarvesterEmissionsShare(
                 allHarvesters[i],
                 data.harvesterTotalBoost,
-                data.totalSupply,
                 data.magicTotalDeposits,
-                data.excludedAddrBal,
-                data.harvesterBal,
+                data.totalDepositCap,
                 data.corruptionBalance
             );
         }
@@ -506,85 +475,6 @@ contract MiddlemanTest is TestUtils {
         vm.prank(address(1234567890));
         rewardsPaid = middleman.requestRewards();
         assertEq(rewardsPaid, 0);
-    }
-
-    function test_addExcludedAddress() public {
-        assertEq(middleman.getExcludedAddresses().length, 0);
-
-        address excludedAddress = address(76);
-
-        bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), middleman.MIDDLEMAN_ADMIN());
-        vm.expectRevert(errorMsg);
-        middleman.addExcludedAddress(excludedAddress);
-
-        vm.prank(admin);
-        vm.expectEmit(true, true, true, true);
-        emit AddExcludedAddress(excludedAddress);
-        middleman.addExcludedAddress(excludedAddress);
-
-        assertEq(middleman.getExcludedAddresses().length, 1);
-        assertEq(middleman.getExcludedAddresses()[0], excludedAddress);
-
-        vm.prank(admin);
-        vm.expectRevert("Address already excluded");
-        middleman.addExcludedAddress(excludedAddress);
-    }
-
-    function test_removeExcludedAddress() public {
-        address excludedAddress1 = address(76);
-        address excludedAddress2 = address(765);
-
-        vm.prank(admin);
-        middleman.addExcludedAddress(excludedAddress1);
-
-        vm.prank(admin);
-        middleman.addExcludedAddress(excludedAddress2);
-
-        assertEq(middleman.getExcludedAddresses().length, 2);
-
-        bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), middleman.MIDDLEMAN_ADMIN());
-        vm.expectRevert(errorMsg);
-        middleman.removeExcludedAddress(excludedAddress1);
-
-        vm.prank(admin);
-        vm.expectEmit(true, true, true, true);
-        emit RemoveExcludedAddress(excludedAddress1);
-        middleman.removeExcludedAddress(excludedAddress1);
-
-        assertEq(middleman.getExcludedAddresses().length, 1);
-        assertEq(middleman.getExcludedAddresses()[0], excludedAddress2);
-
-        vm.prank(admin);
-        vm.expectRevert("Address is not excluded");
-        middleman.removeExcludedAddress(excludedAddress1);
-
-        vm.prank(admin);
-        middleman.addExcludedAddress(excludedAddress1);
-
-        assertEq(middleman.getExcludedAddresses().length, 2);
-        assertEq(middleman.getExcludedAddresses()[0], excludedAddress2);
-        assertEq(middleman.getExcludedAddresses()[1], excludedAddress1);
-    }
-
-    function test_getExcludedAddresses() public {
-        vm.startPrank(admin);
-
-        for (uint256 i = 0; i < 25; i++) {
-            address excludedAddr = address(uint160(i + 55));
-
-            excludedAddresses.push(excludedAddr);
-            middleman.addExcludedAddress(excludedAddr);
-            assertAddressArrayEq(middleman.getExcludedAddresses(), excludedAddresses);
-
-            if (i % 2 == 0) {
-                address removeAddr = excludedAddresses[excludedAddresses.length - 1];
-                excludedAddresses.pop();
-                middleman.removeExcludedAddress(removeAddr);
-                assertAddressArrayEq(middleman.getExcludedAddresses(), excludedAddresses);
-            }
-        }
-
-        vm.stopPrank();
     }
 
     function test_setHarvesterFactory() public {
