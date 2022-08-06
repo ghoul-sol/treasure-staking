@@ -37,6 +37,7 @@ interface IHarvester {
     function disabled() external view returns (bool);
     function enable() external;
     function disable() external;
+    function callUpdateRewards() external returns (bool);
     function isMaxUserGlobalDeposit(address _user) external view returns (bool);
     function updateNftBoost(address user) external returns (bool);
     function nftHandler() external view returns (INftHandler);

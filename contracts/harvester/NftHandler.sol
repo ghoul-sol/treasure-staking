@@ -261,6 +261,8 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
         stakedNfts[msg.sender][_nft][_tokenId] += _amount;
 
         emit Replaced(_nft, _tokenId, _amount, _replacedSpotId);
+
+        harvester.callUpdateRewards();
     }
 
     function batchReplaceExtractor(

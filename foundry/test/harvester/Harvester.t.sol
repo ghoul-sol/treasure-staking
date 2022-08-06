@@ -306,6 +306,24 @@ contract HarvesterTest is TestUtils {
         assertTrue(harvester.disabled());
     }
 
+    function test_callUpdateRewards() public {
+        TestAction memory data = getTestAction(0);
+        mockForAction(data);
+        doDeposit(data);
+        checkState(data);
+
+        uint256 expectedRequestRewards = 2e18;
+
+        middlemanMock.setReward(expectedRequestRewards);
+        vm.mockCall(address(harvesterFactory), abi.encodeCall(IHarvesterFactory.middleman, ()), abi.encode(address(middlemanMock)));
+
+        uint256 totalRewardsEarnedBefore = harvester.totalRewardsEarned();
+        harvester.callUpdateRewards();
+        uint256 totalRewardsEarnedAfter = harvester.totalRewardsEarned();
+
+        assertEq(totalRewardsEarnedAfter - totalRewardsEarnedBefore, expectedRequestRewards);
+    }
+
     enum Actions {
         Deposit,
         Withdraw,
