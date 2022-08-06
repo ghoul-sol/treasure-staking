@@ -23,9 +23,6 @@ contract LegionStakingRules is StakingRulesBase {
 
     event MaxWeight(uint256 maxLegionWeight);
     event LegionMetadataStore(ILegionMetadataStore legionMetadataStore);
-    event LegionBoostMatrix(uint256[][] legionBoostMatrix);
-    event LegionWeightMatrix(uint256[][] legionWeightMatrix);
-    event LegionRankMatrix(uint256[][] legionRankMatrix);
     event MaxStakeableTotal(uint256 maxStakeableTotal);
     event BoostFactor(uint256 boostFactor);
 
@@ -176,22 +173,6 @@ contract LegionStakingRules is StakingRulesBase {
     function setLegionMetadataStore(ILegionMetadataStore _legionMetadataStore) external onlyRole(SR_ADMIN) {
         legionMetadataStore = _legionMetadataStore;
         emit LegionMetadataStore(_legionMetadataStore);
-    }
-
-    function setLegionBoostMatrix(uint256[][] memory _legionBoostMatrix) external onlyRole(SR_ADMIN) {
-        legionBoostMatrix = _legionBoostMatrix;
-        emit LegionBoostMatrix(_legionBoostMatrix);
-    }
-
-    function setLegionWeightMatrix(uint256[][] memory _legionWeightMatrix) external onlyRole(SR_ADMIN) {
-        legionWeightMatrix = _legionWeightMatrix;
-        emit LegionWeightMatrix(_legionWeightMatrix);
-    }
-
-    /// @dev changing ranks values after NFTs are already staked can break `totalRank` calculations
-    function setLegionRankMatrix(uint256[][] memory _legionRankMatrix) external onlyRole(SR_ADMIN) {
-        legionRankMatrix = _legionRankMatrix;
-        emit LegionRankMatrix(_legionRankMatrix);
     }
 
     function setMaxWeight(uint256 _maxLegionWeight) external onlyRole(SR_ADMIN) {

@@ -229,63 +229,6 @@ contract LegionStakingRulesTest is TestUtils {
         assertEq(address(legionRules.legionMetadataStore()), address(newLegionMetadataStore));
     }
 
-    uint256[][] public newLegionBoostMatrix = [
-        [uint256(600e16), uint256(200e16), uint256(75e16), uint256(100e16), uint256(50e16), uint256(0)],
-        [uint256(600e16), uint256(200e16), uint256(75e16), uint256(100e16), uint256(50e16), uint256(0)],
-        [uint256(600e16), uint256(200e16), uint256(75e16), uint256(100e16), uint256(50e16), uint256(0)]
-    ];
-
-    function test_setLegionBoostMatrix() public {
-        uint256[][] memory legionBoostMatrix = legionRules.getLegionBoostMatrix();
-
-        bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), legionRules.SR_ADMIN());
-        vm.expectRevert(errorMsg);
-        legionRules.setLegionBoostMatrix(newLegionBoostMatrix);
-        assertMatrixEq(legionRules.getLegionBoostMatrix(), legionBoostMatrix);
-
-        vm.prank(admin);
-        legionRules.setLegionBoostMatrix(newLegionBoostMatrix);
-        assertMatrixEq(legionRules.getLegionBoostMatrix(), newLegionBoostMatrix);
-    }
-
-    uint256[][] public newLegionWeightMatrix = [
-        [uint256(120e18), uint256(40e18), uint256(15e18), uint256(20e18), uint256(10e18), uint256(0)],
-        [uint256(120e18), uint256(40e18), uint256(15e18), uint256(20e18), uint256(10e18), uint256(0)],
-        [uint256(120e18), uint256(40e18), uint256(15e18), uint256(20e18), uint256(10e18), uint256(0)]
-    ];
-
-    function test_setLegionWeightMatrix() public {
-        uint256[][] memory legionWeightMatrix = legionRules.getLegionWeightMatrix();
-
-        bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), legionRules.SR_ADMIN());
-        vm.expectRevert(errorMsg);
-        legionRules.setLegionWeightMatrix(newLegionWeightMatrix);
-        assertMatrixEq(legionRules.getLegionWeightMatrix(), legionWeightMatrix);
-
-        vm.prank(admin);
-        legionRules.setLegionWeightMatrix(newLegionWeightMatrix);
-        assertMatrixEq(legionRules.getLegionWeightMatrix(), newLegionWeightMatrix);
-    }
-
-    uint256[][] public newLegionRankMatrix = [
-        [uint256(4e18), uint256(4e18), uint256(2e18), uint256(3e18), uint256(1e18), uint256(0)],
-        [uint256(4e18), uint256(4e18), uint256(2e18), uint256(3e18), uint256(1e18), uint256(0)],
-        [uint256(4e18), uint256(4e18), uint256(2e18), uint256(3e18), uint256(1e18), uint256(0)]
-    ];
-
-    function test_setLegionRankMatrix() public {
-        uint256[][] memory legionRankMatrix = legionRules.getLegionRankMatrix();
-
-        bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), legionRules.SR_ADMIN());
-        vm.expectRevert(errorMsg);
-        legionRules.setLegionRankMatrix(newLegionRankMatrix);
-        assertMatrixEq(legionRules.getLegionRankMatrix(), legionRankMatrix);
-
-        vm.prank(admin);
-        legionRules.setLegionRankMatrix(newLegionRankMatrix);
-        assertMatrixEq(legionRules.getLegionRankMatrix(), newLegionRankMatrix);
-    }
-
     function test_setMaxWeight() public {
         assertEq(legionRules.maxLegionWeight(), maxLegionWeight);
 
