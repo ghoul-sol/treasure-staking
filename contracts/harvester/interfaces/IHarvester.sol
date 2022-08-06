@@ -41,4 +41,5 @@ interface IHarvester {
     function updateNftBoost(address user) external returns (bool);
     function nftHandler() external view returns (INftHandler);
     function magicTotalDeposits() external view returns (uint256);
+    function totalDepositCap() external view returns (uint256);
 }
