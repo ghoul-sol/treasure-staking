@@ -5,6 +5,7 @@ import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import '@openzeppelin/contracts/token/ERC1155/IERC1155.sol';
 import '@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Burnable.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
+import '@openzeppelin/contracts/utils/introspection/ERC165Checker.sol';
 
 import '@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
@@ -208,6 +209,19 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
     {
         Interfaces supportedInterface = getSupportedInterface(_nft, _tokenId);
 
+        if (supportedInterface == Interfaces.Unsupported) {
+            // just for unstakeNft, fallback on ERC165
+            if (ERC165Checker.supportsERC165(_nft)) {
+                if (ERC165Checker.supportsInterface(_nft, type(IERC721).interfaceId)) {
+                    supportedInterface =  Interfaces.ERC721;
+                } else if (ERC165Checker.supportsInterface(_nft, type(IERC1155).interfaceId)) {
+                    supportedInterface =  Interfaces.ERC1155;
+                }
+            } else {
+                revert("NftNotAllowed()");
+            }
+        }
+
         if (supportedInterface == Interfaces.ERC721) {
             if (_amount != 1) revert("WrongAmountForERC721()");
             if (stakedNfts[msg.sender][_nft][_tokenId] != 1) revert("NftNotStaked()");
@@ -215,8 +229,6 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
             IERC721(_nft).transferFrom(address(this), msg.sender, _tokenId);
         } else if (supportedInterface == Interfaces.ERC1155) {
             IERC1155(_nft).safeTransferFrom(address(this), msg.sender, _tokenId, _amount, bytes(""));
-        } else {
-            revert("NftNotAllowed()");
         }
 
         uint256 staked = stakedNfts[msg.sender][_nft][_tokenId];
