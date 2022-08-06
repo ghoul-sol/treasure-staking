@@ -804,6 +804,48 @@ contract NftHandlerTest is TestUtils, ERC1155Holder {
         assertEq(nftErc721.ownerOf(tokenId), address(this));
     }
 
+    function test_unstakeNftAndUnsupported() public {
+        uint256 tokenId = 1;
+        uint256 amount = 20;
+
+        stakeNftHelperERC721(tokenId);
+        stakeNftHelperERC1155(tokenId, amount);
+
+        vm.mockCall(
+            address(erc1155StakingRules),
+            abi.encodeCall(IStakingRules.canUnstake, (address(this), address(nftErc1155), tokenId, amount + 1)),
+            abi.encode(bytes(""))
+        );
+        nftErc1155.mint(address(nftHandler), tokenId, 1);
+
+        uint256 currentUserBoost = nftHandler.getUserBoost(address(this));
+
+        INftHandler.Interfaces supportsInterface = nftHandler.getSupportedInterface(address(nftErc721), tokenId);
+        assertEq(uint256(supportsInterface), uint256(INftHandler.Interfaces.ERC721));
+
+        INftHandler.NftConfig memory placeholderConfig = INftHandler.NftConfig({
+            supportedInterface: INftHandler.Interfaces.Unsupported,
+            stakingRules: IStakingRules(address(0))
+        });
+
+        uint256 DEFAULT_ID = nftHandler.DEFAULT_ID();
+
+        vm.prank(admin);
+        nftHandler.setNftConfig(address(nftErc721), DEFAULT_ID, placeholderConfig);
+
+        supportsInterface = nftHandler.getSupportedInterface(address(nftErc721), tokenId);
+        assertEq(uint256(supportsInterface), uint256(INftHandler.Interfaces.Unsupported));
+
+        nftHandler.unstakeNft(address(nftErc721), tokenId, 1);
+
+        assertEq(nftHandler.stakedNfts(address(this), address(nftErc721), tokenId), 0);
+        assertEq(
+            nftHandler.getUserBoost(address(this)),
+            currentUserBoost - nftHandler.getNftBoost(address(this), address(nftErc721), tokenId, 1)
+        );
+        assertEq(nftErc721.ownerOf(tokenId), address(this));
+    }
+
     function test_batchUnstakeNft() public {
         (
             address[] memory _nft,
