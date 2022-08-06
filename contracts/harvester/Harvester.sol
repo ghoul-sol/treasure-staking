@@ -79,7 +79,7 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
 
     modifier updateRewards() {
         uint256 lpSupply = totalLpToken;
-        if (lpSupply > 0 && !disabled) {
+        if (lpSupply > 0) {
             uint256 distributedRewards = factory.middleman().requestRewards();
             totalRewardsEarned += distributedRewards;
             accMagicPerShare += distributedRewards * ONE / lpSupply;
@@ -222,8 +222,7 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         uint256 _accMagicPerShare = accMagicPerShare;
         uint256 lpSupply = totalLpToken;
 
-        // if harvester is disabled, only account for rewards that were already sent
-        if (!disabled && lpSupply > 0) {
+        if (lpSupply > 0) {
             uint256 pendingRewards = factory.middleman().getPendingRewards(address(this));
             _accMagicPerShare += pendingRewards * ONE / lpSupply;
         }
