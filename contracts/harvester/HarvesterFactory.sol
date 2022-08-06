@@ -80,6 +80,32 @@ contract HarvesterFactory is AccessControlEnumerableUpgradeable {
         return harvesters.values();
     }
 
+    function getAllActiveHarvesters() external view returns (address[] memory allActiveHarvesters) {
+        uint256 len = harvesters.length();
+
+        uint256 activeHarvestersCount;
+        address[] memory activeHarvesters = new address[](len);
+
+        for (uint256 i = 0; i < len; i++) {
+            IHarvester harvester = IHarvester(harvesters.at(i));
+
+            if (!harvester.disabled()) {
+                activeHarvesters[activeHarvestersCount] = address(harvester);
+                activeHarvestersCount++;
+            }
+        }
+
+        if (activeHarvestersCount == len) {
+            return harvesters.values();
+        }
+
+        allActiveHarvesters = new address[](activeHarvestersCount);
+
+        for (uint256 i = 0; i < activeHarvestersCount; i++) {
+            allActiveHarvesters[i] = activeHarvesters[i];
+        }
+    }
+
     function getAllHarvestersLength() external view returns (uint256) {
         return harvesters.length();
     }

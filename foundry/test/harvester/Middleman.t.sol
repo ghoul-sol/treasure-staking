@@ -254,7 +254,7 @@ contract MiddlemanTest is TestUtils {
 
         vm.mockCall(
             address(harvesterFactory),
-            abi.encodeCall(IHarvesterFactory.getAllHarvesters, ()),
+            abi.encodeCall(IHarvesterFactory.getAllActiveHarvesters, ()),
             abi.encode(allHarvesters)
         );
 

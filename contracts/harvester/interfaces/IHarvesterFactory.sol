@@ -9,4 +9,5 @@ interface IHarvesterFactory {
     function magic() external view returns (IERC20);
     function middleman() external view returns (IMiddleman);
     function getAllHarvesters() external view returns (address[] memory);
+    function getAllActiveHarvesters() external view returns (address[] memory);
 }
