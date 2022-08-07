@@ -48,10 +48,10 @@ contract LegionStakingRules is StakingRulesBase {
         legionBoostMatrix = [
             // GENESIS
             // LEGENDARY,RARE,SPECIAL,UNCOMMON,COMMON,RECRUIT
-            [uint256(600e16), uint256(200e16), uint256(75e16), uint256(100e16), uint256(50e16), uint256(0)],
+            [uint256(6e18), uint256(2e18), uint256(0.75e18), uint256(1e18), uint256(0.5e18), uint256(0)],
             // AUXILIARY
             // LEGENDARY,RARE,SPECIAL,UNCOMMON,COMMON,RECRUIT
-            [uint256(0), uint256(25e16), uint256(0), uint256(10e16), uint256(5e16), uint256(0)],
+            [uint256(0), uint256(0.25e18), uint256(0), uint256(0.1e18), uint256(0.05e18), uint256(0)],
             // RECRUIT
             // LEGENDARY,RARE,SPECIAL,UNCOMMON,COMMON,RECRUIT
             [uint256(0), uint256(0), uint256(0), uint256(0), uint256(0), uint256(0)]
