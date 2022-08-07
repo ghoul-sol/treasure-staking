@@ -64,9 +64,9 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC721Ho
     modifier canStake(address _user, address _nft, uint256 _tokenId, uint256 _amount) {
         IStakingRules stakingRules = getStakingRules(_nft, _tokenId);
 
-        if (address(stakingRules) != address(0)) {
-            stakingRules.canStake(msg.sender, _nft, _tokenId, _amount);
-        }
+        if (address(stakingRules) == address(0)) revert("NoStakingRules()");
+
+        stakingRules.canStake(msg.sender, _nft, _tokenId, _amount);
 
         _;
     }

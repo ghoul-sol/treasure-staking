@@ -561,7 +561,7 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
         vm.expectRevert("WrongAmountForERC721()");
         nftHandler.stakeNft(address(nftErc721), tokenId, 10);
 
-        vm.expectRevert("NftNotAllowed()");
+        vm.expectRevert("NoStakingRules()");
         nftHandler.stakeNft(address(nftErc1155), tokenId, 10);
 
         nftErc721.mint(address(this), tokenId);
