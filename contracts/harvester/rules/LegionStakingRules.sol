@@ -154,7 +154,7 @@ contract LegionStakingRules is StakingRulesBase {
         return 0;
     }
 
-    function _canStake(address _user, address, uint256 _tokenId, uint256) internal override {
+    function _processStake(address _user, address, uint256 _tokenId, uint256) internal override {
         staked++;
         totalRank += getRank(_tokenId);
         weightStaked[_user] += getWeight(_tokenId);
@@ -162,7 +162,7 @@ contract LegionStakingRules is StakingRulesBase {
         if (weightStaked[_user] > maxLegionWeight) revert("MaxWeight()");
     }
 
-    function _canUnstake(address _user, address, uint256 _tokenId, uint256) internal override {
+    function _processUnstake(address _user, address, uint256 _tokenId, uint256) internal override {
         staked--;
         totalRank -= getRank(_tokenId);
         weightStaked[_user] -= getWeight(_tokenId);

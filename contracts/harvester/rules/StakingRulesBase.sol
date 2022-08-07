@@ -33,21 +33,21 @@ abstract contract StakingRulesBase is IStakingRules, AccessControlEnumerableUpgr
     }
 
     /// @inheritdoc IStakingRules
-    function canStake(address _user, address _nft, uint256 _tokenId, uint256 _amount)
+    function processStake(address _user, address _nft, uint256 _tokenId, uint256 _amount)
         external
         override
         onlyRole(SR_NFT_HANDLER)
     {
-        _canStake(_user, _nft, _tokenId, _amount);
+        _processStake(_user, _nft, _tokenId, _amount);
     }
 
     /// @inheritdoc IStakingRules
-    function canUnstake(address _user, address _nft, uint256 _tokenId, uint256 _amount)
+    function processUnstake(address _user, address _nft, uint256 _tokenId, uint256 _amount)
         external
         override
         onlyRole(SR_NFT_HANDLER)
     {
-        _canUnstake(_user, _nft, _tokenId, _amount);
+        _processUnstake(_user, _nft, _tokenId, _amount);
     }
 
     /// @inheritdoc IStakingRules
@@ -59,8 +59,8 @@ abstract contract StakingRulesBase is IStakingRules, AccessControlEnumerableUpgr
     }
 
     /// @dev it's meant to be overriden by staking rules implementation
-    function _canStake(address, address, uint256, uint256) internal virtual {}
+    function _processStake(address, address, uint256, uint256) internal virtual {}
 
     /// @dev it's meant to be overriden by staking rules implementation
-    function _canUnstake(address, address, uint256, uint256) internal virtual {}
+    function _processUnstake(address, address, uint256, uint256) internal virtual {}
 }

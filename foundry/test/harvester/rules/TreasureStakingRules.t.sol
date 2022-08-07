@@ -123,7 +123,7 @@ contract TreasureStakingRulesTest is TestUtils {
 
         vm.assume(_user != address(0));
 
-        treasureRules.canStake(_user, _nft, _tokenId, _amount);
+        treasureRules.processStake(_user, _nft, _tokenId, _amount);
         assertEq(treasureRules.getAmountTreasuresStaked(_user), _amount);
 
         // TreasureStakingRules harvesterBoost multiplier is always 1 (no effect),
@@ -131,7 +131,7 @@ contract TreasureStakingRulesTest is TestUtils {
         assertEq(treasureRules.getHarvesterBoost(), Constant.ONE);
     }
 
-    function test_canStake(
+    function test_processStake(
         address _user,
         address _nft,
         uint256 _tokenId,
@@ -139,18 +139,18 @@ contract TreasureStakingRulesTest is TestUtils {
     ) public {
         bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), treasureRules.SR_NFT_HANDLER());
         vm.expectRevert(errorMsg);
-        treasureRules.canStake(_user, _nft, _tokenId, _amount);
+        treasureRules.processStake(_user, _nft, _tokenId, _amount);
 
         vm.prank(harvesterFactory);
         treasureRules.setNftHandler(address(this));
 
         vm.expectRevert("ZeroAddress()");
-        treasureRules.canStake(address(0), _nft, _tokenId, _amount);
+        treasureRules.processStake(address(0), _nft, _tokenId, _amount);
 
         vm.assume(_user != address(0));
 
         vm.expectRevert("ZeroAmount()");
-        treasureRules.canStake(_user, _nft, _tokenId, 0);
+        treasureRules.processStake(_user, _nft, _tokenId, 0);
 
         vm.assume(_amount > 0 && _amount < 1e18);
 
@@ -160,32 +160,32 @@ contract TreasureStakingRulesTest is TestUtils {
         assertEq(treasureRules.maxStakeablePerUser(), _amount);
         assertEq(treasureRules.getAmountTreasuresStaked(_user), 0);
 
-        treasureRules.canStake(_user, _nft, _tokenId, _amount);
+        treasureRules.processStake(_user, _nft, _tokenId, _amount);
         assertEq(treasureRules.getAmountTreasuresStaked(_user), _amount);
 
         vm.expectRevert("MaxStakeablePerUser()");
-        treasureRules.canStake(_user, _nft, _tokenId, _amount + 1);
+        treasureRules.processStake(_user, _nft, _tokenId, _amount + 1);
 
         assertEq(treasureRules.getAmountTreasuresStaked(_user), _amount);
     }
 
-    function test_canUnstake(address _user, address _nft, uint256 _tokenId, uint256 _amount) public {
+    function test_processUnstake(address _user, address _nft, uint256 _tokenId, uint256 _amount) public {
         bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), treasureRules.SR_NFT_HANDLER());
         vm.expectRevert(errorMsg);
-        treasureRules.canUnstake(_user, _nft, _tokenId, _amount);
+        treasureRules.processUnstake(_user, _nft, _tokenId, _amount);
 
         vm.prank(harvesterFactory);
         treasureRules.setNftHandler(nftHandler);
 
         vm.prank(nftHandler);
         vm.expectRevert("ZeroAddress()");
-        treasureRules.canUnstake(address(0), _nft, _tokenId, _amount);
+        treasureRules.processUnstake(address(0), _nft, _tokenId, _amount);
 
         vm.assume(_user != address(0));
 
         vm.prank(nftHandler);
         vm.expectRevert("ZeroAmount()");
-        treasureRules.canUnstake(_user, _nft, _tokenId, 0);
+        treasureRules.processUnstake(_user, _nft, _tokenId, 0);
 
         vm.assume(maxStakeablePerUser < _amount);
 
@@ -193,15 +193,15 @@ contract TreasureStakingRulesTest is TestUtils {
         treasureRules.setMaxStakeablePerUser(_amount);
 
         vm.prank(nftHandler);
-        treasureRules.canStake(_user, _nft, _tokenId, _amount);
+        treasureRules.processStake(_user, _nft, _tokenId, _amount);
 
         vm.prank(nftHandler);
-        treasureRules.canUnstake(_user, _nft, _tokenId, _amount - 1);
+        treasureRules.processUnstake(_user, _nft, _tokenId, _amount - 1);
 
         assertEq(treasureRules.getAmountTreasuresStaked(_user), 1);
 
         vm.prank(nftHandler);
-        treasureRules.canUnstake(_user, _nft, _tokenId, 1);
+        treasureRules.processUnstake(_user, _nft, _tokenId, 1);
 
         assertEq(treasureRules.getAmountTreasuresStaked(_user), 0);
     }

@@ -91,7 +91,7 @@ contract PartsStakingRulesTest is TestUtils {
             uint256 harvesterBoost = testData[i][3];
 
             vm.prank(nftHandler);
-            partsRules.canStake(user, nft, tokenId, amount);
+            partsRules.processStake(user, nft, tokenId, amount);
             vm.prank(admin);
             partsRules.setMaxStakeableTotal(maxStakeable);
             vm.prank(admin);
@@ -101,11 +101,11 @@ contract PartsStakingRulesTest is TestUtils {
 
             // reset staked to 0
             vm.prank(nftHandler);
-            partsRules.canUnstake(user, nft, tokenId, amount);
+            partsRules.processUnstake(user, nft, tokenId, amount);
         }
     }
 
-    function test_canStake(
+    function test_processStake(
         address _user,
         address _nft,
         uint256 _tokenId,
@@ -116,77 +116,77 @@ contract PartsStakingRulesTest is TestUtils {
     ) public {
         bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), partsRules.SR_NFT_HANDLER());
         vm.expectRevert(errorMsg);
-        partsRules.canStake(_user, _nft, _tokenId, _amount);
+        partsRules.processStake(_user, _nft, _tokenId, _amount);
 
         vm.prank(harvesterFactory);
         partsRules.setNftHandler(address(this));
 
         vm.expectRevert("ZeroAddress()");
-        partsRules.canStake(address(0), _nft, _tokenId, _amount);
+        partsRules.processStake(address(0), _nft, _tokenId, _amount);
 
         vm.assume(_user != address(0));
 
         vm.expectRevert("ZeroAmount()");
-        partsRules.canStake(_user, _nft, _tokenId, 0);
+        partsRules.processStake(_user, _nft, _tokenId, 0);
 
         vm.assume(maxStakeableTotal < _amount && _amount < type(uint256).max / 10);
 
         vm.expectRevert("MaxStakeable()");
-        partsRules.canStake(_user, _nft, _tokenId, _amount);
+        partsRules.processStake(_user, _nft, _tokenId, _amount);
 
         vm.prank(admin);
         partsRules.setMaxStakeableTotal(_amount * 10);
 
         vm.expectRevert("MaxStakeablePerUser()");
-        partsRules.canStake(_user, _nft, _tokenId, _amount);
+        partsRules.processStake(_user, _nft, _tokenId, _amount);
 
         vm.prank(admin);
         partsRules.setMaxStakeablePerUser(_amount * 2);
 
-        partsRules.canStake(_user, _nft, _tokenId, _amount);
+        partsRules.processStake(_user, _nft, _tokenId, _amount);
 
         assertEq(partsRules.staked(), _amount);
         assertEq(partsRules.getAmountStaked(_user), _amount);
 
-        partsRules.canStake(_user, _nft, _tokenId, _amount);
+        partsRules.processStake(_user, _nft, _tokenId, _amount);
 
         assertEq(partsRules.staked(), _amount * 2);
         assertEq(partsRules.getAmountStaked(_user), _amount * 2);
 
         vm.expectRevert("MaxStakeablePerUser()");
-        partsRules.canStake(_user, _nft, _tokenId, _amount);
+        partsRules.processStake(_user, _nft, _tokenId, _amount);
 
         assertEq(partsRules.staked(), _amount * 2);
         assertEq(partsRules.getAmountStaked(_user), _amount * 2);
 
         vm.assume(_user2 != address(0) && _user != _user2);
 
-        partsRules.canStake(_user2, _nft2, _tokenId2, _amount);
+        partsRules.processStake(_user2, _nft2, _tokenId2, _amount);
 
         assertEq(partsRules.staked(), _amount * 3);
         assertEq(partsRules.getAmountStaked(_user2), _amount);
 
         vm.expectRevert("MaxStakeablePerUser()");
-        partsRules.canStake(_user2, _nft2, _tokenId2, _amount + 1);
+        partsRules.processStake(_user2, _nft2, _tokenId2, _amount + 1);
     }
 
-    function test_canUnstake(address _user, address _nft, uint256 _tokenId, uint256 _amount) public {
+    function test_processUnstake(address _user, address _nft, uint256 _tokenId, uint256 _amount) public {
         bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), partsRules.SR_NFT_HANDLER());
         vm.expectRevert(errorMsg);
-        partsRules.canUnstake(_user, _nft, _tokenId, _amount);
+        partsRules.processUnstake(_user, _nft, _tokenId, _amount);
 
         vm.prank(harvesterFactory);
         partsRules.setNftHandler(nftHandler);
 
         vm.prank(nftHandler);
         vm.expectRevert("ZeroAddress()");
-        partsRules.canUnstake(address(0), _nft, _tokenId, _amount);
+        partsRules.processUnstake(address(0), _nft, _tokenId, _amount);
 
         vm.assume(_user != address(0));
 
         vm.prank(nftHandler);
         vm.expectRevert("ZeroAmount()");
-        partsRules.canUnstake(_user, _nft, _tokenId, 0);
+        partsRules.processUnstake(_user, _nft, _tokenId, 0);
 
         vm.assume(maxStakeableTotal < _amount && _amount < type(uint256).max / 2);
 
@@ -197,7 +197,7 @@ contract PartsStakingRulesTest is TestUtils {
         partsRules.setMaxStakeablePerUser(_amount);
 
         vm.prank(nftHandler);
-        partsRules.canStake(_user, _nft, _tokenId, _amount);
+        partsRules.processStake(_user, _nft, _tokenId, _amount);
 
         vm.mockCall(
             nftHandler,
@@ -213,7 +213,7 @@ contract PartsStakingRulesTest is TestUtils {
 
         vm.prank(nftHandler);
         vm.expectRevert("MinUserGlobalDeposit()");
-        partsRules.canUnstake(_user, _nft, _tokenId, _amount);
+        partsRules.processUnstake(_user, _nft, _tokenId, _amount);
 
         assertEq(partsRules.staked(), _amount);
         assertEq(partsRules.getAmountStaked(_user), _amount);
@@ -225,13 +225,13 @@ contract PartsStakingRulesTest is TestUtils {
         );
 
         vm.prank(nftHandler);
-        partsRules.canUnstake(_user, _nft, _tokenId, _amount - 1);
+        partsRules.processUnstake(_user, _nft, _tokenId, _amount - 1);
 
         assertEq(partsRules.staked(), 1);
         assertEq(partsRules.getAmountStaked(_user), 1);
 
         vm.prank(nftHandler);
-        partsRules.canUnstake(_user, _nft, _tokenId, 1);
+        partsRules.processUnstake(_user, _nft, _tokenId, 1);
 
         assertEq(partsRules.staked(), 0);
         assertEq(partsRules.getAmountStaked(_user), 0);
