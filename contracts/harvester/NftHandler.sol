@@ -66,7 +66,7 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC721Ho
 
         if (address(stakingRules) == address(0)) revert("NoStakingRules()");
 
-        stakingRules.processStake(msg.sender, _nft, _tokenId, _amount);
+        stakingRules.processStake(_user, _nft, _tokenId, _amount);
 
         _;
     }
@@ -75,7 +75,7 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC721Ho
         IStakingRules stakingRules = getStakingRules(_nft, _tokenId);
 
         if (address(stakingRules) != address(0)) {
-            stakingRules.processUnstake(msg.sender, _nft, _tokenId, _amount);
+            stakingRules.processUnstake(_user, _nft, _tokenId, _amount);
         }
 
         _;
