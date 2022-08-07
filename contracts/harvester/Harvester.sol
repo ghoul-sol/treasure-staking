@@ -325,9 +325,9 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
 
         int256 amountInt = _amount.toInt256();
         int256 lockLpAmountInt = lockLpAmount.toInt256();
-        uint256 pendingRewards = _recalculateGlobalLp(msg.sender, -amountInt, -lockLpAmountInt);
+        _recalculateGlobalLp(msg.sender, -amountInt, -lockLpAmountInt);
 
-        if (user.depositAmount == 0 && user.lockLpAmount == 0 && pendingRewards == 0) {
+        if (user.depositAmount == 0 && user.lockLpAmount == 0) {
             _removeDeposit(msg.sender, _depositId);
         }
 
