@@ -404,11 +404,7 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
 
     function withdrawAndHarvestAll() public {
         harvestAll();
-
-        uint256[] memory depositIds = allUserDepositIds[msg.sender].values();
-        for (uint256 i = 0; i < depositIds.length; i++) {
-            withdrawPosition(depositIds[i], type(uint256).max);
-        }
+        withdrawAll();
     }
 
     function _recalculateGlobalLp(address _user, int256 _amount, int256 _lockLpAmount) internal returns (uint256 pendingRewards) {
