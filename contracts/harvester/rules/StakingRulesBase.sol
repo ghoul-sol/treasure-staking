@@ -4,6 +4,7 @@ pragma solidity 0.8.13;
 import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
 
 import '../interfaces/IStakingRules.sol';
+import '../interfaces/INftHandler.sol';
 
 import '../lib/Constant.sol';
 
@@ -14,9 +15,11 @@ abstract contract StakingRulesBase is IStakingRules, AccessControlEnumerableUpgr
     ///      (solves circular dependency)
     bytes32 public constant SR_HARVESTER_FACTORY = keccak256("SR_HARVESTER_FACTORY");
 
+    INftHandler public nftHandler;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
-    
+
     function _initStakingRulesBase(address _admin, address _harvesterFactory) internal onlyInitializing {
         __AccessControlEnumerable_init();
 
@@ -49,6 +52,8 @@ abstract contract StakingRulesBase is IStakingRules, AccessControlEnumerableUpgr
 
     /// @inheritdoc IStakingRules
     function setNftHandler(address _nftHandler) external onlyRole(SR_HARVESTER_FACTORY) {
+        nftHandler = INftHandler(_nftHandler);
+
         _grantRole(SR_NFT_HANDLER, _nftHandler);
         _revokeRole(SR_HARVESTER_FACTORY, msg.sender);
     }

@@ -152,11 +152,15 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
     }
 
     function setExtractorBoost(uint256 _tokenId, uint256 _boost) external onlyRole(SR_ADMIN) {
+        nftHandler.harvester().callUpdateRewards();
+
         extractorBoost[_tokenId] = _boost;
         emit ExtractorBoost(_tokenId, _boost);
     }
 
     function setExtractorLifetime(uint256 _lifetime) external onlyRole(SR_ADMIN) {
+        nftHandler.harvester().callUpdateRewards();
+
         _setExtractorLifetime(_lifetime);
     }
 

@@ -12,33 +12,30 @@ import "contracts/harvester/rules/PartsStakingRules.sol";
 contract PartsStakingRulesTest is TestUtils {
     PartsStakingRules public partsRules;
 
-    address public admin;
-    address public harvester;
-    address public harvesterFactory;
-    address public nftHandler;
-    uint256 public maxStakeableTotal;
-    uint256 public maxStakeablePerUser;
-    uint256 public boostFactor;
+    address public admin = address(111);
+    address public harvester = address(333);
+    address public harvesterFactory = address(222);
+    address public nftHandler = address(444);
+    uint256 public maxStakeableTotal = 800;
+    uint256 public maxStakeablePerUser = 40;
+    uint256 public boostFactor = 1e18;
 
     event MaxStakeableTotal(uint256 maxStakeableTotal);
     event MaxStakeablePerUser(uint256 maxStakeablePerUser);
     event BoostFactor(uint256 boostFactor);
 
     function setUp() public {
-        admin = address(111);
-        harvesterFactory = address(222);
-
-        harvester = address(new Mock("Harvester"));
-        nftHandler = address(new Mock("NftHandler"));
-
-        maxStakeableTotal = 800;
-        maxStakeablePerUser = 40;
-        boostFactor = 1e18;
-
         address impl = address(new PartsStakingRules());
 
         partsRules = PartsStakingRules(address(new ERC1967Proxy(impl, bytes(""))));
         partsRules.init(admin, harvesterFactory, maxStakeableTotal, maxStakeablePerUser, boostFactor);
+    }
+
+    function mockCallUpdateRewards() public {
+        vm.prank(harvesterFactory);
+        partsRules.setNftHandler(address(this));
+
+        vm.mockCall(address(harvester), abi.encodeCall(IHarvester.callUpdateRewards, ()), abi.encode(true));
     }
 
     function test_getUserBoost(address _user, address _nft, uint256 _tokenId, uint256 _amount) public {
@@ -50,11 +47,8 @@ contract PartsStakingRulesTest is TestUtils {
         address nft = address(12);
         uint256 tokenId = 9;
 
-        vm.mockCall(
-            nftHandler,
-            abi.encodeCall(INftHandler.harvester, ()),
-            abi.encode(harvester)
-        );
+        vm.mockCall(nftHandler, abi.encodeCall(INftHandler.harvester, ()), abi.encode(harvester));
+        vm.mockCall(address(harvester), abi.encodeCall(IHarvester.callUpdateRewards, ()), abi.encode(true));
 
         vm.mockCall(
             harvester,
@@ -284,6 +278,8 @@ contract PartsStakingRulesTest is TestUtils {
     }
 
     function test_setBoostFactor(uint256 _boostFactor) public {
+        mockCallUpdateRewards();
+
         vm.assume(_boostFactor > 1e17);
 
         bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), partsRules.SR_ADMIN());

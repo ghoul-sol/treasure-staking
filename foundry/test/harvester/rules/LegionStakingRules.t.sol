@@ -34,23 +34,15 @@ contract LegionStakingRulesTest is TestUtils {
 
     LegionStakingRulesMock public legionRules;
 
-    address public admin;
-    address public harvesterFactory;
-    address public legionMetadataStore;
-    uint256 public maxLegionWeight;
-    uint256 public maxStakeableTotal;
-    uint256 public boostFactor;
+    address public admin = address(111);
+    address public harvesterFactory = address(222);
+    address public harvester = address(333);
+    address public legionMetadataStore = address(new Mock("LegionMetadataStore"));
+    uint256 public maxLegionWeight = 200e18;
+    uint256 public maxStakeableTotal = 100;
+    uint256 public boostFactor = 1e18;
 
     function setUp() public {
-        admin = address(111);
-        harvesterFactory = address(222);
-
-        legionMetadataStore = address(new Mock("LegionMetadataStore"));
-
-        maxLegionWeight = 200e18;
-        maxStakeableTotal = 100;
-        boostFactor = 1e18;
-
         address impl = address(new LegionStakingRulesMock());
 
         legionRules = LegionStakingRulesMock(address(new ERC1967Proxy(impl, bytes(""))));
@@ -62,6 +54,11 @@ contract LegionStakingRulesTest is TestUtils {
             maxStakeableTotal,
             boostFactor
         );
+
+        vm.prank(harvesterFactory);
+        legionRules.setNftHandler(address(this));
+
+        vm.mockCall(address(harvester), abi.encodeCall(IHarvester.callUpdateRewards, ()), abi.encode(true));
     }
 
     function getTestCase(uint256 _i) public view returns (TestCase memory) {

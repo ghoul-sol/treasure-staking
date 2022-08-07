@@ -13,6 +13,8 @@ import "contracts/harvester/rules/ExtractorStakingRules.sol";
 contract ExtractorStakingRulesTest is TestUtils {
     ExtractorStakingRules public extractorRules;
 
+    IHarvester public harvester = IHarvester(address(8888));
+
     address public admin = address(111);
     address public harvesterFactory = address(222);
     address public extractorAddress = address(333);
@@ -36,6 +38,8 @@ contract ExtractorStakingRulesTest is TestUtils {
 
         extractorRules = ExtractorStakingRules(address(new ERC1967Proxy(impl, bytes(""))));
         extractorRules.init(admin, harvesterFactory, extractorAddress, maxStakeable, lifetime);
+
+        vm.mockCall(address(harvester), abi.encodeCall(IHarvester.callUpdateRewards, ()), abi.encode(true));
     }
 
     function stakeExtractor(address _user, uint256 _tokenId, uint256 _amount) public {
@@ -287,6 +291,9 @@ contract ExtractorStakingRulesTest is TestUtils {
     }
 
     function test_getHarvesterBoost(uint256 _amount) public {
+        vm.prank(harvesterFactory);
+        extractorRules.setNftHandler(address(this));
+
         vm.assume(0 < _amount && _amount < maxStakeable - 1);
 
         address user = address(999);
@@ -330,6 +337,9 @@ contract ExtractorStakingRulesTest is TestUtils {
     }
 
     function test_setExtractorBoost(uint256 _boost) public {
+        vm.prank(harvesterFactory);
+        extractorRules.setNftHandler(address(this));
+
         uint256 tokenId = 9;
 
         assertEq(extractorRules.extractorBoost(tokenId), 0);
@@ -347,6 +357,9 @@ contract ExtractorStakingRulesTest is TestUtils {
     }
 
     function test_setExtractorLifetime(uint256 _lifetime) public {
+        vm.prank(harvesterFactory);
+        extractorRules.setNftHandler(address(this));
+
         vm.assume(_lifetime != lifetime);
 
         assertEq(extractorRules.lifetime(), lifetime);
