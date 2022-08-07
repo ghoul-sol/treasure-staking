@@ -81,9 +81,11 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         uint256 lpSupply = totalLpToken;
         if (lpSupply > 0) {
             uint256 distributedRewards = factory.middleman().requestRewards();
-            totalRewardsEarned += distributedRewards;
-            accMagicPerShare += distributedRewards * ONE / lpSupply;
-            emit LogUpdateRewards(distributedRewards, lpSupply, accMagicPerShare);
+            if (distributedRewards > 0) {
+                totalRewardsEarned += distributedRewards;
+                accMagicPerShare += distributedRewards * ONE / lpSupply;
+                emit LogUpdateRewards(distributedRewards, lpSupply, accMagicPerShare);
+            }
         }
 
         _;
