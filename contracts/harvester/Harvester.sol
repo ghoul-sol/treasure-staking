@@ -64,7 +64,6 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
 
     event Deposit(address indexed user, uint256 indexed index, uint256 amount, uint256 lock);
     event Withdraw(address indexed user, uint256 indexed index, uint256 amount);
-    event UndistributedRewardsWithdraw(address indexed to, uint256 amount);
     event Harvest(address indexed user, uint256 amount);
     event LogUpdateRewards(uint256 distributedRewards, uint256 lpSupply, uint256 accMagicPerShare);
     event Enable();
