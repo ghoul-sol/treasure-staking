@@ -8,6 +8,7 @@ import "foundry/lib/ERC1155Mintable.sol";
 import "forge-std/console2.sol";
 
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import '@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol';
 import '@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol';
 
 import "contracts/harvester/interfaces/INftHandler.sol";
@@ -17,7 +18,7 @@ import "contracts/harvester/rules/ExtractorStakingRules.sol";
 import "contracts/harvester/NftHandler.sol";
 import "./rules/LegionStakingRules.t.sol";
 
-contract NftHandlerTest is TestUtils, ERC1155Holder {
+contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
     LegionStakingRulesTest legionTest;
 
     NftHandler public nftHandler;

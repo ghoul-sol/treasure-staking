@@ -7,6 +7,7 @@ import '@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Burnable.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 import '@openzeppelin/contracts/utils/introspection/ERC165Checker.sol';
 
+import '@openzeppelin/contracts-upgradeable/token/ERC721/utils/ERC721HolderUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
 
@@ -16,7 +17,7 @@ import './interfaces/IExtractorStakingRules.sol';
 
 import './lib/Constant.sol';
 
-contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155HolderUpgradeable {
+contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC721HolderUpgradeable, ERC1155HolderUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     bytes32 public constant NH_ADMIN = keccak256("NH_ADMIN");
@@ -92,6 +93,7 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
         INftHandler.NftConfig[] memory _nftConfigs
     ) external initializer {
         __AccessControlEnumerable_init();
+        __ERC721Holder_init();
         __ERC1155Holder_init();
 
         _setRoleAdmin(NH_ADMIN, NH_ADMIN);
@@ -177,7 +179,7 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
             if (_amount != 1) revert("WrongAmountForERC721()");
             if (stakedNfts[msg.sender][_nft][_tokenId] != 0) revert("NftAlreadyStaked()");
 
-            IERC721(_nft).transferFrom(msg.sender, address(this), _tokenId);
+            IERC721(_nft).safeTransferFrom(msg.sender, address(this), _tokenId);
         } else if (supportedInterface == Interfaces.ERC1155) {
             IERC1155(_nft).safeTransferFrom(msg.sender, address(this), _tokenId, _amount, bytes(""));
         } else {
@@ -226,7 +228,7 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC1155H
             if (_amount != 1) revert("WrongAmountForERC721()");
             if (stakedNfts[msg.sender][_nft][_tokenId] != 1) revert("NftNotStaked()");
 
-            IERC721(_nft).transferFrom(address(this), msg.sender, _tokenId);
+            IERC721(_nft).safeTransferFrom(address(this), msg.sender, _tokenId);
         } else if (supportedInterface == Interfaces.ERC1155) {
             IERC1155(_nft).safeTransferFrom(address(this), msg.sender, _tokenId, _amount, bytes(""));
         }
