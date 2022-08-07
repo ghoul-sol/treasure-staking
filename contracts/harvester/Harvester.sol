@@ -202,7 +202,7 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         vestingTime = timelockOptions[_timelockId].vesting;
     }
 
-    function calcualteVestedPrincipal(address _user, uint256 _depositId)
+    function calculateVestedPrincipal(address _user, uint256 _depositId)
         public
         view
         returns (uint256 amount)
@@ -253,7 +253,7 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         for (uint256 i = 0; i < depositIds.length; i++) {
             uint256 depositId = depositIds[i];
 
-            withdrawable += calcualteVestedPrincipal(_user, depositId);
+            withdrawable += calculateVestedPrincipal(_user, depositId);
         }
     }
 
@@ -322,7 +322,7 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         if (!unlockAll) {
             if (block.timestamp < user.lockedUntil) revert StillLocked();
 
-            uint256 vestedAmount = calcualteVestedPrincipal(msg.sender, _depositId);
+            uint256 vestedAmount = calculateVestedPrincipal(msg.sender, _depositId);
             if (_amount > vestedAmount) {
                 _amount = vestedAmount;
             }

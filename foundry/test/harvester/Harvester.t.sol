@@ -1120,7 +1120,7 @@ contract HarvesterTest is TestUtils {
         checkState(data);
     }
 
-    function test_calcualteVestedPrincipal() public {
+    function test_calculateVestedPrincipal() public {
         uint256 originalDepositAmount;
         uint256 lockedUntil;
         uint256 lock;
@@ -1131,11 +1131,11 @@ contract HarvesterTest is TestUtils {
 
         ( originalDepositAmount,,, lockedUntil, lock ) = harvester.userInfo(data0.user, data0.depositId);
 
-        assertEq(harvester.calcualteVestedPrincipal(data0.user, data0.depositId), 0);
+        assertEq(harvester.calculateVestedPrincipal(data0.user, data0.depositId), 0);
 
         vm.warp(lockedUntil);
 
-        assertEq(harvester.calcualteVestedPrincipal(data0.user, data0.depositId), originalDepositAmount);
+        assertEq(harvester.calculateVestedPrincipal(data0.user, data0.depositId), originalDepositAmount);
 
         TestAction memory data1 = getTestAction(1);
         mockForAction(data1);
@@ -1143,14 +1143,14 @@ contract HarvesterTest is TestUtils {
 
         ( originalDepositAmount,,, lockedUntil, lock ) = harvester.userInfo(data1.user, data1.depositId);
 
-        assertEq(harvester.calcualteVestedPrincipal(data1.user, data1.depositId), 0);
+        assertEq(harvester.calculateVestedPrincipal(data1.user, data1.depositId), 0);
 
         uint256 vestingTime = harvester.getVestingTime(lock);
         uint256 vestingBegin = lockedUntil;
 
         vm.warp(vestingBegin);
 
-        assertEq(harvester.calcualteVestedPrincipal(data1.user, data1.depositId), 0);
+        assertEq(harvester.calculateVestedPrincipal(data1.user, data1.depositId), 0);
 
         uint256 quaterVestingTime = vestingTime / 4;
         uint256 quaterDepositAmount = originalDepositAmount / 4;
@@ -1158,7 +1158,7 @@ contract HarvesterTest is TestUtils {
         for (uint256 i = 0; i < 4; i++) {
             vm.warp(block.timestamp + quaterVestingTime);
 
-            uint256 vestedAmount = harvester.calcualteVestedPrincipal(data1.user, data1.depositId);
+            uint256 vestedAmount = harvester.calculateVestedPrincipal(data1.user, data1.depositId);
 
             assertEq(vestedAmount, quaterDepositAmount + quaterDepositAmount * i);
         }
