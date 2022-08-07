@@ -47,7 +47,7 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
     ExtractorStakingRules public erc1155StakingRules;
 
     event NftConfigSet(address indexed _nft, uint256 indexed _tokenId, INftHandler.NftConfig _nftConfig);
-    event Staked(address indexed nft, uint256 tokenId, uint256 amount);
+    event Staked(address indexed user, address indexed nft, uint256 tokenId, uint256 amount);
 
     function setUp() public {
         legionTest = new LegionStakingRulesTest();
@@ -571,7 +571,7 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
         vm.mockCall(h, abi.encodeCall(IHarvester.updateNftBoost, (address(this))), abi.encode(true));
 
         vm.expectEmit(true, true, true, true);
-        emit Staked(address(nftErc721), tokenId, 1);
+        emit Staked(address(this), address(nftErc721), tokenId, 1);
         nftHandler.stakeNft(address(nftErc721), tokenId, 1);
 
         assertEq(nftHandler.stakedNfts(address(this), address(nftErc721), tokenId), 1);
@@ -611,7 +611,7 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
         erc1155StakingRules.setExtractorBoost(tokenId, extractorBoost);
 
         vm.expectEmit(true, true, true, true);
-        emit Staked(address(nftErc1155), tokenId, amount);
+        emit Staked(address(this), address(nftErc1155), tokenId, amount);
         nftHandler.stakeNft(address(nftErc1155), tokenId, amount);
 
         assertEq(nftHandler.stakedNfts(address(this), address(nftErc1155), tokenId), amount);
@@ -627,7 +627,7 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
         nftErc1155.mint(address(this), tokenId, newAmount);
 
         vm.expectEmit(true, true, true, true);
-        emit Staked(address(nftErc1155), tokenId, newAmount);
+        emit Staked(address(this), address(nftErc1155), tokenId, newAmount);
         nftHandler.stakeNft(address(nftErc1155), tokenId, newAmount);
 
         assertEq(nftHandler.stakedNfts(address(this), address(nftErc1155), tokenId), amount + newAmount);
