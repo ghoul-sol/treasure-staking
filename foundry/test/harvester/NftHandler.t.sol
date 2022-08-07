@@ -605,6 +605,8 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
         nftErc1155.mint(address(this), tokenId, amount);
         nftErc1155.setApprovalForAll(address(nftHandler), true);
 
+        vm.mockCall(harvester, abi.encodeCall(IHarvester.callUpdateRewards, ()), abi.encode(true));
+
         vm.prank(admin);
         erc1155StakingRules.setExtractorBoost(tokenId, extractorBoost);
 
@@ -673,6 +675,8 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
 
         address h = address(nftHandler.harvester());
         vm.mockCall(h, abi.encodeCall(IHarvester.updateNftBoost, (address(this))), abi.encode(true));
+
+        vm.mockCall(address(harvester), abi.encodeCall(IHarvester.callUpdateRewards, ()), abi.encode(true));
 
         vm.prank(admin);
         erc1155StakingRules.setExtractorBoost(tokenId, extractorBoost);

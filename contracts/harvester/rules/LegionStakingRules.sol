@@ -184,6 +184,8 @@ contract LegionStakingRules is StakingRulesBase {
     }
 
     function setBoostFactor(uint256 _boostFactor) external onlyRole(SR_ADMIN) {
+        nftHandler.harvester().callUpdateRewards();
+
         _setBoostFactor(_boostFactor);
     }
 
