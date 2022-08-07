@@ -178,7 +178,7 @@ contract HarvesterTest is TestUtils {
         assertEq(mockHarvester.getAllUserDepositIdsLength(user2), 1);
         assertEq(mockHarvester.getAllUserDepositIds(user2)[0], 1);
 
-        vm.expectRevert("DepositDoesNotExists()");
+        vm.expectRevert(Harvester.DepositDoesNotExists.selector);
         mockHarvester.removeDeposit(user2, 2);
         assertEq(mockHarvester.getAllUserDepositIdsLength(user2), 1);
         assertEq(mockHarvester.getAllUserDepositIds(user2)[0], 1);
@@ -280,7 +280,7 @@ contract HarvesterTest is TestUtils {
         assertTrue(harvester.disabled());
 
         vm.prank(randomWallet);
-        vm.expectRevert("OnlyFactory()");
+        vm.expectRevert(Harvester.OnlyFactory.selector);
         harvester.enable();
 
         vm.prank(harvesterFactory);
@@ -295,7 +295,7 @@ contract HarvesterTest is TestUtils {
         assertFalse(harvester.disabled());
 
         vm.prank(randomWallet);
-        vm.expectRevert("OnlyFactory()");
+        vm.expectRevert(Harvester.OnlyFactory.selector);
         harvester.disable();
 
         vm.prank(harvesterFactory);
@@ -357,7 +357,7 @@ contract HarvesterTest is TestUtils {
         uint256 pendingRewardsBefore;
         uint256 pendingRewards;
         uint256 maxWithdrawableAmount;
-        bytes revertString;
+        bytes4 revertString;
     }
 
     // workaround for "UnimplementedFeatureError: Copying of type struct memory to storage not yet supported."
@@ -464,7 +464,7 @@ contract HarvesterTest is TestUtils {
                 pendingRewardsBefore: 0,
                 pendingRewards: 0,
                 maxWithdrawableAmount: 0,
-                revertString: "ZeroAmount()"
+                revertString: Harvester.ZeroAmount.selector
             }),
             TestAction({
                 action: Actions.Withdraw,
@@ -489,7 +489,7 @@ contract HarvesterTest is TestUtils {
                 pendingRewardsBefore: 0,
                 pendingRewards: 0,
                 maxWithdrawableAmount: 0,
-                revertString: "StillLocked()"
+                revertString: Harvester.StillLocked.selector
             }),
             TestAction({
                 action: Actions.Withdraw,
@@ -689,7 +689,7 @@ contract HarvesterTest is TestUtils {
                 pendingRewardsBefore: 0,
                 pendingRewards: 0,
                 maxWithdrawableAmount: 1e18,
-                revertString: "StillLocked()"
+                revertString: Harvester.StillLocked.selector
             }),
             TestAction({
                 action: Actions.WithdrawAmountFromAll,
@@ -739,7 +739,7 @@ contract HarvesterTest is TestUtils {
                 pendingRewardsBefore: 0,
                 pendingRewards: 0,
                 maxWithdrawableAmount: 0.5e18,
-                revertString: "StillLocked()"
+                revertString: Harvester.StillLocked.selector
             }),
             TestAction({
                 action: Actions.WithdrawAmountFromAll,
@@ -789,7 +789,7 @@ contract HarvesterTest is TestUtils {
                 pendingRewardsBefore: 0,
                 pendingRewards: 0,
                 maxWithdrawableAmount: 0.5e18,
-                revertString: "AmountTooBig()"
+                revertString: Harvester.AmountTooBig.selector
             }),
             TestAction({
                 action: Actions.WithdrawAmountFromAll,
@@ -839,7 +839,7 @@ contract HarvesterTest is TestUtils {
                 pendingRewardsBefore: 0,
                 pendingRewards: 0,
                 maxWithdrawableAmount: 0,
-                revertString: "AmountTooBig()"
+                revertString: Harvester.AmountTooBig.selector
             })
         ];
 
@@ -888,7 +888,7 @@ contract HarvesterTest is TestUtils {
     }
 
     function doDeposit(TestAction memory data) public {
-        if (data.revertString.length == 0) {
+        if (data.revertString == bytes4(0)) {
             magic.mint(data.user, data.originalDepositAmount);
             vm.prank(data.user);
             magic.approve(address(harvester), data.originalDepositAmount);
@@ -916,7 +916,7 @@ contract HarvesterTest is TestUtils {
     function doWithdraw(TestAction memory data) public {
         uint256 balanceBefore = magic.balanceOf(data.user);
 
-        if (data.revertString.length == 0) {
+        if (data.revertString == bytes4(0)) {
             vm.prank(data.user);
             vm.expectCall(address(magic), abi.encodeCall(IERC20.transfer, (data.user, data.withdrawAmount)));
             vm.expectEmit(true, true, true, true);
@@ -938,7 +938,7 @@ contract HarvesterTest is TestUtils {
     function doWithdrawAll(TestAction memory data) public {
         uint256 balanceBefore = magic.balanceOf(data.user);
 
-        if (data.revertString.length == 0) {
+        if (data.revertString == bytes4(0)) {
             vm.prank(data.user);
             harvester.withdrawAll();
 
@@ -957,7 +957,7 @@ contract HarvesterTest is TestUtils {
     function doWithdrawAmountFromAll(TestAction memory data) public {
         uint256 balanceBefore = magic.balanceOf(data.user);
 
-        if (data.revertString.length == 0) {
+        if (data.revertString == bytes4(0)) {
             vm.prank(data.user);
             harvester.withdrawAmountFromAll(data.withdrawAmount);
 
@@ -974,7 +974,7 @@ contract HarvesterTest is TestUtils {
     }
 
     function doHarvest(TestAction memory data) public {
-        if (data.revertString.length == 0) {
+        if (data.revertString == bytes4(0)) {
             vm.prank(data.user);
             vm.expectCall(address(magic), abi.encodeCall(IERC20.transfer, (data.user, data.pendingRewardsBefore)));
             vm.expectEmit(true, true, true, true);
@@ -990,7 +990,7 @@ contract HarvesterTest is TestUtils {
     function doWithdrawAndHarvest(TestAction memory data) public {
         uint256 balanceBefore = magic.balanceOf(data.user);
 
-        if (data.revertString.length == 0) {
+        if (data.revertString == bytes4(0)) {
             vm.prank(data.user);
             harvester.withdrawAndHarvestPosition(data.depositId, data.withdrawAmount);
 
@@ -1009,7 +1009,7 @@ contract HarvesterTest is TestUtils {
     function doWithdrawAndHarvestAll(TestAction memory data) public {
         uint256 balanceBefore = magic.balanceOf(data.user);
 
-        if (data.revertString.length == 0) {
+        if (data.revertString == bytes4(0)) {
             vm.prank(data.user);
             harvester.withdrawAndHarvestAll();
 
@@ -1106,11 +1106,11 @@ contract HarvesterTest is TestUtils {
         vm.mockCall(stakingRules, abi.encodeCall(IPartsStakingRules.getAmountStaked, (data.user)), abi.encode(500));
 
         vm.prank(data.user);
-        vm.expectRevert("Invalid value or disabled timelock");
+        vm.expectRevert(Harvester.InvalidValueOrDisabledTimelock.selector);
         harvester.deposit(data.originalDepositAmount, data.lock);
 
         vm.prank(data.user);
-        vm.expectRevert("Invalid value or disabled timelock");
+        vm.expectRevert(Harvester.InvalidValueOrDisabledTimelock.selector);
         harvester.deposit(data.originalDepositAmount, 9999999);
 
         vm.prank(admin);

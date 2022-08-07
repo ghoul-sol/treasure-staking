@@ -241,7 +241,7 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
         INftHandler.Interfaces expectedInterface;
         address expectedStakingRules;
         uint256 expectedRulesUsage;
-        bytes revertString;
+        bytes4 revertString;
     }
 
     // workaround for "UnimplementedFeatureError: Copying of type struct memory to storage not yet supported."
@@ -446,7 +446,7 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
                 expectedInterface: INftHandler.Interfaces.ERC1155,
                 expectedStakingRules: address(erc1155StakingRules),
                 expectedRulesUsage: 1,
-                revertString: "WrongInterface()"
+                revertString: NftHandler.WrongInterface.selector
             }),
             TestNftConfig({
                 nftAddress: address(nftErc1155),
@@ -523,7 +523,7 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
 
             // check original config first
             if (i > 0) {
-                if (data.revertString.length == 0) {
+                if (data.revertString == bytes4(0)) {
                     vm.prank(admin);
                     vm.expectEmit(true, true, true, true);
                     emit NftConfigSet(data.nftAddress, data.tokenId, data.nftConfig);
@@ -540,10 +540,10 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
     }
 
     function test_stakeNftERC721() public {
-        vm.expectRevert("InvalidNftAddress()");
+        vm.expectRevert(NftHandler.InvalidNftAddress.selector);
         nftHandler.stakeNft(address(0), 1, 1);
 
-        vm.expectRevert("NothingToStake()");
+        vm.expectRevert(NftHandler.NothingToStake.selector);
         nftHandler.stakeNft(address(nftErc721), 1, 0);
 
         uint256 tokenId = 1;
@@ -558,10 +558,10 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
             )
         );
 
-        vm.expectRevert("WrongAmountForERC721()");
+        vm.expectRevert(NftHandler.WrongAmountForERC721.selector);
         nftHandler.stakeNft(address(nftErc721), tokenId, 10);
 
-        vm.expectRevert("NoStakingRules()");
+        vm.expectRevert(NftHandler.NoStakingRules.selector);
         nftHandler.stakeNft(address(nftErc1155), tokenId, 10);
 
         nftErc721.mint(address(this), tokenId);
@@ -581,7 +581,7 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
         );
         assertEq(nftErc721.ownerOf(tokenId), address(nftHandler));
 
-        vm.expectRevert("NftAlreadyStaked()");
+        vm.expectRevert(NftHandler.NftAlreadyStaked.selector);
         nftHandler.stakeNft(address(nftErc721), tokenId, 1);
     }
 
@@ -745,7 +745,7 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
             uint256[] memory _wrongAmount
         ) = prepareBatchStake();
 
-        vm.expectRevert("InvalidData()");
+        vm.expectRevert(NftHandler.InvalidData.selector);
         nftHandler.batchStakeNft(_nft, _tokenId, _wrongAmount);
 
         nftHandler.batchStakeNft(_nft, _tokenId, _amount);
@@ -760,13 +760,13 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
         stakeNftHelperERC721(tokenId);
         stakeNftHelperERC1155(tokenId, amount);
 
-        vm.expectRevert("InvalidNftAddress()");
+        vm.expectRevert(NftHandler.InvalidNftAddress.selector);
         nftHandler.unstakeNft(address(0), tokenId, 1);
 
-        vm.expectRevert("NothingToStake()");
+        vm.expectRevert(NftHandler.NothingToStake.selector);
         nftHandler.unstakeNft(address(nftErc721), tokenId, 0);
 
-        vm.expectRevert("WrongAmountForERC721()");
+        vm.expectRevert(NftHandler.WrongAmountForERC721.selector);
         nftHandler.unstakeNft(address(nftErc721), tokenId, 10);
 
         uint256 wrongTokenId = 10;
@@ -781,10 +781,10 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
             )
         );
 
-        vm.expectRevert("NftNotStaked()");
+        vm.expectRevert(NftHandler.NftNotStaked.selector);
         nftHandler.unstakeNft(address(nftErc721), wrongTokenId, 1);
 
-        vm.expectRevert("NftNotAllowed()");
+        vm.expectRevert(NftHandler.NftNotAllowed.selector);
         nftHandler.unstakeNft(address(1), tokenId, 1);
 
         vm.mockCall(
@@ -794,7 +794,7 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
         );
         nftErc1155.mint(address(nftHandler), tokenId, 1);
 
-        vm.expectRevert("AmountTooBig()");
+        vm.expectRevert(NftHandler.AmountTooBig.selector);
         nftHandler.unstakeNft(address(nftErc1155), tokenId, amount + 1);
 
         uint256 currentUserBoost = nftHandler.getUserBoost(address(this));
@@ -872,7 +872,7 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
             _amountUnstake[i] = _amount[i];
         }
 
-        vm.expectRevert("InvalidData()");
+        vm.expectRevert(NftHandler.InvalidData.selector);
         nftHandler.batchUnstakeNft(_nftUnstake, _tokenIdUnstake, _wrongAmount);
 
         nftHandler.batchUnstakeNft(_nftUnstake, _tokenIdUnstake, _amountUnstake);
@@ -888,16 +888,16 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
         uint256 amount = 20;
         uint256 replacedSpotId = 0;
 
-        vm.expectRevert("InvalidNftAddress()");
+        vm.expectRevert(NftHandler.InvalidNftAddress.selector);
         nftHandler.replaceExtractor(address(0), tokenId, amount, replacedSpotId);
 
-        vm.expectRevert("NothingToStake()");
+        vm.expectRevert(NftHandler.NothingToStake.selector);
         nftHandler.replaceExtractor(address(nftErc1155), tokenId, 0, replacedSpotId);
 
-        vm.expectRevert("StakingRulesRequired()");
+        vm.expectRevert(NftHandler.StakingRulesRequired.selector);
         nftHandler.replaceExtractor(address(nftErc1155), tokenId, amount, replacedSpotId);
 
-        vm.expectRevert("MustBeERC1155()");
+        vm.expectRevert(NftHandler.MustBeERC1155.selector);
         nftHandler.replaceExtractor(address(nftErc721), tokenId, amount, replacedSpotId);
 
         stakeNftHelperERC1155(tokenId, amount);
@@ -1022,7 +1022,7 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
 
         uint256[] memory replacedSpotId = new uint256[](3);
 
-        vm.expectRevert("InvalidData()");
+        vm.expectRevert(NftHandler.InvalidData.selector);
         nftHandler.batchReplaceExtractor(_nft, _tokenId, _wrongAmount, replacedSpotId);
 
         (

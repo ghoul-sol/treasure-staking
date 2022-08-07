@@ -76,6 +76,17 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
     event TimelockOptionEnabled(Timelock timelock, uint256 id);
     event TimelockOptionDisabled(Timelock timelock, uint256 id);
 
+    error MaxUserGlobalDeposit();
+    error MaxTotalDeposit();
+    error Disabled();
+    error OnlyFactory();
+    error InvalidValueOrDisabledTimelock();
+    error ZeroAmount();
+    error StillLocked();
+    error AmountTooBig();
+    error RunOnBank();
+    error DepositDoesNotExists();
+
     modifier updateRewards() {
         uint256 lpSupply = totalLpToken;
         if (lpSupply > 0) {
@@ -94,20 +105,20 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         _;
 
         if (isMaxUserGlobalDeposit(msg.sender)) {
-            revert("MaxUserGlobalDeposit()");
+            revert MaxUserGlobalDeposit();
         }
 
-        if (magicTotalDeposits > totalDepositCap) revert("MaxTotalDeposit()");
+        if (magicTotalDeposits > totalDepositCap) revert MaxTotalDeposit();
     }
 
     modifier whenEnabled() {
-        if (disabled) revert("Disabled()");
+        if (disabled) revert Disabled();
 
         _;
     }
 
     modifier onlyFactory() {
-        if (msg.sender != address(factory)) revert("OnlyFactory()");
+        if (msg.sender != address(factory)) revert OnlyFactory();
 
         _;
     }
@@ -276,7 +287,7 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         (UserInfo storage user, uint256 depositId) = _addDeposit(msg.sender);
 
         if (!timelockOptions[_timelockId].enabled) {
-            revert("Invalid value or disabled timelock");
+            revert InvalidValueOrDisabledTimelock();
         }
 
         (uint256 lockBoost, uint256 timelock) = getLockBoost(_timelockId);
@@ -297,7 +308,7 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
     }
 
     function withdrawPosition(uint256 _depositId, uint256 _amount) public updateRewards returns (bool) {
-        if (_amount == 0) revert("ZeroAmount()");
+        if (_amount == 0) revert ZeroAmount();
 
         UserInfo storage user = userInfo[msg.sender][_depositId];
         uint256 depositAmount = user.depositAmount;
@@ -309,7 +320,7 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
 
         // anyone can withdraw if kill swith was used
         if (!unlockAll) {
-            if (block.timestamp < user.lockedUntil) revert("StillLocked()");
+            if (block.timestamp < user.lockedUntil) revert StillLocked();
 
             uint256 vestedAmount = calcualteVestedPrincipal(msg.sender, _depositId);
             if (_amount > vestedAmount) {
@@ -359,7 +370,7 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
             if (_amount == 0) return;
         }
 
-        if (_amount > 0) revert("AmountTooBig()");
+        if (_amount > 0) revert AmountTooBig();
     }
 
     function withdrawAll() public {
@@ -392,7 +403,7 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
 
         emit Harvest(msg.sender, _pendingMagic);
 
-        if (magic.balanceOf(address(this)) < magicTotalDeposits) revert("RunOnBank()");
+        if (magic.balanceOf(address(this)) < magicTotalDeposits) revert RunOnBank();
     }
 
     function withdrawAndHarvestPosition(uint256 _depositId, uint256 _amount) public {
@@ -431,7 +442,7 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
     }
 
     function _removeDeposit(address _user, uint256 _depositId) internal {
-        if (!allUserDepositIds[_user].remove(_depositId)) revert("DepositDoesNotExists()");
+        if (!allUserDepositIds[_user].remove(_depositId)) revert DepositDoesNotExists();
     }
 
     // ADMIN

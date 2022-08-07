@@ -144,12 +144,12 @@ contract TreasureStakingRulesTest is TestUtils {
         vm.prank(harvesterFactory);
         treasureRules.setNftHandler(address(this));
 
-        vm.expectRevert("ZeroAddress()");
+        vm.expectRevert(TreasureStakingRules.ZeroAddress.selector);
         treasureRules.processStake(address(0), _nft, _tokenId, _amount);
 
         vm.assume(_user != address(0));
 
-        vm.expectRevert("ZeroAmount()");
+        vm.expectRevert(TreasureStakingRules.ZeroAmount.selector);
         treasureRules.processStake(_user, _nft, _tokenId, 0);
 
         vm.assume(_amount > 0 && _amount < 1e18);
@@ -163,7 +163,7 @@ contract TreasureStakingRulesTest is TestUtils {
         treasureRules.processStake(_user, _nft, _tokenId, _amount);
         assertEq(treasureRules.getAmountTreasuresStaked(_user), _amount);
 
-        vm.expectRevert("MaxStakeablePerUser()");
+        vm.expectRevert(TreasureStakingRules.MaxStakeablePerUserReached.selector);
         treasureRules.processStake(_user, _nft, _tokenId, _amount + 1);
 
         assertEq(treasureRules.getAmountTreasuresStaked(_user), _amount);
@@ -178,13 +178,13 @@ contract TreasureStakingRulesTest is TestUtils {
         treasureRules.setNftHandler(nftHandler);
 
         vm.prank(nftHandler);
-        vm.expectRevert("ZeroAddress()");
+        vm.expectRevert(TreasureStakingRules.ZeroAddress.selector);
         treasureRules.processUnstake(address(0), _nft, _tokenId, _amount);
 
         vm.assume(_user != address(0));
 
         vm.prank(nftHandler);
-        vm.expectRevert("ZeroAmount()");
+        vm.expectRevert(TreasureStakingRules.ZeroAmount.selector);
         treasureRules.processUnstake(_user, _nft, _tokenId, 0);
 
         vm.assume(maxStakeablePerUser < _amount);

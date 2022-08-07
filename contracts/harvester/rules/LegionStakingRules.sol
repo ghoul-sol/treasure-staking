@@ -26,6 +26,8 @@ contract LegionStakingRules is StakingRulesBase {
     event MaxStakeableTotal(uint256 maxStakeableTotal);
     event BoostFactor(uint256 boostFactor);
 
+    error MaxWeightReached();
+
     function init(
         address _admin,
         address _harvesterFactory,
@@ -159,7 +161,7 @@ contract LegionStakingRules is StakingRulesBase {
         totalRank += getRank(_tokenId);
         weightStaked[_user] += getWeight(_tokenId);
 
-        if (weightStaked[_user] > maxLegionWeight) revert("MaxWeight()");
+        if (weightStaked[_user] > maxLegionWeight) revert MaxWeightReached();
     }
 
     function _processUnstake(address _user, address, uint256 _tokenId, uint256) internal override {

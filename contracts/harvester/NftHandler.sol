@@ -62,9 +62,22 @@ contract NftHandler is
     event Replaced(address indexed nft, uint256 tokenId, uint256 amount, uint256 replacedSpotId);
     event NftConfigSet(address indexed _nft, uint256 indexed _tokenId, NftConfig _nftConfig);
 
+    error InvalidNftAddress();
+    error NothingToStake();
+    error NoStakingRules();
+    error InvalidData();
+    error WrongAmountForERC721();
+    error NftAlreadyStaked();
+    error NftNotAllowed();
+    error NftNotStaked();
+    error AmountTooBig();
+    error StakingRulesRequired();
+    error MustBeERC1155();
+    error WrongInterface();
+
     modifier validateInput(address _nft, uint256 _amount) {
-        if (_nft == address(0)) revert("InvalidNftAddress()");
-        if (_amount == 0) revert("NothingToStake()");
+        if (_nft == address(0)) revert InvalidNftAddress();
+        if (_amount == 0) revert NothingToStake();
 
         _;
     }
@@ -72,7 +85,7 @@ contract NftHandler is
     modifier processStake(address _user, address _nft, uint256 _tokenId, uint256 _amount) {
         IStakingRules stakingRules = getStakingRules(_nft, _tokenId);
 
-        if (address(stakingRules) == address(0)) revert("NoStakingRules()");
+        if (address(stakingRules) == address(0)) revert NoStakingRules();
 
         stakingRules.processStake(_user, _nft, _tokenId, _amount);
 
@@ -110,7 +123,7 @@ contract NftHandler is
 
         harvester = IHarvester(_harvester);
 
-        if (_nfts.length != _nftConfigs.length) revert("InvalidData()");
+        if (_nfts.length != _nftConfigs.length) revert InvalidData();
 
         for (uint256 i = 0; i < _nfts.length; i++) {
             _setNftConfig(_nfts[i], _tokenIds[i], _nftConfigs[i]);
@@ -186,14 +199,14 @@ contract NftHandler is
         Interfaces supportedInterface = getSupportedInterface(_nft, _tokenId);
 
         if (supportedInterface == Interfaces.ERC721) {
-            if (_amount != 1) revert("WrongAmountForERC721()");
-            if (stakedNfts[msg.sender][_nft][_tokenId] != 0) revert("NftAlreadyStaked()");
+            if (_amount != 1) revert WrongAmountForERC721();
+            if (stakedNfts[msg.sender][_nft][_tokenId] != 0) revert NftAlreadyStaked();
 
             IERC721(_nft).safeTransferFrom(msg.sender, address(this), _tokenId);
         } else if (supportedInterface == Interfaces.ERC1155) {
             IERC1155(_nft).safeTransferFrom(msg.sender, address(this), _tokenId, _amount, bytes(""));
         } else {
-            revert("NftNotAllowed()");
+            revert NftNotAllowed();
         }
 
         stakedNfts[msg.sender][_nft][_tokenId] += _amount;
@@ -205,7 +218,7 @@ contract NftHandler is
     }
 
     function batchStakeNft(address[] memory _nft, uint256[] memory _tokenId, uint256[] memory _amount) external {
-        if (_nft.length != _tokenId.length || _tokenId.length != _amount.length) revert("InvalidData()");
+        if (_nft.length != _tokenId.length || _tokenId.length != _amount.length) revert InvalidData();
 
         uint256 len = _nft.length;
 
@@ -231,13 +244,13 @@ contract NftHandler is
                     supportedInterface =  Interfaces.ERC1155;
                 }
             } else {
-                revert("NftNotAllowed()");
+                revert NftNotAllowed();
             }
         }
 
         if (supportedInterface == Interfaces.ERC721) {
-            if (_amount != 1) revert("WrongAmountForERC721()");
-            if (stakedNfts[msg.sender][_nft][_tokenId] != 1) revert("NftNotStaked()");
+            if (_amount != 1) revert WrongAmountForERC721();
+            if (stakedNfts[msg.sender][_nft][_tokenId] != 1) revert NftNotStaked();
 
             IERC721(_nft).safeTransferFrom(address(this), msg.sender, _tokenId);
         } else if (supportedInterface == Interfaces.ERC1155) {
@@ -245,7 +258,7 @@ contract NftHandler is
         }
 
         uint256 staked = stakedNfts[msg.sender][_nft][_tokenId];
-        if (_amount > staked) revert("AmountTooBig()");
+        if (_amount > staked) revert AmountTooBig();
         stakedNfts[msg.sender][_nft][_tokenId] = staked - _amount;
 
         getUserBoost[msg.sender] -= getNftBoost(msg.sender, _nft, _tokenId, _amount);
@@ -255,7 +268,7 @@ contract NftHandler is
     }
 
     function batchUnstakeNft(address[] memory _nft, uint256[] memory _tokenId, uint256[] memory _amount) external {
-        if (_nft.length != _tokenId.length || _tokenId.length != _amount.length) revert("InvalidData()");
+        if (_nft.length != _tokenId.length || _tokenId.length != _amount.length) revert InvalidData();
 
         uint256 len = _nft.length;
 
@@ -270,8 +283,8 @@ contract NftHandler is
     {
         IExtractorStakingRules stakingRules = IExtractorStakingRules(address(getStakingRules(_nft, _tokenId)));
 
-        if (address(stakingRules) == address(0)) revert("StakingRulesRequired()");
-        if (getSupportedInterface(_nft, _tokenId) != Interfaces.ERC1155) revert("MustBeERC1155()");
+        if (address(stakingRules) == address(0)) revert StakingRulesRequired();
+        if (getSupportedInterface(_nft, _tokenId) != Interfaces.ERC1155) revert MustBeERC1155();
 
         (
             address user,
@@ -296,7 +309,7 @@ contract NftHandler is
         uint256[] memory _amount,
         uint256[] memory _replacedSpotId
     ) external {
-        if (_nft.length != _tokenId.length || _tokenId.length != _amount.length) revert("InvalidData()");
+        if (_nft.length != _tokenId.length || _tokenId.length != _amount.length) revert InvalidData();
 
         uint256 len = _nft.length;
 
@@ -321,7 +334,7 @@ contract NftHandler is
 
         if (newStakingRules != oldStakingRules) {
             if (oldStakingRules == address(0)) { // add
-                if (_nftConfig.supportedInterface == Interfaces.Unsupported) revert("WrongInterface()");
+                if (_nftConfig.supportedInterface == Interfaces.Unsupported) revert WrongInterface();
 
                 allStakingRules.add(newStakingRules);
                 stakingRulesUsage[newStakingRules]++;
@@ -331,7 +344,7 @@ contract NftHandler is
                 stakingRulesUsage[oldStakingRules]--;
                 _nftConfig.supportedInterface = Interfaces.Unsupported;
             } else { // update
-                if (_nftConfig.supportedInterface == Interfaces.Unsupported) revert("WrongInterface()");
+                if (_nftConfig.supportedInterface == Interfaces.Unsupported) revert WrongInterface();
 
                 if (stakingRulesUsage[oldStakingRules] == 1) allStakingRules.remove(oldStakingRules);
                 stakingRulesUsage[oldStakingRules]--;

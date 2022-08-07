@@ -39,9 +39,18 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
     event Lifetime(uint256 lifetime);
     event ExtractorAddress(address extractorAddress);
 
+    error InvalidAddress();
+    error ZeroAmount();
+    error MustReplaceOne();
+    error InvalidSpotId();
+    error MustReplaceWithHigherBoost();
+    error ZeroBoost();
+    error MaxStakeableReached();
+    error CannotUnstake();
+
     modifier validateInput(address _nft, uint256 _amount) {
-        require(_nft == extractorAddress, "InvalidAddress()");
-        require(_amount > 0, "ZeroAmount()");
+        if (_nft != extractorAddress) revert InvalidAddress();
+        if (_amount == 0) revert ZeroAmount();
 
         _;
     }
@@ -104,8 +113,8 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
         validateInput(_nft, _amount)
         returns (address user, uint256 replacedTokenId, uint256 replacedAmount)
     {
-        if (_amount != 1) revert("MustReplaceOne()");
-        if (_replacedSpotId >= maxStakeable) revert("InvalidSpotId()");
+        if (_amount != 1) revert MustReplaceOne();
+        if (_replacedSpotId >= maxStakeable) revert InvalidSpotId();
 
         user = stakedExtractor[_replacedSpotId].user;
         replacedTokenId = stakedExtractor[_replacedSpotId].tokenId;
@@ -114,7 +123,7 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
         if (isExtractorActive(_replacedSpotId)) {
             uint256 oldBoost = extractorBoost[replacedTokenId];
             uint256 newBoost = extractorBoost[_tokenId];
-            if (oldBoost >= newBoost) revert("MustReplaceWithHigherBoost()");
+            if (oldBoost >= newBoost) revert MustReplaceWithHigherBoost();
         }
 
         stakedExtractor[_replacedSpotId] = ExtractorData(_user, _tokenId, block.timestamp);
@@ -126,8 +135,8 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
         override
         validateInput(_nft, _amount)
     {
-        if (extractorBoost[_tokenId] == 0) revert("ZeroBoost()");
-        if (extractorCount.current() + _amount > maxStakeable) revert("MaxStakeable()");
+        if (extractorBoost[_tokenId] == 0) revert ZeroBoost();
+        if (extractorCount.current() + _amount > maxStakeable) revert MaxStakeableReached();
 
         uint256 spotId;
 
@@ -142,7 +151,7 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
     }
 
     function _processUnstake(address, address, uint256, uint256) internal pure override {
-        revert("CannotUnstake()");
+        revert CannotUnstake();
     }
 
     // ADMIN
