@@ -878,6 +878,8 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
     }
 
     function test_replaceExtractor() public {
+        vm.mockCall(harvester, abi.encodeCall(IHarvester.callUpdateRewards, ()), abi.encode(true));
+
         uint256 tokenId = 1;
         uint256 amount = 20;
         uint256 replacedSpotId = 0;
@@ -1002,6 +1004,8 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
     }
 
     function test_batchReplaceExtractor() public {
+        vm.mockCall(harvester, abi.encodeCall(IHarvester.callUpdateRewards, ()), abi.encode(true));
+
         (
             address[] memory _nft,
             uint256[] memory _tokenId,

@@ -247,7 +247,12 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         }
     }
 
-    function updateNftBoost(address _user) external returns (bool) {
+    /// @dev utility function to invoke updateRewards modifier
+    function callUpdateRewards() public updateRewards returns (bool) {
+        return true;
+    }
+
+    function updateNftBoost(address _user) external updateRewards returns (bool) {
         _recalculateGlobalLp(_user, 0, 0);
 
         return true;
