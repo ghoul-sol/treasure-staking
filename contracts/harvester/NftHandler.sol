@@ -10,6 +10,8 @@ import '@openzeppelin/contracts/utils/introspection/ERC165Checker.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC721/utils/ERC721HolderUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
+
 
 import './interfaces/INftHandler.sol';
 import './interfaces/IHarvester.sol';
@@ -17,7 +19,13 @@ import './interfaces/IExtractorStakingRules.sol';
 
 import './lib/Constant.sol';
 
-contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC721HolderUpgradeable, ERC1155HolderUpgradeable {
+contract NftHandler is
+    INftHandler,
+    AccessControlEnumerableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    ERC721HolderUpgradeable,
+    ERC1155HolderUpgradeable
+{
     using EnumerableSet for EnumerableSet.AddressSet;
 
     bytes32 public constant NH_ADMIN = keccak256("NH_ADMIN");
@@ -93,6 +101,7 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC721Ho
         INftHandler.NftConfig[] memory _nftConfigs
     ) external initializer {
         __AccessControlEnumerable_init();
+        __ReentrancyGuard_init();
         __ERC721Holder_init();
         __ERC1155Holder_init();
 
@@ -170,6 +179,7 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC721Ho
 
     function stakeNft(address _nft, uint256 _tokenId, uint256 _amount)
         public
+        nonReentrant
         validateInput(_nft, _amount)
         processStake(msg.sender, _nft, _tokenId, _amount)
     {
@@ -206,6 +216,7 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC721Ho
 
     function unstakeNft(address _nft, uint256 _tokenId, uint256 _amount)
         public
+        nonReentrant
         validateInput(_nft, _amount)
         processUnstake(msg.sender, _nft, _tokenId, _amount)
     {
