@@ -37,6 +37,8 @@ contract HarvesterFactory is AccessControlEnumerableUpgradeable {
     event Magic(IERC20 magic);
     event Middleman(IMiddleman middleman);
 
+    error HarvesterExists();
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
@@ -131,7 +133,7 @@ contract HarvesterFactory is AccessControlEnumerableUpgradeable {
         bytes memory harvesterData = abi.encodeCall(IHarvester.init, (_admin, INftHandler(nftHandler), _depositCapPerWallet));
         address harvester = address(new BeaconProxy(address(harvesterBeacon), harvesterData));
 
-        require(harvesters.add(harvester), "Harvester address already exists");
+        if (!harvesters.add(harvester)) revert HarvesterExists();
 
         emit HarvesterDeployed(harvester, nftHandler);
 

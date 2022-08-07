@@ -68,19 +68,19 @@ contract ExtractorStakingRulesTest is TestUtils {
         vm.prank(harvesterFactory);
         extractorRules.setNftHandler(address(this));
 
-        vm.expectRevert("InvalidAddress()");
+        vm.expectRevert(ExtractorStakingRules.InvalidAddress.selector);
         extractorRules.processStake(_user, address(999), _tokenId, _amount);
 
-        vm.expectRevert("ZeroAmount()");
+        vm.expectRevert(ExtractorStakingRules.ZeroAmount.selector);
         extractorRules.processStake(_user, extractorAddress, _tokenId, 0);
 
-        vm.expectRevert(bytes("ZeroBoost()"));
+        vm.expectRevert(ExtractorStakingRules.ZeroBoost.selector);
         extractorRules.processStake(_user, extractorAddress, _tokenId, _amount);
 
         vm.prank(admin);
         extractorRules.setExtractorBoost(_tokenId, extractorBoost);
 
-        vm.expectRevert(bytes("MaxStakeable()"));
+        vm.expectRevert(ExtractorStakingRules.MaxStakeableReached.selector);
         extractorRules.processStake(_user, extractorAddress, _tokenId, maxStakeable + 1);
 
         assertEq(extractorRules.getExtractorCount(), 0);
@@ -118,7 +118,7 @@ contract ExtractorStakingRulesTest is TestUtils {
         vm.prank(harvesterFactory);
         extractorRules.setNftHandler(address(this));
 
-        vm.expectRevert("CannotUnstake()");
+        vm.expectRevert(ExtractorStakingRules.CannotUnstake.selector);
         extractorRules.processUnstake(_user, _nft, _tokenId, _amount);
     }
 
@@ -152,19 +152,19 @@ contract ExtractorStakingRulesTest is TestUtils {
         vm.prank(admin);
         extractorRules.setExtractorBoost(localVars.newTokenId, localVars.boost2);
 
-        vm.expectRevert("InvalidAddress()");
+        vm.expectRevert(ExtractorStakingRules.InvalidAddress.selector);
         extractorRules.canReplace(_user, address(999), _tokenId, 1, localVars.spotId);
 
-        vm.expectRevert("ZeroAmount()");
+        vm.expectRevert(ExtractorStakingRules.ZeroAmount.selector);
         extractorRules.canReplace(_user, extractorAddress, _tokenId, 0, localVars.spotId);
 
-        vm.expectRevert("MustReplaceOne()");
+        vm.expectRevert(ExtractorStakingRules.MustReplaceOne.selector);
         extractorRules.canReplace(_user, extractorAddress, localVars.newTokenId, 2, localVars.spotId);
 
-        vm.expectRevert("InvalidSpotId()");
+        vm.expectRevert(ExtractorStakingRules.InvalidSpotId.selector);
         extractorRules.canReplace(_user, extractorAddress, localVars.newTokenId, 1, maxStakeable);
 
-        vm.expectRevert("MustReplaceWithHigherBoost()");
+        vm.expectRevert(ExtractorStakingRules.MustReplaceWithHigherBoost.selector);
         extractorRules.canReplace(_user, extractorAddress, _tokenId, 1, localVars.spotId);
 
         (address user, uint256 stakedTokenId, uint256 stakedTimestamp) = extractorRules.stakedExtractor(localVars.spotId);
@@ -220,7 +220,7 @@ contract ExtractorStakingRulesTest is TestUtils {
         stakeExtractor(user, tokenId, maxStakeable - _amount);
         assertEq(extractorRules.getExtractorCount(), maxStakeable);
 
-        vm.expectRevert(bytes("MaxStakeable()"));
+        vm.expectRevert(ExtractorStakingRules.MaxStakeableReached.selector);
         extractorRules.processStake(user, extractorAddress, tokenId, 1);
 
         assertEq(extractorRules.getExtractorCount(), maxStakeable);

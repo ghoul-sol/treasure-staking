@@ -17,9 +17,15 @@ contract PartsStakingRules is StakingRulesBase {
     event MaxStakeablePerUser(uint256 maxStakeablePerUser);
     event BoostFactor(uint256 boostFactor);
 
+    error ZeroAddress();
+    error ZeroAmount();
+    error MaxStakeable();
+    error MaxStakeablePerUserReached();
+    error MinUserGlobalDeposit();
+
     modifier validateInput(address _user, uint256 _amount) {
-        require(_user != address(0), "ZeroAddress()");
-        require(_amount > 0, "ZeroAmount()");
+        if (_user == address(0)) revert ZeroAddress();
+        if (_amount == 0) revert ZeroAmount();
 
         _;
     }
@@ -68,11 +74,11 @@ contract PartsStakingRules is StakingRulesBase {
         validateInput(_user, _amount)
     {
         uint256 stakedCache = staked;
-        if (stakedCache + _amount > maxStakeableTotal) revert("MaxStakeable()");
+        if (stakedCache + _amount > maxStakeableTotal) revert MaxStakeable();
         staked = stakedCache + _amount;
 
         uint256 amountStakedCache = getAmountStaked[_user];
-        if (amountStakedCache + _amount > maxStakeablePerUser) revert("MaxStakeablePerUser()");
+        if (amountStakedCache + _amount > maxStakeablePerUser) revert MaxStakeablePerUserReached();
         getAmountStaked[_user] = amountStakedCache + _amount;
     }
 
@@ -86,7 +92,7 @@ contract PartsStakingRules is StakingRulesBase {
 
         // require that user cap is above MAGIC deposit amount after unstake
         if (INftHandler(msg.sender).harvester().isMaxUserGlobalDeposit(_user)) {
-            revert("MinUserGlobalDeposit()");
+            revert MinUserGlobalDeposit();
         }
     }
 

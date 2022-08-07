@@ -10,9 +10,13 @@ contract TreasureStakingRules is StakingRulesBase {
 
     event MaxStakeablePerUser(uint256 maxStakeablePerUser);
 
+    error ZeroAddress();
+    error ZeroAmount();
+    error MaxStakeablePerUserReached();
+
     modifier validateInput(address _user, uint256 _amount) {
-        require(_user != address(0), "ZeroAddress()");
-        require(_amount > 0, "ZeroAmount()");
+        if (_user == address(0)) revert ZeroAddress();
+        if (_amount == 0) revert ZeroAmount();
 
         _;
     }
@@ -141,7 +145,7 @@ contract TreasureStakingRules is StakingRulesBase {
     {
         // There is only a address-specific limit on number of staked Treasures
         uint256 amountStakedCache = getAmountTreasuresStaked[_user];
-        if (amountStakedCache + _amount > maxStakeablePerUser) revert("MaxStakeablePerUser()");
+        if (amountStakedCache + _amount > maxStakeablePerUser) revert MaxStakeablePerUserReached();
         getAmountTreasuresStaked[_user] = amountStakedCache + _amount;
     }
 
