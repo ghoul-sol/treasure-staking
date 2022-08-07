@@ -61,21 +61,21 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC721Ho
         _;
     }
 
-    modifier canStake(address _user, address _nft, uint256 _tokenId, uint256 _amount) {
+    modifier processStake(address _user, address _nft, uint256 _tokenId, uint256 _amount) {
         IStakingRules stakingRules = getStakingRules(_nft, _tokenId);
 
         if (address(stakingRules) == address(0)) revert("NoStakingRules()");
 
-        stakingRules.canStake(msg.sender, _nft, _tokenId, _amount);
+        stakingRules.processStake(msg.sender, _nft, _tokenId, _amount);
 
         _;
     }
 
-    modifier canUnstake(address _user, address _nft, uint256 _tokenId, uint256 _amount) {
+    modifier processUnstake(address _user, address _nft, uint256 _tokenId, uint256 _amount) {
         IStakingRules stakingRules = getStakingRules(_nft, _tokenId);
 
         if (address(stakingRules) != address(0)) {
-            stakingRules.canUnstake(msg.sender, _nft, _tokenId, _amount);
+            stakingRules.processUnstake(msg.sender, _nft, _tokenId, _amount);
         }
 
         _;
@@ -171,7 +171,7 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC721Ho
     function stakeNft(address _nft, uint256 _tokenId, uint256 _amount)
         public
         validateInput(_nft, _amount)
-        canStake(msg.sender, _nft, _tokenId, _amount)
+        processStake(msg.sender, _nft, _tokenId, _amount)
     {
         Interfaces supportedInterface = getSupportedInterface(_nft, _tokenId);
 
@@ -207,7 +207,7 @@ contract NftHandler is INftHandler, AccessControlEnumerableUpgradeable, ERC721Ho
     function unstakeNft(address _nft, uint256 _tokenId, uint256 _amount)
         public
         validateInput(_nft, _amount)
-        canUnstake(msg.sender, _nft, _tokenId, _amount)
+        processUnstake(msg.sender, _nft, _tokenId, _amount)
     {
         Interfaces supportedInterface = getSupportedInterface(_nft, _tokenId);
 

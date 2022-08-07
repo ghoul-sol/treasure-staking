@@ -14,8 +14,8 @@ contract StakingRulesBaseImpl is StakingRulesBase {
         _initStakingRulesBase(_admin, _harvesterFactory);
     }
     // implement abstract methods so it's deployable
-    function _canStake(address _user, address, uint256, uint256 _amount) internal override {}
-    function _canUnstake(address _user, address, uint256, uint256 _amount) internal override {}
+    function _processStake(address _user, address, uint256, uint256 _amount) internal override {}
+    function _processUnstake(address _user, address, uint256, uint256 _amount) internal override {}
     function getUserBoost(address, address, uint256, uint256) external pure override returns (uint256) {}
     function getHarvesterBoost() external view returns (uint256) {}
 }
@@ -70,25 +70,25 @@ contract StakingRulesBaseTest is TestUtils {
         assertFalse(stakingRules.hasRole(stakingRules.SR_HARVESTER_FACTORY(), harvesterFactory));
     }
 
-    function test_canStake() public {
+    function test_processStake() public {
         bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), stakingRules.SR_NFT_HANDLER());
         vm.expectRevert(errorMsg);
-        stakingRules.canStake(address(1), address(1), 1, 1);
+        stakingRules.processStake(address(1), address(1), 1, 1);
 
         vm.prank(harvesterFactory);
         stakingRules.setNftHandler(address(this));
 
-        stakingRules.canStake(address(1), address(1), 1, 1);
+        stakingRules.processStake(address(1), address(1), 1, 1);
     }
 
-    function test_canUnstake() public {
+    function test_processUnstake() public {
         bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), stakingRules.SR_NFT_HANDLER());
         vm.expectRevert(errorMsg);
-        stakingRules.canUnstake(address(1), address(1), 1, 1);
+        stakingRules.processUnstake(address(1), address(1), 1, 1);
 
         vm.prank(harvesterFactory);
         stakingRules.setNftHandler(address(this));
 
-        stakingRules.canUnstake(address(1), address(1), 1, 1);
+        stakingRules.processUnstake(address(1), address(1), 1, 1);
     }
 }

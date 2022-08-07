@@ -789,7 +789,7 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
 
         vm.mockCall(
             address(erc1155StakingRules),
-            abi.encodeCall(IStakingRules.canUnstake, (address(this), address(nftErc1155), tokenId, amount + 1)),
+            abi.encodeCall(IStakingRules.processUnstake, (address(this), address(nftErc1155), tokenId, amount + 1)),
             abi.encode(bytes(""))
         );
         nftErc1155.mint(address(nftHandler), tokenId, 1);
@@ -818,7 +818,7 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
 
         vm.mockCall(
             address(erc1155StakingRules),
-            abi.encodeCall(IStakingRules.canUnstake, (address(this), address(nftErc1155), tokenId, amount + 1)),
+            abi.encodeCall(IStakingRules.processUnstake, (address(this), address(nftErc1155), tokenId, amount + 1)),
             abi.encode(bytes(""))
         );
         nftErc1155.mint(address(nftHandler), tokenId, 1);

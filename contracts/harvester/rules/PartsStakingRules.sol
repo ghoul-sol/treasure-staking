@@ -62,7 +62,7 @@ contract PartsStakingRules is StakingRulesBase {
         return Constant.ONE + (2 * n - n ** 2 / maxParts) * boost / maxParts;
     }
 
-    function _canStake(address _user, address, uint256, uint256 _amount)
+    function _processStake(address _user, address, uint256, uint256 _amount)
         internal
         override
         validateInput(_user, _amount)
@@ -76,7 +76,7 @@ contract PartsStakingRules is StakingRulesBase {
         getAmountStaked[_user] = amountStakedCache + _amount;
     }
 
-    function _canUnstake(address _user, address, uint256, uint256 _amount)
+    function _processUnstake(address _user, address, uint256, uint256 _amount)
         internal
         override
         validateInput(_user, _amount)

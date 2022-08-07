@@ -121,7 +121,7 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
         emit ExtractorReplaced(_tokenId, _replacedSpotId);
     }
 
-    function _canStake(address _user, address _nft, uint256 _tokenId, uint256 _amount)
+    function _processStake(address _user, address _nft, uint256 _tokenId, uint256 _amount)
         internal
         override
         validateInput(_nft, _amount)
@@ -141,7 +141,7 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
         emit ExtractorStaked(_tokenId, spotId, _amount);
     }
 
-    function _canUnstake(address, address, uint256, uint256) internal pure override {
+    function _processUnstake(address, address, uint256, uint256) internal pure override {
         revert("CannotUnstake()");
     }
 

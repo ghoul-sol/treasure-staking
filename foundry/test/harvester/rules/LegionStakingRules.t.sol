@@ -208,8 +208,8 @@ contract LegionStakingRulesTest is TestUtils {
         }
     }
 
-    // function test_canStake() public {}
-    // function test_canUnstake() public {}
+    // function test_processStake() public {}
+    // function test_processUnstake() public {}
 
     function test_setLegionMetadataStore() public {
         assertEq(address(legionRules.legionMetadataStore()), legionMetadataStore);

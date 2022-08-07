@@ -51,10 +51,10 @@ contract ExtractorStakingRulesTest is TestUtils {
         vm.prank(admin);
         extractorRules.setExtractorBoost(_tokenId, extractorBoost);
 
-        extractorRules.canStake(_user, extractorAddress, _tokenId, _amount);
+        extractorRules.processStake(_user, extractorAddress, _tokenId, _amount);
     }
 
-    function test_canStake(
+    function test_processStake(
         address _user,
         uint256 _tokenId,
         uint256 _amount
@@ -63,25 +63,25 @@ contract ExtractorStakingRulesTest is TestUtils {
 
         bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), extractorRules.SR_NFT_HANDLER());
         vm.expectRevert(errorMsg);
-        extractorRules.canStake(_user, extractorAddress, _tokenId, _amount);
+        extractorRules.processStake(_user, extractorAddress, _tokenId, _amount);
 
         vm.prank(harvesterFactory);
         extractorRules.setNftHandler(address(this));
 
         vm.expectRevert("InvalidAddress()");
-        extractorRules.canStake(_user, address(999), _tokenId, _amount);
+        extractorRules.processStake(_user, address(999), _tokenId, _amount);
 
         vm.expectRevert("ZeroAmount()");
-        extractorRules.canStake(_user, extractorAddress, _tokenId, 0);
+        extractorRules.processStake(_user, extractorAddress, _tokenId, 0);
 
         vm.expectRevert(bytes("ZeroBoost()"));
-        extractorRules.canStake(_user, extractorAddress, _tokenId, _amount);
+        extractorRules.processStake(_user, extractorAddress, _tokenId, _amount);
 
         vm.prank(admin);
         extractorRules.setExtractorBoost(_tokenId, extractorBoost);
 
         vm.expectRevert(bytes("MaxStakeable()"));
-        extractorRules.canStake(_user, extractorAddress, _tokenId, maxStakeable + 1);
+        extractorRules.processStake(_user, extractorAddress, _tokenId, maxStakeable + 1);
 
         assertEq(extractorRules.getExtractorCount(), 0);
 
@@ -89,7 +89,7 @@ contract ExtractorStakingRulesTest is TestUtils {
 
         vm.expectEmit(true, true, true, true);
         emit ExtractorStaked(_tokenId, spotId, _amount);
-        extractorRules.canStake(_user, extractorAddress, _tokenId, _amount);
+        extractorRules.processStake(_user, extractorAddress, _tokenId, _amount);
 
         assertEq(extractorRules.getExtractorCount(), _amount);
 
@@ -110,16 +110,16 @@ contract ExtractorStakingRulesTest is TestUtils {
         assertEq(extractorRules.getUserBoost(_user, extractorAddress, _tokenId, _amount), 0);
     }
 
-    function test_canUnstake(address _user, address _nft, uint256 _tokenId, uint256 _amount) public {
+    function test_processUnstake(address _user, address _nft, uint256 _tokenId, uint256 _amount) public {
         bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), extractorRules.SR_NFT_HANDLER());
         vm.expectRevert(errorMsg);
-        extractorRules.canUnstake(_user, _nft, _tokenId, _amount);
+        extractorRules.processUnstake(_user, _nft, _tokenId, _amount);
 
         vm.prank(harvesterFactory);
         extractorRules.setNftHandler(address(this));
 
         vm.expectRevert("CannotUnstake()");
-        extractorRules.canUnstake(_user, _nft, _tokenId, _amount);
+        extractorRules.processUnstake(_user, _nft, _tokenId, _amount);
     }
 
     struct LocalVars {
@@ -221,7 +221,7 @@ contract ExtractorStakingRulesTest is TestUtils {
         assertEq(extractorRules.getExtractorCount(), maxStakeable);
 
         vm.expectRevert(bytes("MaxStakeable()"));
-        extractorRules.canStake(user, extractorAddress, tokenId, 1);
+        extractorRules.processStake(user, extractorAddress, tokenId, 1);
 
         assertEq(extractorRules.getExtractorCount(), maxStakeable);
     }
