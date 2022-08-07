@@ -1036,7 +1036,6 @@ contract HarvesterTest is TestUtils {
             uint256 depositAmount,
             uint256 lockLpAmount,
             uint256 lockedUntil,
-            uint256 vestingLastUpdate,
             uint256 lock
         ) = harvester.userInfo(data.user, data.depositId);
 
@@ -1044,9 +1043,6 @@ contract HarvesterTest is TestUtils {
         assertEq(depositAmount, data.depositAmount);
         assertEq(lockLpAmount, data.lockLpAmount);
         assertEq(lockedUntil, data.lockedUntil);
-        if (data.action == Actions.Deposit) {
-            assertEq(vestingLastUpdate, data.lockedUntil);
-        }
         assertEq(uint256(lock), uint256(data.lock));
 
         (
@@ -1133,7 +1129,7 @@ contract HarvesterTest is TestUtils {
         mockForAction(data0);
         doDeposit(data0);
 
-        ( originalDepositAmount,,, lockedUntil,, lock ) = harvester.userInfo(data0.user, data0.depositId);
+        ( originalDepositAmount,,, lockedUntil, lock ) = harvester.userInfo(data0.user, data0.depositId);
 
         assertEq(harvester.calcualteVestedPrincipal(data0.user, data0.depositId), 0);
 
@@ -1145,7 +1141,7 @@ contract HarvesterTest is TestUtils {
         mockForAction(data1);
         doDeposit(data1);
 
-        ( originalDepositAmount,,, lockedUntil,, lock ) = harvester.userInfo(data1.user, data1.depositId);
+        ( originalDepositAmount,,, lockedUntil, lock ) = harvester.userInfo(data1.user, data1.depositId);
 
         assertEq(harvester.calcualteVestedPrincipal(data1.user, data1.depositId), 0);
 

@@ -9,7 +9,6 @@ interface IHarvester {
         uint256 depositAmount;
         uint256 lockLpAmount;
         uint256 lockedUntil;
-        uint256 vestingLastUpdate;
         uint256 lock;
     }
 
