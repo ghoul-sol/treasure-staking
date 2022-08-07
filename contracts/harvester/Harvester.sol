@@ -288,7 +288,6 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         user.depositAmount = _amount;
         user.lockLpAmount = lockLpAmount;
         user.lockedUntil = block.timestamp + timelock;
-        user.vestingLastUpdate = user.lockedUntil;
         user.lock = _timelockId;
 
         _recalculateGlobalLp(msg.sender, _amount.toInt256(), lockLpAmount.toInt256());
@@ -313,7 +312,7 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         if (!unlockAll) {
             if (block.timestamp < user.lockedUntil) revert("StillLocked()");
 
-            uint256 vestedAmount = _vestedPrincipal(msg.sender, _depositId);
+            uint256 vestedAmount = calcualteVestedPrincipal(msg.sender, _depositId);
             if (_amount > vestedAmount) {
                 _amount = vestedAmount;
             }
@@ -423,12 +422,6 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
 
         int256 accumulatedMagic = (newGlobalLpAmount * accMagicPerShare / ONE).toInt256();
         pendingRewards = (accumulatedMagic - userGlobalDeposit.globalRewardDebt).toUint256();
-    }
-
-    function _vestedPrincipal(address _user, uint256 _depositId) internal returns (uint256 amount) {
-        amount = calcualteVestedPrincipal(_user, _depositId);
-        UserInfo storage user = userInfo[_user][_depositId];
-        user.vestingLastUpdate = block.timestamp;
     }
 
     function _addDeposit(address _user) internal returns (UserInfo storage user, uint256 newDepositId) {
