@@ -57,9 +57,9 @@ contract NftHandler is
     // user => boost
     mapping (address => uint256) public getUserBoost;
 
-    event Staked(address indexed nft, uint256 tokenId, uint256 amount);
-    event Unstaked(address indexed nft, uint256 tokenId, uint256 amount);
-    event Replaced(address indexed nft, uint256 tokenId, uint256 amount, uint256 replacedSpotId);
+    event Staked(address indexed user, address indexed nft, uint256 tokenId, uint256 amount);
+    event Unstaked(address indexed user, address indexed nft, uint256 tokenId, uint256 amount);
+    event Replaced(address indexed user, address indexed nft, uint256 tokenId, uint256 amount, uint256 replacedSpotId);
     event NftConfigSet(address indexed _nft, uint256 indexed _tokenId, NftConfig _nftConfig);
 
     error InvalidNftAddress();
@@ -214,7 +214,7 @@ contract NftHandler is
         getUserBoost[msg.sender] += getNftBoost(msg.sender, _nft, _tokenId, _amount);
         harvester.updateNftBoost(msg.sender);
 
-        emit Staked(_nft, _tokenId, _amount);
+        emit Staked(msg.sender, _nft, _tokenId, _amount);
     }
 
     function batchStakeNft(address[] memory _nft, uint256[] memory _tokenId, uint256[] memory _amount) external {
@@ -264,7 +264,7 @@ contract NftHandler is
         getUserBoost[msg.sender] -= getNftBoost(msg.sender, _nft, _tokenId, _amount);
         harvester.updateNftBoost(msg.sender);
 
-        emit Unstaked(_nft, _tokenId, _amount);
+        emit Unstaked(msg.sender, _nft, _tokenId, _amount);
     }
 
     function batchUnstakeNft(address[] memory _nft, uint256[] memory _tokenId, uint256[] memory _amount) external {
@@ -298,7 +298,7 @@ contract NftHandler is
         stakedNfts[user][_nft][replacedTokenId] -= replacedAmount;
         stakedNfts[msg.sender][_nft][_tokenId] += _amount;
 
-        emit Replaced(_nft, _tokenId, _amount, _replacedSpotId);
+        emit Replaced(msg.sender, _nft, _tokenId, _amount, _replacedSpotId);
 
         harvester.callUpdateRewards();
     }
