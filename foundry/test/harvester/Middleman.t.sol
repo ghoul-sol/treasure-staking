@@ -161,7 +161,7 @@ contract MiddlemanTest is TestUtils {
         }
     }
 
-    function mockGetHarvesterEmissionsShare(
+    function mockgetHarvesterEmissionsBoost(
         address _harvester,
         uint256 _harvesterTotalBoost,
         uint256 _magicTotalDeposits,
@@ -229,13 +229,13 @@ contract MiddlemanTest is TestUtils {
         return emissionsTestCases[_index];
     }
 
-    function test_getHarvesterEmissionsShare() public {
+    function test_getHarvesterEmissionsBoost() public {
         address harvester = allHarvesters[0];
 
         for (uint256 i = 0; i < emissionsTestCasesLength; i++) {
             EmissionsShareTest memory data = getEmissionsTestCase(i);
 
-            mockGetHarvesterEmissionsShare(
+            mockgetHarvesterEmissionsBoost(
                 harvester,
                 data.harvesterTotalBoost,
                 data.magicTotalDeposits,
@@ -245,7 +245,7 @@ contract MiddlemanTest is TestUtils {
 
             assertEq(middleman.getUtilizationBoost(harvester), data.expectedUtilizationBoost);
             assertEq(middleman.getCorruptionNegativeBoost(harvester), data.expectedCorruptionNegativeBoost);
-            assertEq(middleman.getHarvesterEmissionsShare(harvester), data.expectedHarvesterEmissionsShare);
+            assertEq(middleman.getHarvesterEmissionsBoost(harvester), data.expectedHarvesterEmissionsShare);
         }
     }
 
@@ -261,7 +261,7 @@ contract MiddlemanTest is TestUtils {
         for (uint256 i = 0; i < allHarvesters.length; i++) {
             EmissionsShareTest memory data = getEmissionsTestCase(i);
 
-            mockGetHarvesterEmissionsShare(
+            mockgetHarvesterEmissionsBoost(
                 allHarvesters[i],
                 data.harvesterTotalBoost,
                 data.magicTotalDeposits,

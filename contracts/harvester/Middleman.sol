@@ -118,7 +118,7 @@ contract Middleman is AccessControlEnumerableUpgradeable {
         harvesterShare = new uint256[](allActiveHarvesters.length);
 
         for (uint256 i = 0; i < allActiveHarvesters.length; i++) {
-            harvesterShare[i] = getHarvesterEmissionsShare(allActiveHarvesters[i]);
+            harvesterShare[i] = getHarvesterEmissionsBoost(allActiveHarvesters[i]);
             totalShare += harvesterShare[i];
 
             if (allActiveHarvesters[i] == _targetHarvester) {
@@ -145,7 +145,7 @@ contract Middleman is AccessControlEnumerableUpgradeable {
         return unpaidRewards + pendingRewards * harvesterShare[targetIndex] / totalShare;
     }
 
-    function getHarvesterEmissionsShare(address _harvester) public view returns (uint256) {
+    function getHarvesterEmissionsBoost(address _harvester) public view returns (uint256) {
         uint256 harvesterTotalBoost = IHarvester(_harvester).nftHandler().getHarvesterTotalBoost();
         uint256 utilBoost = getUtilizationBoost(_harvester);
         uint256 corruptionNegativeBoost = getCorruptionNegativeBoost(_harvester);
