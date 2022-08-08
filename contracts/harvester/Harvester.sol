@@ -318,7 +318,7 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
             _amount = depositAmount;
         }
 
-        // anyone can withdraw if kill swith was used
+        // anyone can withdraw if kill switch was used
         if (!unlockAll) {
             if (block.timestamp < user.lockedUntil) revert StillLocked();
 

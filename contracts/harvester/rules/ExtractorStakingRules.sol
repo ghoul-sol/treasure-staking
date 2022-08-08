@@ -24,7 +24,7 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
     /// @dev address of NFT extractor token
     address public extractorAddress;
 
-    /// @dev lastest spot Id
+    /// @dev latest spot Id
     Counters.Counter public extractorCount;
     /// @dev maps spot Id to ExtractorData
     mapping(uint256 => ExtractorData) public stakedExtractor;

@@ -58,9 +58,9 @@ abstract contract StakingRulesBase is IStakingRules, AccessControlEnumerableUpgr
         _revokeRole(SR_HARVESTER_FACTORY, msg.sender);
     }
 
-    /// @dev it's meant to be overriden by staking rules implementation
+    /// @dev it's meant to be overridden by staking rules implementation
     function _processStake(address, address, uint256, uint256) internal virtual {}
 
-    /// @dev it's meant to be overriden by staking rules implementation
+    /// @dev it's meant to be overridden by staking rules implementation
     function _processUnstake(address, address, uint256, uint256) internal virtual {}
 }
