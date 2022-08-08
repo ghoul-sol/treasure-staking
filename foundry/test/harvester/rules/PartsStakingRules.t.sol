@@ -52,7 +52,7 @@ contract PartsStakingRulesTest is TestUtils {
 
         vm.mockCall(
             harvester,
-            abi.encodeCall(IHarvester.isMaxUserGlobalDeposit, (user)),
+            abi.encodeCall(IHarvester.isUserExceedingDepositCap, (user)),
             abi.encode(false)
         );
 
@@ -207,7 +207,7 @@ contract PartsStakingRulesTest is TestUtils {
 
         vm.mockCall(
             harvester,
-            abi.encodeCall(IHarvester.isMaxUserGlobalDeposit, (_user)),
+            abi.encodeCall(IHarvester.isUserExceedingDepositCap, (_user)),
             abi.encode(true)
         );
 
@@ -220,7 +220,7 @@ contract PartsStakingRulesTest is TestUtils {
 
         vm.mockCall(
             harvester,
-            abi.encodeCall(IHarvester.isMaxUserGlobalDeposit, (_user)),
+            abi.encodeCall(IHarvester.isUserExceedingDepositCap, (_user)),
             abi.encode(false)
         );
 

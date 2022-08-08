@@ -91,7 +91,7 @@ contract PartsStakingRules is StakingRulesBase {
         getAmountStaked[_user] -= _amount;
 
         // require that user cap is above MAGIC deposit amount after unstake
-        if (INftHandler(msg.sender).harvester().isMaxUserGlobalDeposit(_user)) {
+        if (INftHandler(msg.sender).harvester().isUserExceedingDepositCap(_user)) {
             revert MinUserGlobalDeposit();
         }
     }
