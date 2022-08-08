@@ -9,7 +9,7 @@ interface INftHandler {
 
     struct NftConfig {
         Interfaces supportedInterface;
-        /// @dev contract address which calcualtes boost for this NFT
+        /// @dev contract address which calculates boost for this NFT
         IStakingRules stakingRules;
     }
 
@@ -18,7 +18,7 @@ interface INftHandler {
     /// @param _harvester harvester address for which INftHandler is deployed
     /// @param _nfts array of NFTs allowed to be staked
     /// @param _tokenIds array of tokenIds allowed to be staked, it should correspond to `_nfts`
-    /// @param _nftConfigs array of congigs for each NFT
+    /// @param _nftConfigs array of configs for each NFT
     function init(
         address _admin,
         address _harvester,
@@ -46,12 +46,12 @@ interface INftHandler {
     /// @notice Gets given NFT boost for user
     /// @param _user user's wallet address
     /// @param _nft address of NFT contract
-    /// @param _tokenId token Id of NFT for which to calcualte the boost
+    /// @param _tokenId token Id of NFT for which to calculate the boost
     /// @param _amount amount of tokens for which to calculate boost, must be 1 for ERC721
-    /// @return calcualted boost for given NFT for given user as percentage, 1e18 == 100%
+    /// @return calculated boost for given NFT for given user as percentage, 1e18 == 100%
     function getNftBoost(address _user, address _nft, uint256 _tokenId, uint256 _amount) external view returns (uint256);
 
-    /// @notice Gets harvester boost to calcualte rewards allocation
-    /// @return boost calcualted harvester boost to calcualte rewards allocation
+    /// @notice Gets harvester boost to calculate rewards allocation
+    /// @return boost calculated harvester boost to calculate rewards allocation
     function getHarvesterTotalBoost() external view returns (uint256 boost);
 }
