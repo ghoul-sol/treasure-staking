@@ -217,27 +217,27 @@ contract HarvesterTest is TestUtils {
         assertEq(harvester.getUserDepositCap(user1), amountStaked * initDepositCapPerWallet.capPerPart);
     }
 
-    function test_isMaxUserGlobalDeposit() public {
+    function test_isUserExceedingDepositCap() public {
         HarvesterMock mockHarvester = deployMockHarvester();
 
         uint256 amountStaked = 5;
 
         vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getStakingRules, (parts, partsTokenId)), abi.encode(address(0)));
 
-        assertFalse(mockHarvester.isMaxUserGlobalDeposit(user1));
+        assertFalse(mockHarvester.isUserExceedingDepositCap(user1));
 
         vm.mockCall(nftHandler, abi.encodeCall(INftHandler.getStakingRules, (parts, partsTokenId)), abi.encode(stakingRules));
         vm.mockCall(stakingRules, abi.encodeCall(IPartsStakingRules.getAmountStaked, (user1)), abi.encode(amountStaked));
 
-        assertFalse(mockHarvester.isMaxUserGlobalDeposit(user1));
+        assertFalse(mockHarvester.isUserExceedingDepositCap(user1));
 
         mockHarvester.setGlobalDepositAmount(user1, initDepositCapPerWallet.capPerPart * amountStaked);
 
-        assertFalse(mockHarvester.isMaxUserGlobalDeposit(user1));
+        assertFalse(mockHarvester.isUserExceedingDepositCap(user1));
 
         mockHarvester.setGlobalDepositAmount(user1, initDepositCapPerWallet.capPerPart * amountStaked + 1);
 
-        assertTrue(mockHarvester.isMaxUserGlobalDeposit(user1));
+        assertTrue(mockHarvester.isUserExceedingDepositCap(user1));
     }
 
     function test_getLockBoost() public {

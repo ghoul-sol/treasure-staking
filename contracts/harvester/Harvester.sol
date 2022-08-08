@@ -104,7 +104,7 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
     modifier checkDepositCaps() {
         _;
 
-        if (isMaxUserGlobalDeposit(msg.sender)) {
+        if (isUserExceedingDepositCap(msg.sender)) {
             revert MaxUserGlobalDeposit();
         }
 
@@ -225,7 +225,7 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         }
     }
 
-    function isMaxUserGlobalDeposit(address _user) public view returns (bool) {
+    function isUserExceedingDepositCap(address _user) public view returns (bool) {
         return getUserGlobalDeposit[_user].globalDepositAmount > getUserDepositCap(_user);
     }
 
