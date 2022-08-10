@@ -158,10 +158,12 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
         public
         view
         virtual
-        override(ERC1155ReceiverUpgradeable, AccessControlEnumerableUpgradeable)
+        override(AccessControlEnumerableUpgradeable, ERC1155ReceiverUpgradeable)
         returns (bool)
     {
-        return super.supportsInterface(interfaceId);
+        return
+            ERC1155ReceiverUpgradeable.supportsInterface(interfaceId) ||
+            AccessControlEnumerableUpgradeable.supportsInterface(interfaceId);
     }
 
     function getStakedLegions(address _user) external view virtual returns (uint256[] memory) {
