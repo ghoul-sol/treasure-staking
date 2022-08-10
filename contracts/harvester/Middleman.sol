@@ -114,7 +114,7 @@ contract Middleman is AccessControlEnumerableUpgradeable {
         uint256 totalShare,
         uint256 targetIndex
     ) {
-        allActiveHarvesters = harvesterFactory.getAllActiveHarvesters();
+        allActiveHarvesters = harvesterFactory.getAllHarvesters();
         harvesterShare = new uint256[](allActiveHarvesters.length);
 
         for (uint256 i = 0; i < allActiveHarvesters.length; i++) {

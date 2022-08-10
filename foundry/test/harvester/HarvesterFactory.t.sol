@@ -185,7 +185,7 @@ contract HarvesterFactoryTest is TestUtils {
         uint256[] memory emptyUnit = new uint256[](0);
         assertAddressArrayEq(harvesterFactory.getAllHarvesters(), emptyArray);
         assertEq(harvesterFactory.getAllHarvestersLength(), 0);
-        assertAddressArrayEq(harvesterFactory.getAllActiveHarvesters(), emptyArray);
+        assertAddressArrayEq(harvesterFactory.getAllHarvesters(), emptyArray);
 
         (address[] memory nfts, uint256[] memory tokenIds, INftHandler.NftConfig[] memory nftConfigs) = getNftAndNftConfig();
 
@@ -214,7 +214,7 @@ contract HarvesterFactoryTest is TestUtils {
 
         assertAddressArrayEq(harvesterFactory.getAllHarvesters(), harvesters);
         assertEq(harvesterFactory.getAllHarvestersLength(), 1);
-        assertAddressArrayEq(harvesterFactory.getAllActiveHarvesters(), harvesters);
+        assertAddressArrayEq(harvesterFactory.getAllHarvesters(), harvesters);
 
         INftHandler.NftConfig[] memory emptyConfig = new INftHandler.NftConfig[](0);
         INftHandler nftHandler = harvester.nftHandler();
@@ -239,11 +239,14 @@ contract HarvesterFactoryTest is TestUtils {
         IHarvester harvester = deployHarvester();
 
         assertEq(harvester.disabled(), false);
+        assertEq(harvesterFactory.getAllHarvestersLength(), 1);
+        assertEq(harvesterFactory.getHarvester(0), address(harvester));
 
-        vm.prank(address(harvesterFactory));
-        harvester.disable();
+        vm.prank(admin);
+        harvesterFactory.disableHarvester(harvester);
 
         assertEq(harvester.disabled(), true);
+        assertEq(harvesterFactory.getAllHarvestersLength(), 0);
 
         bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), harvesterFactory.HF_DEPLOYER());
         vm.expectRevert(errorMsg);
@@ -253,12 +256,23 @@ contract HarvesterFactoryTest is TestUtils {
         harvesterFactory.enableHarvester(harvester);
 
         assertEq(harvester.disabled(), false);
+        assertEq(harvesterFactory.getAllHarvestersLength(), 1);
+        assertEq(harvesterFactory.getHarvester(0), address(harvester));
+
+        address fakeHarvester = address(9999);
+        vm.mockCall(fakeHarvester, abi.encodeCall(IHarvester.callUpdateRewards, ()), abi.encode(true));
+
+        vm.prank(admin);
+        vm.expectRevert(HarvesterFactory.NotHarvester.selector);
+        harvesterFactory.enableHarvester(IHarvester(fakeHarvester));
     }
 
     function test_disableHarvester() public {
         IHarvester harvester = deployHarvester();
 
         assertEq(harvester.disabled(), false);
+        assertEq(harvesterFactory.getAllHarvestersLength(), 1);
+        assertEq(harvesterFactory.getHarvester(0), address(harvester));
 
         bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), harvesterFactory.HF_DEPLOYER());
         vm.expectRevert(errorMsg);
@@ -268,36 +282,11 @@ contract HarvesterFactoryTest is TestUtils {
         harvesterFactory.disableHarvester(harvester);
 
         assertEq(harvester.disabled(), true);
-    }
+        assertEq(harvesterFactory.getAllHarvestersLength(), 0);
 
-    function test_getAllActiveHarvesters() public {
-        IHarvester harvester = deployHarvester();
-
-        assertEq(harvester.disabled(), false);
-
-        address[] memory allHarvestersExpected = new address[](1);
-        allHarvestersExpected[0] = address(harvester);
-        address[] memory allHarvesters = harvesterFactory.getAllHarvesters();
-        assertAddressArrayEq(allHarvestersExpected, allHarvesters);
-        assertAddressArrayEq(harvesterFactory.getAllActiveHarvesters(), allHarvesters);
-
-        vm.prank(address(harvesterFactory));
-        harvester.disable();
-
-        assertEq(harvester.disabled(), true);
-
-        address[] memory allActiveHarvesters = new address[](0);
-
-        assertAddressArrayEq(harvesterFactory.getAllHarvesters(), allHarvesters);
-        assertAddressArrayEq(harvesterFactory.getAllActiveHarvesters(), allActiveHarvesters);
-
-        vm.prank(address(harvesterFactory));
-        harvester.enable();
-
-        assertEq(harvester.disabled(), false);
-
-        assertAddressArrayEq(harvesterFactory.getAllHarvesters(), allHarvesters);
-        assertAddressArrayEq(harvesterFactory.getAllActiveHarvesters(), allHarvesters);
+        vm.prank(admin);
+        vm.expectRevert(HarvesterFactory.NotHarvester.selector);
+        harvesterFactory.disableHarvester(harvester);
     }
 
     function test_setMagicToken() public {
