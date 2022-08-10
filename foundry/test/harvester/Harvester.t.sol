@@ -90,6 +90,20 @@ contract HarvesterTest is TestUtils {
         harvester = Harvester(address(new ERC1967Proxy(impl, bytes(""))));
         harvester.init(admin, INftHandler(nftHandler), initDepositCapPerWallet);
 
+        uint256 ONE_MONTH = harvester.ONE_MONTH();
+        uint256 THREE_MONTHS = harvester.THREE_MONTHS();
+        uint256 SIX_MONTHS = harvester.SIX_MONTHS();
+        uint256 TWELVE_MONTHS = harvester.TWELVE_MONTHS();
+
+        vm.prank(admin);
+        harvester.addTimelockOption(IHarvester.Timelock(0.25e18, ONE_MONTH, 7 days, true));
+        vm.prank(admin);
+        harvester.addTimelockOption(IHarvester.Timelock(0.8e18, THREE_MONTHS, 14 days, true));
+        vm.prank(admin);
+        harvester.addTimelockOption(IHarvester.Timelock(1.8e18, SIX_MONTHS, 30 days, true));
+        vm.prank(admin);
+        harvester.addTimelockOption(IHarvester.Timelock(4e18, TWELVE_MONTHS, 45 days, true));
+
         magic = new ERC20Mintable();
         vm.mockCall(harvesterFactory, abi.encodeCall(IHarvesterFactory.magic, ()), abi.encode(address(magic)));
 
