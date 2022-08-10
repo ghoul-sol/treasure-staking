@@ -181,6 +181,7 @@ contract MasterOfCoinV1 is IMasterOfCoin, Initializable, AccessControlEnumerable
         if (streams.add(_stream)) {
             streamConfig[_stream] = CoinStream({
                 totalRewards: _totalRewards,
+                /// @dev if stream lasts only for one second, it won't show in `getGlobalRatePerSecond`
                 startTimestamp: _startTimestamp,
                 endTimestamp: _endTimestamp,
                 lastRewardTimestamp: _startTimestamp,
