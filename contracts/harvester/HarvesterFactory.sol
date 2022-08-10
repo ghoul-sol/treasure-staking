@@ -28,6 +28,7 @@ contract HarvesterFactory is AccessControlEnumerableUpgradeable {
     UpgradeableBeacon public harvesterBeacon;
 
     EnumerableSet.AddressSet private harvesters;
+    mapping(address => bool) public deployedHarvesters;
 
     /// @dev Magic token addr
     IERC20 public magic;
@@ -38,6 +39,7 @@ contract HarvesterFactory is AccessControlEnumerableUpgradeable {
     event Middleman(IMiddleman middleman);
 
     error HarvesterExists();
+    error NotHarvester();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -82,32 +84,6 @@ contract HarvesterFactory is AccessControlEnumerableUpgradeable {
         return harvesters.values();
     }
 
-    function getAllActiveHarvesters() external view returns (address[] memory allActiveHarvesters) {
-        uint256 len = harvesters.length();
-
-        uint256 activeHarvestersCount;
-        address[] memory activeHarvesters = new address[](len);
-
-        for (uint256 i = 0; i < len; i++) {
-            IHarvester harvester = IHarvester(harvesters.at(i));
-
-            if (!harvester.disabled()) {
-                activeHarvesters[activeHarvestersCount] = address(harvester);
-                activeHarvestersCount++;
-            }
-        }
-
-        if (activeHarvestersCount == len) {
-            return harvesters.values();
-        }
-
-        allActiveHarvesters = new address[](activeHarvestersCount);
-
-        for (uint256 i = 0; i < activeHarvestersCount; i++) {
-            allActiveHarvesters[i] = activeHarvesters[i];
-        }
-    }
-
     function getAllHarvestersLength() external view returns (uint256) {
         return harvesters.length();
     }
@@ -134,6 +110,7 @@ contract HarvesterFactory is AccessControlEnumerableUpgradeable {
         address harvester = address(new BeaconProxy(address(harvesterBeacon), harvesterData));
 
         if (!harvesters.add(harvester)) revert HarvesterExists();
+        deployedHarvesters[harvester] = true;
 
         emit HarvesterDeployed(harvester, nftHandler);
 
@@ -141,10 +118,21 @@ contract HarvesterFactory is AccessControlEnumerableUpgradeable {
     }
 
     function enableHarvester(IHarvester _harvester) external onlyRole(HF_DEPLOYER) {
+        _harvester.callUpdateRewards();
+
+        // only Harvesters deployed by this factory can be enabled and re-added to the list
+        if (!deployedHarvesters[address(_harvester)]) revert NotHarvester();
+
         _harvester.enable();
+        harvesters.add(address(_harvester));
     }
 
     function disableHarvester(IHarvester _harvester) external onlyRole(HF_DEPLOYER) {
+        _harvester.callUpdateRewards();
+
+        // only active harvester in the list can be disabled
+        if (!harvesters.remove(address(_harvester))) revert NotHarvester();
+
         _harvester.disable();
     }
 
