@@ -131,6 +131,9 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
     constructor() initializer {}
 
     function init(address _magic, address _masterOfCoin) external initializer {
+        __AccessControlEnumerable_init();
+        __ERC1155Holder_init();
+
         magic = IERC20Upgradeable(_magic);
         masterOfCoin = IMasterOfCoin(_masterOfCoin);
 
@@ -149,9 +152,6 @@ contract AtlasMine is Initializable, AccessControlEnumerableUpgradeable, ERC1155
             // LEGENDARY,RARE,SPECIAL,UNCOMMON,COMMON,RECRUIT
             [uint256(0), uint256(0), uint256(0), uint256(0), uint256(0), uint256(0)]
         ];
-
-        __AccessControlEnumerable_init();
-        __ERC1155Holder_init();
     }
 
     function supportsInterface(bytes4 interfaceId)
