@@ -24,8 +24,8 @@ contract ExtractorStakingRulesTest is TestUtils {
 
     event MaxStakeable(uint256 maxStakeable);
     event ExtractorBoost(uint256 tokenId, uint256 boost);
-    event ExtractorStaked(uint256 tokenId, uint256 spotId, uint256 amount);
-    event ExtractorReplaced(uint256 tokenId, uint256 replacedSpotId);
+    event ExtractorStaked(address user, uint256 tokenId, uint256 spotId, uint256 amount);
+    event ExtractorReplaced(address user, uint256 tokenId, uint256 replacedSpotId);
     event Lifetime(uint256 lifetime);
     event ExtractorAddress(address extractorAddress);
 
@@ -88,7 +88,7 @@ contract ExtractorStakingRulesTest is TestUtils {
         uint256 spotId = extractorRules.getExtractorCount() + _amount - 1;
 
         vm.expectEmit(true, true, true, true);
-        emit ExtractorStaked(_tokenId, spotId, _amount);
+        emit ExtractorStaked(_user, _tokenId, spotId, _amount);
         extractorRules.processStake(_user, extractorAddress, _tokenId, _amount);
 
         assertEq(extractorRules.getExtractorCount(), _amount);
@@ -175,7 +175,7 @@ contract ExtractorStakingRulesTest is TestUtils {
         vm.warp(localVars.timestamp + 10);
 
         vm.expectEmit(true, true, true, true);
-        emit ExtractorReplaced(localVars.newTokenId, localVars.spotId);
+        emit ExtractorReplaced(_user, localVars.newTokenId, localVars.spotId);
         extractorRules.canReplace(_user, extractorAddress, localVars.newTokenId, 1, localVars.spotId);
 
         (address user2, uint256 stakedTokenId2, uint256 stakedTimestamp2) = extractorRules.stakedExtractor(localVars.spotId);

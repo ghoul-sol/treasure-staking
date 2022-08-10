@@ -34,8 +34,8 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
 
     event MaxStakeable(uint256 maxStakeable);
     event ExtractorBoost(uint256 tokenId, uint256 boost);
-    event ExtractorStaked(uint256 tokenId, uint256 spotId, uint256 amount);
-    event ExtractorReplaced(uint256 tokenId, uint256 replacedSpotId);
+    event ExtractorStaked(address user, uint256 tokenId, uint256 spotId, uint256 amount);
+    event ExtractorReplaced(address user, uint256 tokenId, uint256 replacedSpotId);
     event Lifetime(uint256 lifetime);
     event ExtractorAddress(address extractorAddress);
 
@@ -127,7 +127,7 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
         }
 
         stakedExtractor[_replacedSpotId] = ExtractorData(_user, _tokenId, block.timestamp);
-        emit ExtractorReplaced(_tokenId, _replacedSpotId);
+        emit ExtractorReplaced(_user, _tokenId, _replacedSpotId);
     }
 
     function _processStake(address _user, address _nft, uint256 _tokenId, uint256 _amount)
@@ -147,7 +147,7 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
             extractorCount.increment();
         }
 
-        emit ExtractorStaked(_tokenId, spotId, _amount);
+        emit ExtractorStaked(_user, _tokenId, spotId, _amount);
     }
 
     function _processUnstake(address, address, uint256, uint256) internal pure override {
