@@ -900,6 +900,17 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
         vm.expectRevert(NftHandler.MustBeERC1155.selector);
         nftHandler.replaceExtractor(address(nftErc721), tokenId, amount, replacedSpotId);
 
+        INftHandler.NftConfig memory wrongConfig = INftHandler.NftConfig({
+            supportedInterface: INftHandler.Interfaces.ERC1155,
+            stakingRules: IStakingRules(erc721StakingRules)
+        });
+
+        vm.prank(admin);
+        nftHandler.setNftConfig(address(nftErc1155), defaultId, wrongConfig);
+
+        vm.expectRevert(NftHandler.NotIExtractorStakingRules.selector);
+        nftHandler.replaceExtractor(address(nftErc1155), tokenId, amount, replacedSpotId);
+
         stakeNftHelperERC1155(tokenId, amount);
 
         INftHandler.NftConfig memory newConfig = INftHandler.NftConfig({

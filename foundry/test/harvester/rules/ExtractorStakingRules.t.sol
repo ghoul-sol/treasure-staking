@@ -375,4 +375,9 @@ contract ExtractorStakingRulesTest is TestUtils {
 
         assertEq(extractorRules.lifetime(), _lifetime);
     }
+
+    function test_supportsInterface() public {
+        assertFalse(extractorRules.supportsInterface(bytes4("123")));
+        assertTrue(extractorRules.supportsInterface(type(IExtractorStakingRules).interfaceId));
+    }
 }
