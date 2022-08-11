@@ -3,11 +3,13 @@ pragma solidity 0.8.14;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
 
+import '@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol';
+
 import "../interfaces/IExtractorStakingRules.sol";
 
 import "./StakingRulesBase.sol";
 
-contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
+contract ExtractorStakingRules is IExtractorStakingRules, ERC165Upgradeable, StakingRulesBase {
     using Counters for Counters.Counter;
 
     struct ExtractorData {
@@ -62,11 +64,21 @@ contract ExtractorStakingRules is IExtractorStakingRules, StakingRulesBase {
         uint256 _maxStakeable,
         uint256 _lifetime
     ) external initializer {
+        __ERC165_init();
+
         _initStakingRulesBase(_admin, _harvesterFactory);
 
         _setExtractorAddress(_extractorAddress);
         _setMaxStakeable(_maxStakeable);
         _setExtractorLifetime(_lifetime);
+    }
+
+    function supportsInterface(bytes4 interfaceId) public view override(ERC165Upgradeable, AccessControlEnumerableUpgradeable) returns (bool) {
+        return
+            interfaceId == type(IExtractorStakingRules).interfaceId ||
+            interfaceId == type(IERC165Upgradeable).interfaceId ||
+            interfaceId == type(IAccessControlUpgradeable).interfaceId ||
+            super.supportsInterface(interfaceId);
     }
 
     function isExtractorActive(uint256 _spotId) public view returns (bool) {

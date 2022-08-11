@@ -12,7 +12,6 @@ import '@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpg
 import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 
-
 import './interfaces/INftHandler.sol';
 import './interfaces/IHarvester.sol';
 import './interfaces/IExtractorStakingRules.sol';
@@ -74,6 +73,7 @@ contract NftHandler is
     error StakingRulesRequired();
     error MustBeERC1155();
     error WrongInterface();
+    error NotIExtractorStakingRules();
 
     modifier validateInput(address _nft, uint256 _amount) {
         if (_nft == address(0)) revert InvalidNftAddress();
@@ -285,6 +285,12 @@ contract NftHandler is
 
         if (address(stakingRules) == address(0)) revert StakingRulesRequired();
         if (getSupportedInterface(_nft, _tokenId) != Interfaces.ERC1155) revert MustBeERC1155();
+
+        bool isIExtractorStakingRules = ERC165Checker.supportsInterface(
+            address(stakingRules),
+            type(IExtractorStakingRules).interfaceId
+        );
+        if (!isIExtractorStakingRules) revert NotIExtractorStakingRules();
 
         (
             address user,
