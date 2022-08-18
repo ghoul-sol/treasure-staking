@@ -56,6 +56,7 @@ contract HarvesterTest is TestUtils {
     address public user1 = address(1001);
     address public user2 = address(1002);
     address public user3 = address(1003);
+    address public user4 = address(1004);
 
     ERC20Mintable public magic;
     MiddlemanMock public middlemanMock;
@@ -126,12 +127,10 @@ contract HarvesterTest is TestUtils {
         assertEq(initCapPerPart, initDepositCapPerWallet.capPerPart);
     }
 
-
-
     function test_getTimelockOptionsIds() public {
-        uint256[] memory expectedIds = new uint256[](5);
+        uint256[] memory expectedIds = new uint256[](6);
 
-        for (uint256 i = 0; i < 5; i++) {
+        for (uint256 i = 0; i < expectedIds.length; i++) {
             expectedIds[i] = i;
         }
 
@@ -262,32 +261,37 @@ contract HarvesterTest is TestUtils {
         uint256 timelock;
 
         (boost, timelock) = harvester.getLockBoost(0);
+        assertEq(boost, 0);
+        assertEq(timelock, 0);
+
+        (boost, timelock) = harvester.getLockBoost(1);
         assertEq(boost, 0.1e18);
         assertEq(timelock, harvester.TWO_WEEKS());
 
-        (boost, timelock) = harvester.getLockBoost(1);
+        (boost, timelock) = harvester.getLockBoost(2);
         assertEq(boost, 0.25e18);
         assertEq(timelock, harvester.ONE_MONTH());
 
-        (boost, timelock) = harvester.getLockBoost(2);
+        (boost, timelock) = harvester.getLockBoost(3);
         assertEq(boost, 0.8e18);
         assertEq(timelock, harvester.THREE_MONTHS());
 
-        (boost, timelock) = harvester.getLockBoost(3);
+        (boost, timelock) = harvester.getLockBoost(4);
         assertEq(boost, 1.8e18);
         assertEq(timelock, harvester.SIX_MONTHS());
 
-        (boost, timelock) = harvester.getLockBoost(4);
+        (boost, timelock) = harvester.getLockBoost(5);
         assertEq(boost, 4e18);
         assertEq(timelock, harvester.TWELVE_MONTHS());
     }
 
     function test_getVestingTime() public {
         assertEq(harvester.getVestingTime(0), 0);
-        assertEq(harvester.getVestingTime(1), 7 days);
-        assertEq(harvester.getVestingTime(2), 14 days);
-        assertEq(harvester.getVestingTime(3), 30 days);
-        assertEq(harvester.getVestingTime(4), 45 days);
+        assertEq(harvester.getVestingTime(1), 0);
+        assertEq(harvester.getVestingTime(2), 7 days);
+        assertEq(harvester.getVestingTime(3), 14 days);
+        assertEq(harvester.getVestingTime(4), 30 days);
+        assertEq(harvester.getVestingTime(5), 45 days);
     }
 
     function test_enable() public {
@@ -360,6 +364,7 @@ contract HarvesterTest is TestUtils {
         uint256 requestRewards;
         uint256 withdrawAmount;
         uint256 lock;
+        uint256 expectedLock;
         uint256 originalDepositAmount;
         uint256 depositAmount;
         uint256 lockLpAmount;
@@ -378,7 +383,7 @@ contract HarvesterTest is TestUtils {
     }
 
     // workaround for "UnimplementedFeatureError: Copying of type struct memory to storage not yet supported."
-    uint256 public constant depositTestCasesLength = 19;
+    uint256 public constant depositTestCasesLength = 21;
 
     function getTestAction(uint256 _index) public view returns (TestAction memory) {
         TestAction[depositTestCasesLength] memory testDepositCases = [
@@ -391,7 +396,8 @@ contract HarvesterTest is TestUtils {
                 timeTravel: 0,
                 requestRewards: 0,
                 withdrawAmount: 0,
-                lock: 0,
+                lock: 1,
+                expectedLock: 1,
                 originalDepositAmount: 1e18,
                 depositAmount: 1e18,
                 lockLpAmount: 1.1e18,
@@ -416,7 +422,8 @@ contract HarvesterTest is TestUtils {
                 timeTravel: 0,
                 requestRewards: 0.1e18,
                 withdrawAmount: 0,
-                lock: 2,
+                lock: 3,
+                expectedLock: 3,
                 originalDepositAmount: 1e18,
                 depositAmount: 1e18,
                 lockLpAmount: 1.8e18,
@@ -441,7 +448,8 @@ contract HarvesterTest is TestUtils {
                 timeTravel: 0,
                 requestRewards: 0,
                 withdrawAmount: 0,
-                lock: 0,
+                lock: 1,
+                expectedLock: 1,
                 originalDepositAmount: 1e18,
                 depositAmount: 1e18,
                 lockLpAmount: 1.1e18,
@@ -466,7 +474,8 @@ contract HarvesterTest is TestUtils {
                 timeTravel: 0,
                 requestRewards: 0,
                 withdrawAmount: 0,
-                lock: 0,
+                lock: 1,
+                expectedLock: 1,
                 originalDepositAmount: 1e18,
                 depositAmount: 1e18,
                 lockLpAmount: 1.1e18,
@@ -491,7 +500,8 @@ contract HarvesterTest is TestUtils {
                 timeTravel: 0,
                 requestRewards: 0,
                 withdrawAmount: 1e18,
-                lock: 0,
+                lock: 1,
+                expectedLock: 1,
                 originalDepositAmount: 1e18,
                 depositAmount: 1e18,
                 lockLpAmount: 1.1e18,
@@ -516,7 +526,8 @@ contract HarvesterTest is TestUtils {
                 timeTravel: harvester.TWO_WEEKS(),
                 requestRewards: 0,
                 withdrawAmount: 1e18,
-                lock: 0,
+                lock: 1,
+                expectedLock: 1,
                 originalDepositAmount: 1e18,
                 depositAmount: 0,
                 lockLpAmount: 0,
@@ -541,7 +552,8 @@ contract HarvesterTest is TestUtils {
                 timeTravel: 0,
                 requestRewards: 0.1e18,
                 withdrawAmount: 0,
-                lock: 2,
+                lock: 3,
+                expectedLock: 3,
                 originalDepositAmount: 1e18,
                 depositAmount: 1e18,
                 lockLpAmount: 1.8e18,
@@ -566,7 +578,8 @@ contract HarvesterTest is TestUtils {
                 timeTravel: harvester.THREE_MONTHS(),
                 requestRewards: 0.1e18,
                 withdrawAmount: 1e18,
-                lock: 2,
+                lock: 3,
+                expectedLock: 3,
                 originalDepositAmount: 1e18,
                 depositAmount: 1e18,
                 lockLpAmount: 1.8e18,
@@ -591,7 +604,8 @@ contract HarvesterTest is TestUtils {
                 timeTravel: harvester.TWO_WEEKS() + 1,
                 requestRewards: 0,
                 withdrawAmount: 1e18,
-                lock: 2,
+                lock: 3,
+                expectedLock: 3,
                 originalDepositAmount: 1e18,
                 depositAmount: 0,
                 lockLpAmount: 0,
@@ -616,7 +630,8 @@ contract HarvesterTest is TestUtils {
                 timeTravel: 0,
                 requestRewards: 0,
                 withdrawAmount: 0,
-                lock: 0,
+                lock: 1,
+                expectedLock: 1,
                 originalDepositAmount: 1e18,
                 depositAmount: 1e18,
                 lockLpAmount: 1.1e18,
@@ -641,7 +656,8 @@ contract HarvesterTest is TestUtils {
                 timeTravel: harvester.ONE_WEEK(),
                 requestRewards: 0,
                 withdrawAmount: 0,
-                lock: 0,
+                lock: 1,
+                expectedLock: 1,
                 originalDepositAmount: 1e18,
                 depositAmount: 1e18,
                 lockLpAmount: 1.1e18,
@@ -666,7 +682,8 @@ contract HarvesterTest is TestUtils {
                 timeTravel: harvester.ONE_WEEK(),
                 requestRewards: 0,
                 withdrawAmount: 0,
-                lock: 0,
+                lock: 1,
+                expectedLock: 1,
                 originalDepositAmount: 1e18,
                 depositAmount: 1e18,
                 lockLpAmount: 1.1e18,
@@ -691,7 +708,8 @@ contract HarvesterTest is TestUtils {
                 timeTravel: 0,
                 requestRewards: 0,
                 withdrawAmount: 2e18,
-                lock: 0,
+                lock: 1,
+                expectedLock: 1,
                 originalDepositAmount: 1e18,
                 depositAmount: 1e18,
                 lockLpAmount: 1.1e18,
@@ -716,7 +734,8 @@ contract HarvesterTest is TestUtils {
                 timeTravel: harvester.ONE_WEEK(),
                 requestRewards: 0,
                 withdrawAmount: 1.5e18,
-                lock: 0,
+                lock: 1,
+                expectedLock: 1,
                 originalDepositAmount: 1e18,
                 depositAmount: 0,
                 lockLpAmount: 0,
@@ -741,7 +760,8 @@ contract HarvesterTest is TestUtils {
                 timeTravel: 0,
                 requestRewards: 0,
                 withdrawAmount: 0.5000001e18,
-                lock: 0,
+                lock: 1,
+                expectedLock: 1,
                 originalDepositAmount: 1e18,
                 depositAmount: 0,
                 lockLpAmount: 0,
@@ -766,7 +786,8 @@ contract HarvesterTest is TestUtils {
                 timeTravel: harvester.ONE_WEEK(),
                 requestRewards: 0,
                 withdrawAmount: 1e18,
-                lock: 0,
+                lock: 1,
+                expectedLock: 1,
                 originalDepositAmount: 1e18,
                 depositAmount: 0.5e18,
                 lockLpAmount: 0.55e18,
@@ -791,7 +812,8 @@ contract HarvesterTest is TestUtils {
                 timeTravel: 0,
                 requestRewards: 0,
                 withdrawAmount: 0.500001e18,
-                lock: 0,
+                lock: 1,
+                expectedLock: 1,
                 originalDepositAmount: 1e18,
                 depositAmount: 0,
                 lockLpAmount: 0,
@@ -816,7 +838,8 @@ contract HarvesterTest is TestUtils {
                 timeTravel: 0,
                 requestRewards: 0,
                 withdrawAmount: 0.5e18,
-                lock: 0,
+                lock: 1,
+                expectedLock: 1,
                 originalDepositAmount: 1e18,
                 depositAmount: 0,
                 lockLpAmount: 0,
@@ -841,7 +864,8 @@ contract HarvesterTest is TestUtils {
                 timeTravel: 0,
                 requestRewards: 0,
                 withdrawAmount: 1,
-                lock: 0,
+                lock: 1,
+                expectedLock: 1,
                 originalDepositAmount: 1e18,
                 depositAmount: 0,
                 lockLpAmount: 0,
@@ -857,6 +881,58 @@ contract HarvesterTest is TestUtils {
                 pendingRewards: 0,
                 maxWithdrawableAmount: 0,
                 revertString: Harvester.AmountTooBig.selector
+            }),
+            TestAction({
+                action: Actions.Deposit,
+                user: user4,
+                depositId: 1,
+                nftBoost: 0.5e18,
+                timeTravel: 0,
+                requestRewards: 0,
+                withdrawAmount: 0,
+                lock: 0,
+                expectedLock: 0,
+                originalDepositAmount: 1e18,
+                depositAmount: 1e18,
+                lockLpAmount: 1e18,
+                lockedUntil: 0,
+                globalDepositAmount: 1e18,
+                globalLockLpAmount: 1e18,
+                globalLpAmount: 1.5e18,
+                globalRewardDebt: 0.160353535353535351e18,
+                magicTotalDeposits: 1e18,
+                totalLpToken: 1.5e18,
+                accMagicPerShare: 0.106902356902356901e18,
+                pendingRewardsBefore: 0,
+                pendingRewards: 0,
+                maxWithdrawableAmount: 0,
+                revertString: ""
+            }),
+            TestAction({
+                action: Actions.Deposit,
+                user: user4,
+                depositId: 1,
+                nftBoost: 0,
+                timeTravel: 0,
+                requestRewards: 0,
+                withdrawAmount: 0,
+                lock: 98,
+                expectedLock: 0,
+                originalDepositAmount: 1e18,
+                depositAmount: 1e18,
+                lockLpAmount: 1e18,
+                lockedUntil: 0,
+                globalDepositAmount: 1e18,
+                globalLockLpAmount: 1e18,
+                globalLpAmount: 1.5e18,
+                globalRewardDebt: 0.160353535353535351e18,
+                magicTotalDeposits: 1e18,
+                totalLpToken: 1.5e18,
+                accMagicPerShare: 0.106902356902356901e18,
+                pendingRewardsBefore: 0,
+                pendingRewards: 0,
+                maxWithdrawableAmount: 1e18,
+                revertString: Harvester.InvalidValueOrDisabledTimelock.selector
             })
         ];
 
@@ -905,13 +981,13 @@ contract HarvesterTest is TestUtils {
     }
 
     function doDeposit(TestAction memory data) public {
+        magic.mint(data.user, data.originalDepositAmount);
+        vm.prank(data.user);
+        magic.approve(address(harvester), data.originalDepositAmount);
+
+        vm.mockCall(stakingRules, abi.encodeCall(IPartsStakingRules.getAmountStaked, (data.user)), abi.encode(500));
+
         if (data.revertString == bytes4(0)) {
-            magic.mint(data.user, data.originalDepositAmount);
-            vm.prank(data.user);
-            magic.approve(address(harvester), data.originalDepositAmount);
-
-            vm.mockCall(stakingRules, abi.encodeCall(IPartsStakingRules.getAmountStaked, (data.user)), abi.encode(500));
-
             vm.prank(data.user);
             vm.expectCall(
                 address(magic),
@@ -1060,7 +1136,7 @@ contract HarvesterTest is TestUtils {
         assertEq(depositAmount, data.depositAmount);
         assertEq(lockLpAmount, data.lockLpAmount);
         assertEq(lockedUntil, data.lockedUntil);
-        assertEq(uint256(lock), uint256(data.lock));
+        assertEq(uint256(lock), uint256(data.expectedLock));
 
         (
             uint256 globalDepositAmount,
@@ -1081,6 +1157,18 @@ contract HarvesterTest is TestUtils {
     }
 
     function test_depositWithdrawHarvestScenarios() public {
+        (
+            uint256 boost,
+            uint256 timelock,
+            uint256 vesting,
+            bool enabled
+        ) = harvester.timelockOptions(0);
+
+        assertEq(boost, 0);
+        assertEq(timelock, 0);
+        assertEq(vesting, 0);
+        assertEq(enabled, true);
+
         for (uint256 i = 0; i < depositTestCasesLength; i++) {
             console2.log("TEST CASE:", i);
 
