@@ -146,6 +146,9 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
 
         depositCapPerWallet = _depositCapPerWallet;
         emit DepositCapPerWallet(_depositCapPerWallet);
+
+        // add default timelock
+        _addTimelockOption(Timelock(0, 0, 0, true));
     }
 
     function getTimelockOptionsIds() external view returns (uint256[] memory) {
