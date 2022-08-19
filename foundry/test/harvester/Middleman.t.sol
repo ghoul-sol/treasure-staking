@@ -25,8 +25,6 @@ contract MiddlemanTest is TestUtils {
     address[] public excludedAddresses;
 
     event RewardsPaid(address indexed stream, uint256 rewardsPaid, uint256 rewardsPaidInTotal);
-    event AddExcludedAddress(address addr);
-    event RemoveExcludedAddress(address addr);
     event HarvesterFactory(IHarvesterFactory harvesterFactory);
     event MasterOfCoin(IMasterOfCoin masterOfCoin);
     event AtlasMineBoost(uint256 atlasMineBoost);
