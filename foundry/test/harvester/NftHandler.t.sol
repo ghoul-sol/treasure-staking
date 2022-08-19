@@ -34,7 +34,7 @@ contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
     uint256 public maxStakeableTotal = 100;
     uint256 public boostFactor = 1e18;
 
-    uint256 public maxStakeable = 100;
+    uint256 public maxStakeable = 40;
     uint256 public lifetime = 3600;
 
     uint256 public extractorBoost = 1e18;

@@ -32,7 +32,7 @@ contract HarvesterFactoryTest is TestUtils {
     uint256 public boostFactor = 1e18;
 
     uint256 public maxStakeableTreasuresPerUser = 20;
-    uint256 public maxStakeable = 100;
+    uint256 public maxStakeable = 50;
     uint256 public lifetime = 3600;
 
     ERC721Mintable public nftErc721;
