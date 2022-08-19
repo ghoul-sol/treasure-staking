@@ -328,6 +328,11 @@ contract ExtractorStakingRulesTest is TestUtils {
         vm.expectRevert(errorMsg);
         extractorRules.setMaxStakeable(newMaxStakeable);
 
+        uint256 MAX_SPOTS = extractorRules.MAX_SPOTS();
+        vm.prank(admin);
+        vm.expectRevert(ExtractorStakingRules.TooManyStakeableSpots.selector);
+        extractorRules.setMaxStakeable(MAX_SPOTS + 1);
+
         vm.prank(admin);
         vm.expectEmit(true, true, true, true);
         emit MaxStakeable(newMaxStakeable);

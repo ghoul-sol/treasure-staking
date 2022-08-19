@@ -18,6 +18,8 @@ contract ExtractorStakingRules is IExtractorStakingRules, ERC165Upgradeable, Sta
         uint256 stakedTimestamp;
     }
 
+    uint256 public constant MAX_SPOTS = 75;
+
     uint256 public maxStakeable;
 
     /// @dev time in seconds during which extractor is live
@@ -49,6 +51,7 @@ contract ExtractorStakingRules is IExtractorStakingRules, ERC165Upgradeable, Sta
     error ZeroBoost();
     error MaxStakeableReached();
     error CannotUnstake();
+    error TooManyStakeableSpots();
 
     modifier validateInput(address _nft, uint256 _amount) {
         if (_nft != extractorAddress) revert InvalidAddress();
@@ -186,6 +189,9 @@ contract ExtractorStakingRules is IExtractorStakingRules, ERC165Upgradeable, Sta
     }
 
     function _setMaxStakeable(uint256 _maxStakeable) internal {
+        // disallow number higher than MAX_SPOTS because of loops
+        if (_maxStakeable > MAX_SPOTS) revert TooManyStakeableSpots();
+
         maxStakeable = _maxStakeable;
         emit MaxStakeable(_maxStakeable);
     }
