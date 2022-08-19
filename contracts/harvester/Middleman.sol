@@ -45,8 +45,6 @@ contract Middleman is AccessControlEnumerableUpgradeable {
     event MasterOfCoin(IMasterOfCoin masterOfCoin);
     event CorruptionNegativeBoostMatrix(uint256[][] _corruptionNegativeBoostMatrix);
     event AtlasMineBoost(uint256 atlasMineBoost);
-    event AddExcludedAddress(address addr);
-    event RemoveExcludedAddress(address addr);
 
     modifier runIfNeeded {
         if (block.timestamp > lastRewardTimestamp) {
