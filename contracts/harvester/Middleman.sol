@@ -112,20 +112,31 @@ contract Middleman is AccessControlEnumerableUpgradeable {
         uint256 totalShare,
         uint256 targetIndex
     ) {
-        allActiveHarvesters = harvesterFactory.getAllHarvesters();
-        harvesterShare = new uint256[](allActiveHarvesters.length);
+        address[] memory harvesters = harvesterFactory.getAllHarvesters();
+        uint256 len = harvesters.length;
+        bool isAtlas = atlasMine != address(0) && atlasMineBoost != 0;
+
+        if (isAtlas) {
+            len += 1;
+        }
+
+        allActiveHarvesters = new address[](len);
+        harvesterShare = new uint256[](len);
 
         for (uint256 i = 0; i < allActiveHarvesters.length; i++) {
-            harvesterShare[i] = getHarvesterEmissionsBoost(allActiveHarvesters[i]);
-            totalShare += harvesterShare[i];
+            if (isAtlas && i == allActiveHarvesters.length - 1) {
+                allActiveHarvesters[i] = atlasMine;
+                harvesterShare[i] = atlasMineBoost;
+                totalShare += atlasMineBoost;
+            } else {
+                allActiveHarvesters[i] = harvesters[i];
+                harvesterShare[i] = getHarvesterEmissionsBoost(allActiveHarvesters[i]);
+                totalShare += harvesterShare[i];
+            }
 
             if (allActiveHarvesters[i] == _targetHarvester) {
                 targetIndex = i;
             }
-        }
-
-        if (atlasMine != address(0) && atlasMineBoost != 0) {
-            totalShare += atlasMineBoost;
         }
     }
 
@@ -144,6 +155,10 @@ contract Middleman is AccessControlEnumerableUpgradeable {
     }
 
     function getHarvesterEmissionsBoost(address _harvester) public view returns (uint256) {
+        if (atlasMine == _harvester) {
+            return atlasMineBoost;
+        }
+
         uint256 harvesterTotalBoost = IHarvester(_harvester).nftHandler().getHarvesterTotalBoost();
         uint256 utilBoost = getUtilizationBoost(_harvester);
         uint256 corruptionNegativeBoost = getCorruptionNegativeBoost(_harvester);
@@ -194,6 +209,10 @@ contract Middleman is AccessControlEnumerableUpgradeable {
     }
 
     function getUtilization(address _harvester) public view returns (uint256 util) {
+        if (atlasMine == _harvester) {
+            return Constant.ONE;
+        }
+
         uint256 totalDepositCap = IHarvester(_harvester).totalDepositCap();
 
         if (totalDepositCap != 0) {
@@ -214,10 +233,6 @@ contract Middleman is AccessControlEnumerableUpgradeable {
             uint256[] memory harvesterShare,
             uint256 totalShare,
         ) = getHarvesterShares(address(0));
-
-        if (atlasMine != address(0) && atlasMineBoost != 0) {
-            rewardsBalance[atlasMine].unpaid += distributedRewards * atlasMineBoost / totalShare;
-        }
 
         for (uint256 i = 0; i < harvesterShare.length; i++) {
             rewardsBalance[allActiveHarvesters[i]].unpaid += distributedRewards * harvesterShare[i] / totalShare;
