@@ -10,19 +10,17 @@ import "contracts/harvester/Middleman.sol";
 contract MiddlemanTest is TestUtils {
     Middleman public middleman;
 
-    address public magic;
-
-    address public admin;
-    address public masterOfCoin;
-    address public harvesterFactory;
-    address public atlasMine;
-    address public corruptionToken;
+    address public magic = address(420);
+    address public admin = address(111);
+    address public masterOfCoin = address(112);
+    address public harvesterFactory = address(113);
+    address public atlasMine = address(114);
+    address public corruptionToken = address(115);
 
     address[] public allHarvesters;
-
-    uint256 public atlasMineBoost;
-
     address[] public excludedAddresses;
+
+    uint256 public atlasMineBoost = 8e18;
 
     event RewardsPaid(address indexed stream, uint256 rewardsPaid, uint256 rewardsPaidInTotal);
     event HarvesterFactory(IHarvesterFactory harvesterFactory);
@@ -31,30 +29,28 @@ contract MiddlemanTest is TestUtils {
     event CorruptionNegativeBoostMatrix(uint256[][] _corruptionNegativeBoostMatrix);
 
     function setUp() public {
-        magic = address(420);
         // workaround for ERC20's code check
         vm.etch(magic, bytes("34567876543456787654"));
-        vm.label(magic, "magic");
 
-        admin = address(111);
+        vm.label(magic, "magic");
         vm.label(admin, "admin");
-        masterOfCoin = address(112);
         vm.label(masterOfCoin, "masterOfCoin");
-        harvesterFactory = address(113);
         vm.label(harvesterFactory, "harvesterFactory");
-        atlasMine = address(114);
         vm.label(atlasMine, "atlasMine");
-        corruptionToken = address(115);
         vm.label(corruptionToken, "corruptionToken");
 
-        for (uint256 i = 0; i < 3; i++) {
+        for (uint256 i = 0; i < emissionsTestCasesLength; i++) {
             address harvesterAddress = address(uint160(900+i));
             allHarvesters.push(harvesterAddress);
 
-            vm.label(allHarvesters[i], "allHarvesters[i]");
+            vm.label(harvesterAddress, "allHarvesters[i]");
         }
 
-        atlasMineBoost = 8e18;
+        vm.mockCall(
+            address(harvesterFactory),
+            abi.encodeCall(IHarvesterFactory.getAllHarvesters, ()),
+            abi.encode(allHarvesters)
+        );
 
         address impl = address(new Middleman());
 
@@ -247,17 +243,27 @@ contract MiddlemanTest is TestUtils {
         }
     }
 
-    function setupDistributeRewards(uint256 _rewards) public {
-        vm.mockCall(address(masterOfCoin), abi.encodeCall(IMasterOfCoin.requestRewards, ()), abi.encode(_rewards));
+    function setupDistributeRewards(uint256 _rewards, bool _includeAtlasMine) public returns (
+        address[] memory allActiveHarvesters,
+        uint256[] memory harvesterShare,
+        uint256 totalShare
+    ) {
+        uint256 len = allHarvesters.length;
 
-        vm.mockCall(
-            address(harvesterFactory),
-            abi.encodeCall(IHarvesterFactory.getAllHarvesters, ()),
-            abi.encode(allHarvesters)
-        );
+        if (_includeAtlasMine) {
+            len += 1;
+        }
+        allActiveHarvesters = new address[](len);
+        harvesterShare = new uint256[](len);
+
+        vm.mockCall(address(masterOfCoin), abi.encodeCall(IMasterOfCoin.requestRewards, ()), abi.encode(_rewards));
 
         for (uint256 i = 0; i < allHarvesters.length; i++) {
             EmissionsShareTest memory data = getEmissionsTestCase(i);
+
+            allActiveHarvesters[i] = allHarvesters[i];
+            harvesterShare[i] = data.expectedHarvesterEmissionsShare;
+            totalShare += data.expectedHarvesterEmissionsShare;
 
             mockgetHarvesterEmissionsBoost(
                 allHarvesters[i],
@@ -266,6 +272,12 @@ contract MiddlemanTest is TestUtils {
                 data.totalDepositCap,
                 data.corruptionBalance
             );
+        }
+
+        if (_includeAtlasMine) {
+            allActiveHarvesters[len - 1] = atlasMine;
+            harvesterShare[len - 1] = atlasMineBoost;
+            totalShare += atlasMineBoost;
         }
     }
 
@@ -278,7 +290,7 @@ contract MiddlemanTest is TestUtils {
             assertEq(unpaid, 0);
         }
 
-        setupDistributeRewards(rewards);
+        setupDistributeRewards(rewards, true);
 
         middleman.distributeRewards();
 
@@ -318,6 +330,97 @@ contract MiddlemanTest is TestUtils {
         assertEq(unpaid, 7500);
     }
 
+    function test_getHarvesterShares() public {
+        uint256 rewards = 10000;
+
+        vm.mockCall(address(masterOfCoin), abi.encodeCall(IMasterOfCoin.getPendingRewards, (address(middleman))), abi.encode(rewards));
+
+        assertEq(middleman.atlasMine(), atlasMine);
+        assertEq(middleman.atlasMineBoost(), atlasMineBoost);
+
+        (
+            address[] memory expectedAllActiveHarvesters,
+            uint256[] memory expectedHarvesterShare,
+            uint256 expectedTotalShare
+        ) = setupDistributeRewards(rewards, true);
+
+        assertEq(expectedAllActiveHarvesters[expectedAllActiveHarvesters.length - 1], atlasMine);
+
+        for (uint256 expectedTargetIndex = 0; expectedTargetIndex < expectedAllActiveHarvesters.length; expectedTargetIndex++) {
+            address targetHarvester = expectedAllActiveHarvesters[expectedTargetIndex];
+
+            (
+                address[] memory allActiveHarvesters,
+                uint256[] memory harvesterShare,
+                uint256 totalShare,
+                uint256 targetIndex
+            ) = middleman.getHarvesterShares(targetHarvester);
+
+            assertEq(allActiveHarvesters.length, expectedAllActiveHarvesters.length);
+            assertAddressArrayEq(allActiveHarvesters, expectedAllActiveHarvesters);
+
+            assertEq(harvesterShare.length, expectedHarvesterShare.length);
+            assertUint256ArrayEq(harvesterShare, expectedHarvesterShare);
+
+            assertEq(totalShare, expectedTotalShare);
+            assertEq(targetIndex, expectedTargetIndex);
+
+            (uint256 unpaid, ) = middleman.rewardsBalance(targetHarvester);
+            assertEq(unpaid, 0);
+
+            uint256 pendingRewards = middleman.getPendingRewards(targetHarvester);
+            assertFalse(pendingRewards == 0);
+            assertEq(pendingRewards, rewards * harvesterShare[targetIndex] / totalShare);
+        }
+    }
+
+    function test_getHarvesterSharesWithoutAtlasMine() public {
+        uint256 rewards = 10000;
+
+        vm.mockCall(address(masterOfCoin), abi.encodeCall(IMasterOfCoin.getPendingRewards, (address(middleman))), abi.encode(rewards));
+
+        vm.prank(admin);
+        middleman.setAtlasMineBoost(0);
+
+        assertEq(middleman.atlasMine(), atlasMine);
+        assertEq(middleman.atlasMineBoost(), 0);
+
+        (
+            address[] memory expectedAllActiveHarvesters,
+            uint256[] memory expectedHarvesterShare,
+            uint256 expectedTotalShare
+        ) = setupDistributeRewards(rewards, false);
+
+        assertFalse(expectedAllActiveHarvesters[expectedAllActiveHarvesters.length - 1] == atlasMine);
+
+        for (uint256 expectedTargetIndex = 0; expectedTargetIndex < expectedAllActiveHarvesters.length; expectedTargetIndex++) {
+            address targetHarvester = expectedAllActiveHarvesters[expectedTargetIndex];
+
+            (
+                address[] memory allActiveHarvesters,
+                uint256[] memory harvesterShare,
+                uint256 totalShare,
+                uint256 targetIndex
+            ) = middleman.getHarvesterShares(targetHarvester);
+
+            assertEq(allActiveHarvesters.length, expectedAllActiveHarvesters.length);
+            assertAddressArrayEq(allActiveHarvesters, expectedAllActiveHarvesters);
+
+            assertEq(harvesterShare.length, expectedHarvesterShare.length);
+            assertUint256ArrayEq(harvesterShare, expectedHarvesterShare);
+
+            assertEq(totalShare, expectedTotalShare);
+            assertEq(targetIndex, expectedTargetIndex);
+
+            (uint256 unpaid, ) = middleman.rewardsBalance(targetHarvester);
+            assertEq(unpaid, 0);
+
+            uint256 pendingRewards = middleman.getPendingRewards(targetHarvester);
+            assertFalse(pendingRewards == 0);
+            assertEq(pendingRewards, rewards * harvesterShare[targetIndex] / totalShare);
+        }
+    }
+
     function test_requestRewards() public {
         uint256 paid;
         uint256 unpaid;
@@ -325,7 +428,7 @@ contract MiddlemanTest is TestUtils {
         uint256 rewards = 10000;
         uint256[4] memory expectedRewards = [uint256(5000), 1250, 1250, 2500];
 
-        setupDistributeRewards(rewards);
+        setupDistributeRewards(rewards, true);
 
         for (uint256 i = 0; i < allHarvesters.length; i++) {
             (unpaid, paid) = middleman.rewardsBalance(allHarvesters[i]);
