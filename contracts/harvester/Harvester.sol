@@ -163,9 +163,7 @@ contract Harvester is IHarvester, Initializable, AccessControlEnumerableUpgradea
         (uint256 lockBoost, ) = getLockBoost(userInfo[_user][_depositId].lock);
         uint256 userNftBoost = nftHandler.getUserBoost(_user);
         // see: `_recalculateGlobalLp`.
-        // `userNftBoost` multiplies lp amount that already has `lockBoost` added
-        // that's why we have to add `lockBoost * userNftBoost / ONE` for correct result
-        return lockBoost + userNftBoost + lockBoost * userNftBoost / ONE;
+        return (ONE + lockBoost) * (ONE + userNftBoost) / ONE;
     }
 
     function getNftBoost(address _user, address _nft, uint256 _tokenId, uint256 _amount) external view returns (uint256) {

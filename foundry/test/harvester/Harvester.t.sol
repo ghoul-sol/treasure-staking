@@ -1331,6 +1331,55 @@ contract HarvesterTest is TestUtils {
         assertEq(harvester.pendingRewardsAll(data.user), (newPendingRewards - 1) * 2);
     }
 
+    function test_getDepositTotalBoost(uint256 _timelockBoost, uint256 _nftBoost, uint256 _deposit) public {
+        vm.assume(_timelockBoost < 100e18);
+        vm.assume(_nftBoost < 100e18);
+        vm.assume(_deposit < initDepositCapPerWallet.capPerPart);
+
+        TestAction memory data = TestAction({
+            action: Actions.Deposit,
+            user: user1,
+            depositId: 1,
+            nftBoost: _nftBoost,
+            timeTravel: 0,
+            requestRewards: 0,
+            withdrawAmount: 0,
+            lock: 0, //overriden
+            expectedLock: 1,
+            originalDepositAmount: _deposit,
+            depositAmount: _deposit,
+            lockLpAmount: 0,
+            lockedUntil: 0,
+            globalDepositAmount: 0,
+            globalLockLpAmount: 0,
+            globalLpAmount: 0,
+            globalRewardDebt: 0,
+            magicTotalDeposits: 0,
+            totalLpToken: 0,
+            accMagicPerShare: 0,
+            pendingRewardsBefore: 0,
+            pendingRewards: 0,
+            maxWithdrawableAmount: 0,
+            revertString: ""
+        });
+
+        uint256[] memory timelockIds = harvester.getTimelockOptionsIds();
+        data.lock = timelockIds.length;
+
+        vm.prank(admin);
+        harvester.addTimelockOption(IHarvester.Timelock(_timelockBoost, 0, 0, true));
+
+        mockForAction(data);
+
+        doDeposit(data);
+
+        (uint256 globalDepositAmount,, uint256 globalLpAmount,) = harvester.getUserGlobalDeposit(data.user);
+        uint256 boost = harvester.getDepositTotalBoost(data.user, data.depositId);
+
+        assertEq(globalDepositAmount, data.originalDepositAmount);
+        assertApproxEqAbs(globalLpAmount, data.originalDepositAmount * boost / harvester.ONE(), 1);
+    }
+
     function test_setNftHandler() public {
         assertEq(address(harvester.nftHandler()), nftHandler);
 
