@@ -1377,7 +1377,7 @@ contract HarvesterTest is TestUtils {
         uint256 boost = harvester.getDepositTotalBoost(data.user, data.depositId);
 
         assertEq(globalDepositAmount, data.originalDepositAmount);
-        assertApproxEqAbs(globalLpAmount, data.originalDepositAmount * boost / harvester.ONE(), 1);
+        assertApproxEqAbs(globalLpAmount, data.originalDepositAmount * boost / harvester.ONE(), 50);
     }
 
     function test_setNftHandler() public {

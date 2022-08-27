@@ -21,12 +21,22 @@ contract LegionStakingRules is StakingRulesBase {
     /// @dev maps user wallet to current staked weight. For weight values, see getWeight
     mapping (address => uint256) public weightStaked;
 
+    bool public paused;
+
     event MaxWeight(uint256 maxLegionWeight);
     event LegionMetadataStore(ILegionMetadataStore legionMetadataStore);
     event MaxStakeableTotal(uint256 maxStakeableTotal);
     event BoostFactor(uint256 boostFactor);
+    event Pause();
+    event Unpause();
+    event LegionBoostMatrix(uint256[][] legionBoostMatrix);
+    event LegionWeightMatrix(uint256[][] legionWeightMatrix);
+    event LegionRankMatrix(uint256[][] legionRankMatrix);
+    event TotalRankUpdate(uint256 oldTotalRank, uint256 newTotalRank);
 
     error MaxWeightReached();
+    error Paused();
+    error Unpaused();
 
     function init(
         address _admin,
@@ -157,6 +167,8 @@ contract LegionStakingRules is StakingRulesBase {
     }
 
     function _processStake(address _user, address, uint256 _tokenId, uint256) internal override {
+        if (paused) revert Paused();
+
         staked++;
         totalRank += getRank(_tokenId);
         weightStaked[_user] += getWeight(_tokenId);
@@ -165,6 +177,8 @@ contract LegionStakingRules is StakingRulesBase {
     }
 
     function _processUnstake(address _user, address, uint256 _tokenId, uint256) internal override {
+        if (paused) revert Paused();
+
         staked--;
         totalRank -= getRank(_tokenId);
         weightStaked[_user] -= getWeight(_tokenId);
@@ -175,6 +189,22 @@ contract LegionStakingRules is StakingRulesBase {
     function setLegionMetadataStore(ILegionMetadataStore _legionMetadataStore) external onlyRole(SR_ADMIN) {
         legionMetadataStore = _legionMetadataStore;
         emit LegionMetadataStore(_legionMetadataStore);
+    }
+
+    function setLegionBoostMatrix(uint256[][] memory _legionBoostMatrix) external onlyRole(SR_ADMIN) {
+        legionBoostMatrix = _legionBoostMatrix;
+        emit LegionBoostMatrix(_legionBoostMatrix);
+    }
+
+    function setLegionWeightMatrix(uint256[][] memory _legionWeightMatrix) external onlyRole(SR_ADMIN) {
+        legionWeightMatrix = _legionWeightMatrix;
+        emit LegionWeightMatrix(_legionWeightMatrix);
+    }
+
+    /// @dev changing ranks values after NFTs are already staked can break `totalRank` calculations
+    function setLegionRankMatrix(uint256[][] memory _legionRankMatrix) external onlyRole(SR_ADMIN) {
+        legionRankMatrix = _legionRankMatrix;
+        emit LegionRankMatrix(_legionRankMatrix);
     }
 
     function setMaxWeight(uint256 _maxLegionWeight) external onlyRole(SR_ADMIN) {
@@ -189,6 +219,28 @@ contract LegionStakingRules is StakingRulesBase {
         nftHandler.harvester().callUpdateRewards();
 
         _setBoostFactor(_boostFactor);
+    }
+
+    function pause() external onlyRole(SR_ADMIN) {
+        if (paused) revert Paused();
+
+        paused = true;
+
+        emit Pause();
+    }
+
+    function unpause() external onlyRole(SR_ADMIN) {
+        if (!paused) revert Unpaused();
+
+        paused = false;
+
+        emit Unpause();
+    }
+
+    function setTotalRank(uint256 _totalRank) external onlyRole(SR_ADMIN) {
+        emit TotalRankUpdate(totalRank, _totalRank);
+
+        totalRank = _totalRank;
     }
 
     function _setMaxWeight(uint256 _maxLegionWeight) internal {

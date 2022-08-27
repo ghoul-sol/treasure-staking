@@ -14,10 +14,6 @@ contract LegionStakingRulesMock is LegionStakingRules {
     function setStaked(uint256 _staked) public {
         staked = _staked;
     }
-
-    function setTotalRank(uint256 _totalRank) public {
-        totalRank = _totalRank;
-    }
 }
 
 contract LegionStakingRulesTest is TestUtils {
@@ -197,6 +193,7 @@ contract LegionStakingRulesTest is TestUtils {
             legionRules.setStaked(uint256(testData[0][1]));
             assertEq(legionRules.staked(), testData[0][1]);
 
+            vm.prank(admin);
             legionRules.setTotalRank(uint256(testData[0][2]));
             assertEq(legionRules.totalRank(), testData[0][2]);
 
@@ -208,8 +205,16 @@ contract LegionStakingRulesTest is TestUtils {
         }
     }
 
-    // function test_processStake() public {}
-    // function test_processUnstake() public {}
+    function test_processStake(address _user, address _nft, uint256 _tokenId, uint256 _amount) public {
+        // Paused
+        // MaxWeightReached
+        // check
+        // legionRules.processStake(_user, _nft, _tokenId, _amount);
+    }
+
+    function test_processUnstake() public {
+
+    }
 
     function test_setLegionMetadataStore() public {
         assertEq(address(legionRules.legionMetadataStore()), legionMetadataStore);
@@ -269,5 +274,115 @@ contract LegionStakingRulesTest is TestUtils {
         vm.prank(admin);
         legionRules.setBoostFactor(newBoostFactor);
         assertEq(legionRules.boostFactor(), newBoostFactor);
+    }
+
+    uint256[][] public newLegionBoostMatrix = [
+        [uint256(600e16), uint256(200e16), uint256(75e16), uint256(100e16), uint256(50e16), uint256(0)],
+        [uint256(600e16), uint256(200e16), uint256(75e16), uint256(100e16), uint256(50e16), uint256(0)],
+        [uint256(600e16), uint256(200e16), uint256(75e16), uint256(100e16), uint256(50e16), uint256(0)]
+    ];
+
+    function test_setLegionBoostMatrix() public {
+        uint256[][] memory legionBoostMatrix = legionRules.getLegionBoostMatrix();
+
+        bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), legionRules.SR_ADMIN());
+        vm.expectRevert(errorMsg);
+        legionRules.setLegionBoostMatrix(newLegionBoostMatrix);
+        assertMatrixEq(legionRules.getLegionBoostMatrix(), legionBoostMatrix);
+
+        vm.prank(admin);
+        legionRules.setLegionBoostMatrix(newLegionBoostMatrix);
+        assertMatrixEq(legionRules.getLegionBoostMatrix(), newLegionBoostMatrix);
+    }
+
+    uint256[][] public newLegionWeightMatrix = [
+        [uint256(120e18), uint256(40e18), uint256(15e18), uint256(20e18), uint256(10e18), uint256(0)],
+        [uint256(120e18), uint256(40e18), uint256(15e18), uint256(20e18), uint256(10e18), uint256(0)],
+        [uint256(120e18), uint256(40e18), uint256(15e18), uint256(20e18), uint256(10e18), uint256(0)]
+    ];
+
+    function test_setLegionWeightMatrix() public {
+        uint256[][] memory legionWeightMatrix = legionRules.getLegionWeightMatrix();
+
+        bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), legionRules.SR_ADMIN());
+        vm.expectRevert(errorMsg);
+        legionRules.setLegionWeightMatrix(newLegionWeightMatrix);
+        assertMatrixEq(legionRules.getLegionWeightMatrix(), legionWeightMatrix);
+
+        vm.prank(admin);
+        legionRules.setLegionWeightMatrix(newLegionWeightMatrix);
+        assertMatrixEq(legionRules.getLegionWeightMatrix(), newLegionWeightMatrix);
+    }
+
+    uint256[][] public newLegionRankMatrix = [
+        [uint256(4e18), uint256(4e18), uint256(2e18), uint256(3e18), uint256(1e18), uint256(0)],
+        [uint256(4e18), uint256(4e18), uint256(2e18), uint256(3e18), uint256(1e18), uint256(0)],
+        [uint256(4e18), uint256(4e18), uint256(2e18), uint256(3e18), uint256(1e18), uint256(0)]
+    ];
+
+    function test_setLegionRankMatrix() public {
+        uint256[][] memory legionRankMatrix = legionRules.getLegionRankMatrix();
+
+        bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), legionRules.SR_ADMIN());
+        vm.expectRevert(errorMsg);
+        legionRules.setLegionRankMatrix(newLegionRankMatrix);
+        assertMatrixEq(legionRules.getLegionRankMatrix(), legionRankMatrix);
+
+        vm.prank(admin);
+        legionRules.setLegionRankMatrix(newLegionRankMatrix);
+        assertMatrixEq(legionRules.getLegionRankMatrix(), newLegionRankMatrix);
+    }
+
+    function test_setTotalRank() public {
+        assertEq(legionRules.totalRank(), 0);
+
+        uint256 newTotalRank = 200000e18;
+
+        bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), legionRules.SR_ADMIN());
+        vm.expectRevert(errorMsg);
+        legionRules.setTotalRank(newTotalRank);
+        assertEq(legionRules.totalRank(), 0);
+
+        vm.prank(admin);
+        legionRules.setTotalRank(newTotalRank);
+        assertEq(legionRules.totalRank(), newTotalRank);
+    }
+
+    function test_pause() public {
+        assertEq(legionRules.paused(), false);
+
+        bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), legionRules.SR_ADMIN());
+        vm.expectRevert(errorMsg);
+        legionRules.pause();
+        assertEq(legionRules.paused(), false);
+
+        vm.prank(admin);
+        legionRules.pause();
+        assertEq(legionRules.paused(), true);
+
+        vm.prank(admin);
+        vm.expectRevert(LegionStakingRules.Paused.selector);
+        legionRules.pause();
+    }
+
+    function test_unpause() public {
+        assertEq(legionRules.paused(), false);
+
+        vm.prank(admin);
+        legionRules.pause();
+        assertEq(legionRules.paused(), true);
+
+        bytes memory errorMsg = TestUtils.getAccessControlErrorMsg(address(this), legionRules.SR_ADMIN());
+        vm.expectRevert(errorMsg);
+        legionRules.unpause();
+        assertEq(legionRules.paused(), true);
+
+        vm.prank(admin);
+        legionRules.unpause();
+        assertEq(legionRules.paused(), false);
+
+        vm.prank(admin);
+        vm.expectRevert(LegionStakingRules.Unpaused.selector);
+        legionRules.unpause();
     }
 }
