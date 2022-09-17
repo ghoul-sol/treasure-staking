@@ -8,6 +8,8 @@ import '@openzeppelin/contracts/utils/math/SafeCast.sol';
 
 import './interfaces/IUniswapV2Pair.sol';
 import './interfaces/IMiniChefV2.sol';
+import './harvester/interfaces/IHarvester.sol';
+import './harvester/interfaces/IHarvesterFactory.sol';
 import './AtlasMine.sol';
 
 contract TreasureDAO is ERC20 {
@@ -16,11 +18,13 @@ contract TreasureDAO is ERC20 {
     AtlasMine public atlasMine;
     IUniswapV2Pair public sushiLP;
     IMiniChefV2 public miniChefV2;
+    IHarvesterFactory public harvesterFactory;
 
-    constructor(address _atlasMine, address _sushiLP, address _miniChefV2) ERC20("Treasure DAO Governance", "gMAGIC") {
+    constructor(address _atlasMine, address _sushiLP, address _miniChefV2, address _harvesterFactory) ERC20("Treasure DAO Governance", "gMAGIC") {
         atlasMine = AtlasMine(_atlasMine);
         sushiLP = IUniswapV2Pair(_sushiLP);
         miniChefV2 = IMiniChefV2(_miniChefV2);
+        harvesterFactory = IHarvesterFactory(_harvesterFactory);
     }
 
     function totalSupply() public view override returns (uint256) {
@@ -28,7 +32,7 @@ contract TreasureDAO is ERC20 {
     }
 
     function balanceOf(address _account) public view override returns (uint256) {
-        return getMineBalance(_account) + getLPBalance(_account);
+        return getMineBalance(_account) + getLPBalance(_account) + getHarvesterBalance(_account);
     }
 
     function getMineBalance(address _account) public view returns (uint256 userMineBalance) {
@@ -40,6 +44,15 @@ contract TreasureDAO is ERC20 {
             (uint256 lockBoost, ) = atlasMine.getLockBoost(lock);
             uint256 lpAmount = depositAmount + depositAmount * lockBoost / atlasMine.ONE();
             userMineBalance += lpAmount;
+        }
+    }
+
+    function getHarvesterBalance(address _account) public view returns (uint256 harvesterBalance) {
+        address[] memory harvesters = harvesterFactory.getAllHarvesters();
+        uint256 len = harvesters.length;
+        for (uint256 i = 0; i < len; i++) {
+            (uint256 globalDepositAmount,,,) = IHarvester(harvesters[i]).getUserGlobalDeposit(_account);
+            harvesterBalance += globalDepositAmount;
         }
     }
 
