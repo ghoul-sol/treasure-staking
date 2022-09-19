@@ -2,26 +2,23 @@
 pragma solidity >=0.8.11;
 
 import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
-import '@openzeppelin/contracts/access/Ownable.sol';
-import '@openzeppelin/contracts/utils/math/SafeCast.sol';
 
 import './interfaces/IUniswapV2Pair.sol';
 import './interfaces/IMiniChefV2.sol';
+import './interfaces/IAtlasMine.sol';
 import './harvester/interfaces/IHarvester.sol';
 import './harvester/interfaces/IHarvesterFactory.sol';
-import './AtlasMine.sol';
 
 contract TreasureDAO is ERC20 {
     uint256 public constant PID = 13;
 
-    AtlasMine public atlasMine;
+    IAtlasMine public atlasMine;
     IUniswapV2Pair public sushiLP;
     IMiniChefV2 public miniChefV2;
     IHarvesterFactory public harvesterFactory;
 
     constructor(address _atlasMine, address _sushiLP, address _miniChefV2, address _harvesterFactory) ERC20("Treasure DAO Governance", "gMAGIC") {
-        atlasMine = AtlasMine(_atlasMine);
+        atlasMine = IAtlasMine(_atlasMine);
         sushiLP = IUniswapV2Pair(_sushiLP);
         miniChefV2 = IMiniChefV2(_miniChefV2);
         harvesterFactory = IHarvesterFactory(_harvesterFactory);
@@ -40,7 +37,7 @@ contract TreasureDAO is ERC20 {
         uint256 len = allUserDepositIds.length;
         for (uint256 i = 0; i < len; i++) {
             uint256 depositId = allUserDepositIds[i];
-            (, uint256 depositAmount,,,,, AtlasMine.Lock lock) = atlasMine.userInfo(_account, depositId);
+            (, uint256 depositAmount,,,,, IAtlasMine.Lock lock) = atlasMine.userInfo(_account, depositId);
             (uint256 lockBoost, ) = atlasMine.getLockBoost(lock);
             uint256 lpAmount = depositAmount + depositAmount * lockBoost / atlasMine.ONE();
             userMineBalance += lpAmount;
