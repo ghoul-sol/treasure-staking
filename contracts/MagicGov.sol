@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity >=0.8.11;
 
 import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
@@ -47,15 +47,6 @@ contract TreasureDAO is ERC20 {
         }
     }
 
-    function getHarvesterBalance(address _account) public view returns (uint256 harvesterBalance) {
-        address[] memory harvesters = harvesterFactory.getAllHarvesters();
-        uint256 len = harvesters.length;
-        for (uint256 i = 0; i < len; i++) {
-            (uint256 globalDepositAmount,,,) = IHarvester(harvesters[i]).getUserGlobalDeposit(_account);
-            harvesterBalance += globalDepositAmount;
-        }
-    }
-
     function getLPBalance(address _account) public view returns (uint256) {
         (uint256 liquidity, ) = miniChefV2.userInfo(PID, _account);
         (uint112 _reserve0, uint112 _reserve1,) = sushiLP.getReserves();
@@ -64,6 +55,15 @@ contract TreasureDAO is ERC20 {
             return _reserve0 * liquidity / sushiLP.totalSupply();
         } else {
             return _reserve1 * liquidity / sushiLP.totalSupply();
+        }
+    }
+
+    function getHarvesterBalance(address _account) public view returns (uint256 harvesterBalance) {
+        address[] memory harvesters = harvesterFactory.getAllHarvesters();
+        uint256 len = harvesters.length;
+        for (uint256 i = 0; i < len; i++) {
+            (uint256 globalDepositAmount,,,) = IHarvester(harvesters[i]).getUserGlobalDeposit(_account);
+            harvesterBalance += globalDepositAmount;
         }
     }
 
