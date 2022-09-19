@@ -42,5 +42,4 @@ interface IHarvester {
     function nftHandler() external view returns (INftHandler);
     function magicTotalDeposits() external view returns (uint256);
     function totalDepositCap() external view returns (uint256);
-    function getUserGlobalDeposit(address _user) external view returns (uint256 globalDepositAmount, uint256 globalLockLpAmount, uint256 globalLpAmount, int256 globalRewardDebt);
 }
