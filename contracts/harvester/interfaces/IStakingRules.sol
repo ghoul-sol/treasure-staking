@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.11;
+pragma solidity 0.8.14;
 
 interface IStakingRules {
     /// @notice Checks if NFT can be staked
