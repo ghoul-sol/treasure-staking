@@ -3,11 +3,40 @@ pragma solidity >=0.8.11;
 
 import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
-import './interfaces/IUniswapV2Pair.sol';
-import './interfaces/IMiniChefV2.sol';
-import './interfaces/IAtlasMine.sol';
-import './harvester/interfaces/IHarvester.sol';
-import './harvester/interfaces/IHarvesterFactory.sol';
+interface IUniswapV2Pair {
+    function totalSupply() external view returns (uint);
+    function token0() external view returns (address);
+    function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
+}
+
+interface IMiniChefV2 {
+    function userInfo(uint256 _pid, address _user) external view returns (uint256 amount, int256 rewardDebt);
+}
+
+interface IAtlasMine {
+    enum Lock { twoWeeks, oneMonth, threeMonths, sixMonths, twelveMonths }
+
+    function magic() external view returns (IERC20);
+    function getAllUserDepositIds(address _user) external view returns (uint256[] memory);
+    function userInfo(address _user, uint256 _depositId) external view virtual returns (
+        uint256 originalDepositAmount,
+        uint256 depositAmount,
+        uint256 lpAmount,
+        uint256 lockedUntil,
+        uint256 vestingLastUpdate,
+        int256 rewardDebt,
+        Lock lock);
+    function getLockBoost(Lock _lock) external pure returns (uint256 boost, uint256 timelock);
+    function ONE() external pure returns (uint256);
+}
+
+interface IHarvester {
+    function getUserGlobalDeposit(address _user) external view returns (uint256 globalDepositAmount, uint256 globalLockLpAmount, uint256 globalLpAmount, int256 globalRewardDebt);
+}
+
+interface IHarvesterFactory {
+    function getAllHarvesters() external view returns (address[] memory);
+}
 
 contract TreasureDAO is ERC20 {
     uint256 public constant PID = 13;
